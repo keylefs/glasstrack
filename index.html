@@ -12,9 +12,9 @@
     <!-- Icono (favicon) para la pestaña -->
     <link rel="icon" type="image/png" href="img/favicon.png">
 
-    <link rel="stylesheet" href="styles.css?v=glasstrack-mobile-v5-20260919">
+    <link rel="stylesheet" href="styles.css?v=glasstrack-b55-concludor-mix-studio-20261013">
     <!-- Fuentes de Google Fonts actualizadas -->
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Cinzel:wght@500&family=Fira+Code&family=Inter:wght@400;600&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Nunito:wght@400;600;700&family=Raleway:wght@400;600;700&family=Rubik:wght@400;500;700&family=Bebas+Neue&family=Playfair+Display:wght@400;600;700&family=Press+Start+2P&family=Montserrat:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Pacifico&family=Permanent+Marker&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
@@ -30,6 +30,9 @@
   <div class="top-left-global-bar">
     <button id="btn-main-menu" class="global-icon-btn" title="Menú de Ajustes">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <button id="btn-account" class="global-icon-btn account-icon-btn" title="Cuenta" aria-label="Cuenta">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25"/><circle cx="12" cy="9.6" r="3.1"/><path d="M5.9 19.2a6.6 6.6 0 0 1 12.2 0"/></svg>
     </button>
   </div>
 
@@ -67,6 +70,13 @@
           <small>Juego de ritmo y editor de charts</small>
         </span>
       </button>
+      <button id="top-mode-visual" class="top-experience-item visual-mode-menu-item" type="button" role="menuitem" aria-label="Abrir Modo Visual">
+        <span class="top-experience-icon" aria-hidden="true">✦</span>
+        <span class="top-experience-copy">
+          <strong>Modo Visual</strong>
+          <small>Reproductor estilo edit: portada, fondo, HUD y visualizador</small>
+        </span>
+      </button>
       <button id="top-mode-jk" class="top-experience-item top-experience-item-locked" type="button" role="menuitem" aria-disabled="true" disabled title="Modo JK bloqueado">
         <span class="top-experience-icon" aria-hidden="true">🔒</span>
         <span class="top-experience-copy">
@@ -91,6 +101,9 @@
     <!-- Pantalla Completa -->
     <button id="btn-fullscreen" class="global-icon-btn" title="Pantalla Completa">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+    </button>
+    <button id="btn-account-mobile" class="global-icon-btn mobile-account-btn" type="button" title="Cuenta" aria-label="Abrir cuentas" aria-haspopup="dialog">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.25"/><circle cx="12" cy="9.6" r="3.1"/><path d="M5.9 19.2a6.6 6.6 0 0 1 12.2 0"/></svg>
     </button>
     <!-- Opciones secundarias: acceso exclusivo del Modo PC -->
     <button id="btn-pc-secondary-menu" class="global-icon-btn pc-secondary-menu-trigger" type="button" title="Opciones secundarias" aria-label="Opciones secundarias" aria-haspopup="menu" aria-expanded="false" aria-controls="top-experiences-menu">
@@ -129,7 +142,7 @@
     <div class="eq-panel hidden" id="eq-panel">
       <div class="eq-header">
         <span>Ecualizador Activo</span>
-        <button id="btn-close-eq" class="icon-btn" title="Cerrar Ecualizador">
+        <button id="btn-close-eq" class="icon-btn" data-ui-tooltip="Cerrar ecualizador" aria-label="Cerrar ecualizador">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -200,8 +213,21 @@
           </label>
 
           <label class="mobile-eq-balance">
-            <span>Balance L / R <output id="mobile-eq-balance-value">0</output></span>
-            <input id="mobile-eq-balance" type="range" min="-1" max="1" step="0.05" value="0">
+            <span class="balance-lr-title-row"><span>Balance L / R</span><output id="mobile-eq-balance-value">Centro · 0%</output></span>
+            <div class="balance-lr-control" aria-label="Balance estéreo izquierda y derecha">
+              <div class="balance-lr-side balance-lr-left" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="presentation"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="3" y="13" width="5" height="8" rx="2"/><rect x="16" y="13" width="5" height="8" rx="2"/></svg>
+                <span>L</span>
+              </div>
+              <div class="balance-lr-slider-wrap">
+                <div class="balance-lr-segment-track" aria-hidden="true"></div>
+                <input id="mobile-eq-balance" type="range" min="-1" max="1" step="0.05" value="0" aria-label="Balance de audio izquierda a derecha">
+              </div>
+              <div class="balance-lr-side balance-lr-right" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="presentation"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="3" y="13" width="5" height="8" rx="2"/><rect x="16" y="13" width="5" height="8" rx="2"/></svg>
+                <span>R</span>
+              </div>
+            </div>
           </label>
         </div>
       </div>
@@ -222,23 +248,101 @@
     <div class="eq-panel hidden" id="vm-panel">
       <div class="eq-header">
         <span>Separar Voz / Música</span>
-        <button id="btn-close-vm" class="icon-btn" title="Cerrar">
+        <button id="btn-close-vm" class="icon-btn" data-ui-tooltip="Cerrar Voz y Música" aria-label="Cerrar Voz y Música">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
       <p class="vm-hint">No es una separación perfecta (eso necesitaría inteligencia artificial): resalta o reduce lo que está centrado en la mezcla (casi siempre la voz), aplicado solo en el rango de frecuencia típico de la voz (200Hz-5kHz) para que el bajo y la batería casi no se vean afectados.</p>
-      <div class="eq-mini-toggle">
-        <span>Activar</span>
-        <label class="switch"><input type="checkbox" id="toggle-vm-enabled"><span class="slider"></span></label>
+      <div class="vm-activation-row">
+        <div class="eq-mini-toggle vm-legacy-activation">
+          <span>Activar separación</span>
+          <label class="switch"><input type="checkbox" id="toggle-vm-enabled"><span class="slider"></span></label>
+        </div>
+        <button type="button" id="btn-toggle-external-mixer" class="vm-external-toggle" aria-expanded="false" aria-controls="external-track-mixer-panel" title="Abrir pistas externas">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/></svg>
+          <span>Pistas</span>
+        </button>
       </div>
       <div class="vm-slider-row">
         <span>Voz</span>
-        <input type="range" id="input-voice-level" min="0" max="2" step="0.05" value="1">
+        <input type="range" id="input-voice-level" min="0" max="2" step="0.05" value="1" aria-label="Nivel de voz">
+        <output id="input-voice-level-value" class="vm-percent-value" for="input-voice-level">100%</output>
       </div>
       <div class="vm-slider-row">
         <span>Música</span>
-        <input type="range" id="input-music-level" min="0" max="2" step="0.05" value="1">
+        <input type="range" id="input-music-level" min="0" max="2" step="0.05" value="1" aria-label="Nivel de música">
+        <output id="input-music-level-value" class="vm-percent-value" for="input-music-level">100%</output>
       </div>
+
+      <section id="external-track-mixer-panel" class="external-track-mixer hidden" aria-hidden="true" aria-label="Mezclador de pistas externas">
+        <div class="external-mixer-heading">
+          <div><strong>Pistas externas</strong><small>Hasta cinco pistas sincronizadas por canción</small></div>
+          <button type="button" id="btn-collapse-external-mixer" class="icon-btn external-mixer-close" title="Ocultar pistas externas" aria-label="Ocultar pistas externas">×</button>
+        </div>
+        <p class="external-mixer-hint">Carga voz e instrumental y añade hasta tres pistas extra. Los archivos quedan asociados a la canción seleccionada; solo los que sueltes en estas zonas se asignarán al mezclador y no se añadirán a la biblioteca principal.</p>
+
+        <div class="external-track-slot" data-external-track-slot="voice">
+          <div class="external-track-slot-title"><span>♪ Pista de voz</span><span id="external-voice-duration" class="external-track-duration">--:--</span></div>
+          <button type="button" class="external-track-drop" data-external-track-drop="voice" aria-label="Elegir pista de voz">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 14v5h14v-5"/></svg>
+            <span id="external-voice-name">Seleccionar o arrastrar archivo de voz</span>
+          </button>
+          <input type="file" id="file-external-voice" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm" hidden>
+          <div class="external-track-actions"><button type="button" id="btn-replace-external-voice" class="text-btn">Reemplazar</button><button type="button" data-external-mute="voice" class="text-btn" aria-pressed="false">Silenciar</button><button type="button" id="btn-clear-external-voice" class="text-btn" disabled>Quitar</button></div>
+          <label class="external-track-volume"><span>Volumen de voz</span><output id="external-voice-volume-value" for="external-voice-volume">100%</output><input type="range" id="external-voice-volume" min="0" max="100" step="1" value="100" data-external-volume="voice" aria-label="Volumen de la pista de voz"></label>
+          <label class="external-track-offset"><span>Sincronización de voz</span><output id="external-voice-offset-value" for="external-voice-offset">0.00 s</output><input type="range" id="external-voice-offset" min="-5" max="5" step="0.05" value="0" data-external-offset="voice" aria-label="Desfase de la pista de voz"></label>
+        </div>
+
+        <div class="external-track-slot" data-external-track-slot="music">
+          <div class="external-track-slot-title"><span>♫ Pista instrumental</span><span id="external-music-duration" class="external-track-duration">--:--</span></div>
+          <button type="button" class="external-track-drop" data-external-track-drop="music" aria-label="Elegir pista instrumental">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <span id="external-music-name">Seleccionar o arrastrar archivo instrumental</span>
+          </button>
+          <input type="file" id="file-external-music" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm" hidden>
+          <div class="external-track-actions"><button type="button" id="btn-replace-external-music" class="text-btn">Reemplazar</button><button type="button" data-external-mute="music" class="text-btn" aria-pressed="false">Silenciar</button><button type="button" id="btn-clear-external-music" class="text-btn" disabled>Quitar</button></div>
+          <label class="external-track-volume"><span>Volumen de música</span><output id="external-music-volume-value" for="external-music-volume">100%</output><input type="range" id="external-music-volume" min="0" max="100" step="1" value="100" data-external-volume="music" aria-label="Volumen de la pista instrumental"></label>
+          <label class="external-track-offset"><span>Sincronización de música</span><output id="external-music-offset-value" for="external-music-offset">0.00 s</output><input type="range" id="external-music-offset" min="-5" max="5" step="0.05" value="0" data-external-offset="music" aria-label="Desfase de la pista instrumental"></label>
+        </div>
+
+        <div id="external-extra-tracks" class="external-extra-tracks" aria-label="Pistas adicionales">
+          <div class="external-track-slot hidden" data-external-track-slot="extra1" id="external-slot-extra1">
+            <div class="external-track-slot-title"><span>♫ Pista extra 1</span><span id="external-extra1-duration" class="external-track-duration">--:--</span></div>
+            <button type="button" class="external-track-drop" data-external-track-drop="extra1" aria-label="Elegir pista extra 1"><span id="external-extra1-name">Seleccionar o arrastrar archivo</span></button>
+            <input type="file" id="file-external-extra1" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm" hidden>
+            <div class="external-track-actions"><button type="button" class="text-btn" data-external-replace="extra1">Reemplazar</button><button type="button" class="text-btn" data-external-mute="extra1" aria-pressed="false">Silenciar</button><button type="button" class="text-btn" data-external-clear="extra1">Quitar</button></div>
+            <label class="external-track-volume"><span>Volumen pista extra 1</span><output id="external-extra1-volume-value">100%</output><input type="range" min="0" max="100" step="1" value="100" data-external-volume="extra1" aria-label="Volumen de pista extra 1"></label>
+            <label class="external-track-offset"><span>Sincronización</span><output id="external-extra1-offset-value">0.00 s</output><input type="range" min="-5" max="5" step="0.05" value="0" data-external-offset="extra1" aria-label="Desfase de pista extra 1"></label>
+          </div>
+          <div class="external-track-slot hidden" data-external-track-slot="extra2" id="external-slot-extra2">
+            <div class="external-track-slot-title"><span>♫ Pista extra 2</span><span id="external-extra2-duration" class="external-track-duration">--:--</span></div>
+            <button type="button" class="external-track-drop" data-external-track-drop="extra2" aria-label="Elegir pista extra 2"><span id="external-extra2-name">Seleccionar o arrastrar archivo</span></button>
+            <input type="file" id="file-external-extra2" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm" hidden>
+            <div class="external-track-actions"><button type="button" class="text-btn" data-external-replace="extra2">Reemplazar</button><button type="button" class="text-btn" data-external-mute="extra2" aria-pressed="false">Silenciar</button><button type="button" class="text-btn" data-external-clear="extra2">Quitar</button></div>
+            <label class="external-track-volume"><span>Volumen pista extra 2</span><output id="external-extra2-volume-value">100%</output><input type="range" min="0" max="100" step="1" value="100" data-external-volume="extra2" aria-label="Volumen de pista extra 2"></label>
+            <label class="external-track-offset"><span>Sincronización</span><output id="external-extra2-offset-value">0.00 s</output><input type="range" min="-5" max="5" step="0.05" value="0" data-external-offset="extra2" aria-label="Desfase de pista extra 2"></label>
+          </div>
+          <div class="external-track-slot hidden" data-external-track-slot="extra3" id="external-slot-extra3">
+            <div class="external-track-slot-title"><span>♫ Pista extra 3</span><span id="external-extra3-duration" class="external-track-duration">--:--</span></div>
+            <button type="button" class="external-track-drop" data-external-track-drop="extra3" aria-label="Elegir pista extra 3"><span id="external-extra3-name">Seleccionar o arrastrar archivo</span></button>
+            <input type="file" id="file-external-extra3" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a,.aac,.opus,.webm" hidden>
+            <div class="external-track-actions"><button type="button" class="text-btn" data-external-replace="extra3">Reemplazar</button><button type="button" class="text-btn" data-external-mute="extra3" aria-pressed="false">Silenciar</button><button type="button" class="text-btn" data-external-clear="extra3">Quitar</button></div>
+            <label class="external-track-volume"><span>Volumen pista extra 3</span><output id="external-extra3-volume-value">100%</output><input type="range" min="0" max="100" step="1" value="100" data-external-volume="extra3" aria-label="Volumen de pista extra 3"></label>
+            <label class="external-track-offset"><span>Sincronización</span><output id="external-extra3-offset-value">0.00 s</output><input type="range" min="-5" max="5" step="0.05" value="0" data-external-offset="extra3" aria-label="Desfase de pista extra 3"></label>
+          </div>
+        </div>
+        <div class="external-mixer-management-row">
+          <button type="button" id="btn-add-external-track" class="text-btn">+ Agregar pista extra (0/3)</button>
+          <label class="external-eq-profile-label"><span>Ecualizador de la mezcla</span><select id="external-eq-profile" aria-label="Perfil del ecualizador para esta canción"><option value="current">EQ actual</option><option value="bass">Graves</option><option value="treble">Agudos</option><option value="vocal">Voz</option><option value="reset">Flat</option></select></label>
+        </div>
+
+        <div class="external-mixer-footer">
+          <div class="eq-mini-toggle"><span>Activar pistas fusionadas</span><label class="switch"><input type="checkbox" id="toggle-external-mix" disabled><span class="slider"></span></label></div>
+          <span id="external-mixer-status" class="external-mixer-status" role="status">Carga ambas pistas para activar la mezcla.</span>
+        </div>
+        <div id="external-mix-save-state" class="external-mix-save-state" role="status" aria-live="polite"></div>
+        <div class="external-mixer-note">Cada canción y perfil conserva sus propias pistas, volúmenes, desfases y perfil de EQ en IndexedDB. Los valores negativos adelantan una pista y los positivos la retrasan. Si falta un archivo o el navegador no tiene espacio para guardarlo, Glasstrack avisará en vez de mezclar pistas de otra canción.</div>
+      </section>
     </div>
 
     <!-- REPRODUCTOR PRINCIPAL -->
@@ -246,19 +350,23 @@
       <div class="player-bg-fluid" id="player-bg-fluid"></div>
       
       <div class="top-bar">
-        <button id="btn-eq-toggle" class="text-btn">EQ</button>
-        <button id="btn-lyrics-toggle" class="text-btn">Letras</button>
-        <button id="btn-vm-toggle" class="text-btn">Voz/Música</button>
-        <span id="sleep-timer-badge" class="timer-badge hidden">00:00</span>
-        <button id="btn-close-mobile-player" class="icon-btn mobile-only-btn" title="Cerrar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <button id="btn-eq-toggle" class="text-btn player-tool-btn" type="button" data-ui-tooltip="Ecualizador" aria-label="Abrir ecualizador">
+          <svg class="player-tool-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></svg>
         </button>
+        <button id="btn-lyrics-toggle" class="text-btn player-tool-btn" type="button" data-ui-tooltip="Letras" aria-label="Abrir letras">
+          <svg class="player-tool-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V4.8A1.8 1.8 0 0 1 5.8 3H20v16H5.8A1.8 1.8 0 0 0 4 20.8"/><path d="M8 7h8M8 10.5h8M8 14h5"/><path d="m15.8 15.6 3.9-3.9 1.5 1.5-3.9 3.9-2 .5z"/></svg>
+        </button>
+        <button id="btn-vm-toggle" class="text-btn player-tool-btn" type="button" data-ui-tooltip="Voz y música" aria-label="Abrir controles de voz y música">
+          <svg class="player-tool-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5v1.2a6.5 6.5 0 0 0 13 0v-1.2M12 18.2v3.3M8.5 21.5h7"/><path d="M3 6v3M21 6v3"/></svg>
+        </button>
+        <span id="sleep-timer-badge" class="timer-badge hidden">00:00</span>
       </div>
 
       <div class="cover-container" id="cover-container">
         <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80" alt="Carátula" id="cover">
       </div>
       <canvas id="player-visualizer" class="player-visualizer hidden"></canvas>
+      <div id="youtube-player-host" class="youtube-player-host" aria-hidden="true"></div>
 
       <div class="song-info">
         <h2 id="title">Sin canción cargada</h2>
@@ -269,6 +377,10 @@
 
       <div class="progress-container" id="progress-container">
         <div class="progress-bar" id="progress"></div>
+        <div id="snake-progress-layer" class="snake-progress-layer" aria-hidden="true">
+          <canvas id="snake-progress-canvas" class="snake-progress-canvas"></canvas>
+          <img id="snake-progress-chibi" class="snake-progress-chibi" alt="" draggable="false" hidden>
+        </div>
       </div>
       <div class="time-stamps">
         <span id="current-time">0:00</span>
@@ -276,19 +388,19 @@
       </div>
 
       <div class="controls">
-        <button id="shuffle" class="icon-btn" title="Aleatorio">
+        <button id="shuffle" class="icon-btn" data-ui-tooltip="Aleatorio" aria-label="Aleatorio">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
         </button>
-        <button id="prev" class="icon-btn" title="Anterior">
+        <button id="prev" class="icon-btn" data-ui-tooltip="Anterior" aria-label="Anterior">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
-        <button id="play" class="btn-play" title="Reproducir / Pausa">
+        <button id="play" class="btn-play" data-ui-tooltip="Reproducir / Pausa" aria-label="Reproducir / Pausa">
           <svg id="play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         </button>
-        <button id="next" class="icon-btn" title="Siguiente">
+        <button id="next" class="icon-btn" data-ui-tooltip="Siguiente" aria-label="Siguiente">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
-        <button id="loop" class="icon-btn" title="Repetir">
+        <button id="loop" class="icon-btn" data-ui-tooltip="Repetir" aria-label="Repetir">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
         </button>
         <button id="btn-fav" class="icon-btn fav-btn" title="Me gusta">
@@ -301,7 +413,7 @@
 
       <div class="volume-container">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
-        <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="1" draggable="false" aria-label="Volumen">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
       </div>
 
@@ -310,7 +422,7 @@
           <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         </button>
         <button id="mobile-player-lyrics" type="button" class="mobile-player-action mobile-player-action-pill" title="Letras" aria-label="Letras">
-          <span class="mobile-player-action-icon">♫</span>
+          <svg class="mobile-player-action-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V4.8A1.8 1.8 0 0 1 5.8 3H20v16H5.8A1.8 1.8 0 0 0 4 20.8"/><path d="M8 7h8M8 10.5h8M8 14h5"/><path d="m15.8 15.6 3.9-3.9 1.5 1.5-3.9 3.9-2 .5z"/></svg>
           <span>Letras</span>
         </button>
         <button id="mobile-player-vm" type="button" class="mobile-player-action" title="Voz / Música" aria-label="Voz / Música">
@@ -364,12 +476,200 @@
 
   </div>
 
-  <!-- BOTÓN FLOTANTE (+) -->
-  <div class="floating-upload-btn" id="drop-zone" title="Cargar canciones MP3">
-    <label for="file-input" class="floating-label">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <!-- AÑADIR MÚSICA POR URL / YOUTUBE -->
+  <div class="modal-overlay hidden" id="modal-add-url">
+    <div class="modal-window url-import-window">
+      <div class="modal-header">
+        <h3>Añadir por URL / YouTube</h3>
+        <button id="btn-close-url-modal" class="icon-btn" type="button" title="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="url-import-content">
+        <div class="btn-group url-mode-tabs">
+          <button type="button" class="url-mode-tab active" data-mode="link">Pegar enlace</button>
+          <button type="button" class="url-mode-tab" data-mode="search">Buscar en YouTube</button>
+        </div>
+
+        <div class="url-mode-panel" id="url-mode-link" data-mode-panel="link">
+          <label class="setting-item vertical">
+            <span class="setting-title">Enlace</span>
+            <input id="input-song-url" class="text-input" type="url" placeholder="https://... o enlace de YouTube">
+          </label>
+          <label class="setting-item vertical">
+            <span class="setting-title">Título</span>
+            <input id="input-song-url-title" class="text-input" type="text" placeholder="Título opcional">
+          </label>
+          <label class="setting-item vertical">
+            <span class="setting-title">Artista</span>
+            <input id="input-song-url-artist" class="text-input" type="text" placeholder="Artista opcional">
+          </label>
+          <p class="setting-desc">Las URLs de audio directas se reproducen como audio web. Los enlaces de YouTube se guardan como fuente YouTube y se reproducen mediante su reproductor oficial cuando esté disponible.</p>
+          <div class="url-import-actions">
+            <button id="btn-add-song-url" class="menu-opt-btn primary-opt" type="button">Guardar canción</button>
+          </div>
+        </div>
+
+        <div class="url-mode-panel hidden" id="url-mode-search" data-mode-panel="search">
+          <label class="setting-item vertical">
+            <span class="setting-title">Buscar en YouTube</span>
+            <input id="input-youtube-search" class="text-input" type="text" placeholder="Nombre de la canción o artista">
+          </label>
+          <div class="url-import-actions">
+            <button id="btn-youtube-search-open" class="menu-opt-btn" type="button">Buscar en YouTube ↗</button>
+          </div>
+          <p class="setting-desc">Se abrirá YouTube en una pestaña nueva. Copia el enlace del video que quieras y pégalo aquí para guardarlo.</p>
+          <label class="setting-item vertical">
+            <span class="setting-title">Enlace del video elegido</span>
+            <input id="input-youtube-search-url" class="text-input" type="url" placeholder="Pega aquí el enlace del video">
+          </label>
+          <div class="url-import-actions">
+            <button id="btn-add-song-url-search" class="menu-opt-btn primary-opt" type="button">Guardar canción</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTÓN FLOTANTE (+) Y MENÚ DE AÑADIR -->
+  <div class="add-menu-popup" id="add-menu-popup">
+    <label for="file-input" class="add-menu-option" id="opt-add-local">
+      <span class="add-menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+      <span>Música local</span>
     </label>
+    <button type="button" class="add-menu-option add-menu-option-locked" id="opt-add-youtube" aria-disabled="true" disabled title="Función bloqueada temporalmente">
+      <span class="add-menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg></span>
+      <span>URL de YouTube</span>
+      <span class="add-menu-lock" aria-label="Bloqueado">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/><path d="M8 10.5V7.2a4 4 0 0 1 8 0v3.3"/></svg>
+      </span>
+    </button>
+  </div>
+
+  <div class="floating-upload-btn" id="drop-zone" title="Añadir música">
+    <button type="button" class="floating-label" id="btn-add-menu-toggle" aria-label="Añadir música" aria-haspopup="true" aria-expanded="false">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
     <input type="file" id="file-input" accept="audio/mp3, audio/*" multiple hidden>
+  </div>
+
+  <!-- CUENTA / PERFIL LOCAL V2 -->
+  <div class="modal-overlay" id="modal-account">
+    <div class="modal-window account-window">
+      <div class="modal-header account-modal-header">
+        <div>
+          <h3>Cuenta</h3>
+          <p class="account-modal-subtitle" id="account-step-indicator">Sesión local</p>
+        </div>
+        <button id="btn-close-account" class="icon-btn" type="button" title="Cerrar" aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+
+      <!-- PANEL NORMAL: solo aparece después de que la cuenta ya está creada -->
+      <div class="account-dashboard hidden" id="account-dashboard">
+        <div class="account-dashboard-card">
+          <div class="account-dashboard-avatar" id="account-dashboard-avatar" aria-hidden="true">🎧</div>
+          <div class="account-dashboard-copy">
+            <span class="account-welcome-kicker">SESIÓN ACTIVA</span>
+            <h4 id="account-dashboard-name">Invitado</h4>
+            <p id="account-dashboard-email">Sin correo</p>
+            <small id="account-dashboard-music">0 canciones en esta cuenta</small>
+          </div>
+          <button id="btn-account-edit" class="account-pencil-btn" type="button" title="Editar cuenta" aria-label="Editar cuenta">✎</button>
+        </div>
+        <div class="account-session-note">Tu sesión se guarda en este dispositivo y Glasstrack vuelve a abrir con esta cuenta al iniciar.</div>
+        <div class="account-dashboard-actions">
+          <button id="btn-account-switch" class="menu-opt-btn" type="button">Cambiar cuenta</button>
+          <button id="btn-account-logout" class="menu-opt-btn account-danger-btn" type="button">Cerrar sesión</button>
+        </div>
+      </div>
+
+      <!-- DESBLOQUEO: editar o cambiar de cuenta exige contraseña -->
+      <div class="account-unlock-panel hidden" id="account-unlock-panel">
+        <div class="account-security-icon" aria-hidden="true">🔒</div>
+        <h4 id="account-unlock-title">Editar cuenta</h4>
+        <p id="account-unlock-text">Primero confirma tu contraseña actual.</p>
+        <label class="setting-item vertical">
+          <span class="setting-title">Contraseña</span>
+          <input id="input-account-unlock" class="text-input" type="password" placeholder="Contraseña de la cuenta" autocomplete="current-password">
+        </label>
+        <p class="account-inline-status" id="account-unlock-msg" aria-live="polite"></p>
+        <div class="account-unlock-actions">
+          <button id="btn-account-unlock" class="menu-opt-btn primary-opt" type="button">Continuar</button>
+        </div>
+      </div>
+
+      <!-- EDITAR PERFIL -->
+      <div class="account-edit-panel hidden" id="account-edit-panel">
+        <div class="account-step-heading">
+          <span class="account-step-kicker">EDITAR PERFIL</span>
+          <h4>Datos de la cuenta</h4>
+          <p>Para cambiar la contraseña debes haber confirmado primero la contraseña anterior.</p>
+        </div>
+        <label class="setting-item vertical account-field"><span class="setting-title">Nombre</span><input id="account-edit-name" class="text-input" type="text" maxlength="24" autocomplete="nickname"></label>
+        <label class="setting-item vertical account-field"><span class="setting-title">Correo</span><input id="account-edit-email" class="text-input" type="email" autocomplete="email"></label>
+        <label class="setting-item vertical account-field"><span class="setting-title">Nueva contraseña <small>(opcional)</small></span><input id="account-new-password" class="text-input" type="password" placeholder="Deja vacío para conservarla" autocomplete="new-password"></label>
+        <label class="setting-item vertical account-field"><span class="setting-title">Repetir nueva contraseña</span><input id="account-new-password-confirm" class="text-input" type="password" autocomplete="new-password"></label>
+        <div class="account-password-meter"><div class="account-password-track"><span id="account-password-strength-fill"></span></div><span id="account-password-strength">Mínimo 8 caracteres</span></div>
+        <div class="account-edit-bottom"><button id="btn-account-edit-cancel" class="menu-opt-btn" type="button">Cancelar</button><button id="btn-account-edit-save" class="menu-opt-btn primary-opt" type="button">Guardar cambios</button></div>
+      </div>
+
+      <!-- CAMBIO DE CUENTA -->
+      <div class="account-switch-panel hidden" id="account-switch-panel">
+        <div class="account-step-heading">
+          <span class="account-step-kicker">CUENTAS</span>
+          <h4>Cambiar de cuenta</h4>
+          <p>Para entrar a una cuenta guardada debes escribir su contraseña. La biblioteca de cada cuenta permanece separada.</p>
+        </div>
+        <div class="account-switch-list" id="account-switch-list"></div>
+        <div class="account-switch-actions">
+          <button id="btn-account-switch-guest" class="menu-opt-btn" type="button">Entrar como Invitado</button>
+          <button id="btn-account-add" class="menu-opt-btn primary-opt" type="button">+ Agregar cuenta</button>
+        </div>
+      </div>
+
+      <!-- ASISTENTE: SOLO EN LA CREACIÓN DE UNA CUENTA NUEVA -->
+      <div class="account-wizard hidden" id="account-wizard">
+        <div class="account-progress" aria-hidden="true">
+          <span class="account-progress-dot active" data-progress-step="1"></span><span class="account-progress-line"></span>
+          <span class="account-progress-dot" data-progress-step="2"></span><span class="account-progress-line"></span>
+          <span class="account-progress-dot" data-progress-step="3"></span><span class="account-progress-line"></span>
+          <span class="account-progress-dot" data-progress-step="4"></span>
+        </div>
+        <section class="account-step active" data-account-step="1" id="account-step-1">
+          <div class="account-welcome-card"><span class="account-welcome-kicker">BIENVENIDO A GLASSTRACK PRO</span><h4 id="account-welcome-name">Hola, Invitado</h4><p id="account-welcome-message">Vamos a preparar tu perfil por primera vez.</p></div>
+          <label class="setting-item vertical account-field"><span class="setting-title">Nombre de usuario</span><input id="input-account-name" class="text-input" type="text" maxlength="24" placeholder="¿Cómo te llamas?" autocomplete="nickname"></label>
+        </section>
+        <section class="account-step" data-account-step="2" id="account-step-2">
+          <div class="account-step-heading"><span class="account-step-kicker">PASO 2</span><h4>Elige tu icono</h4><p>Selecciona un icono o usa una foto propia.</p></div>
+          <div class="account-avatar-row account-avatar-row-large"><span class="account-avatar" id="account-avatar-preview" aria-hidden="true">🎧</span><div class="account-avatar-copy"><strong id="account-display-name">Invitado</strong><small id="account-display-email">Sin correo guardado</small></div></div>
+          <div class="setting-item vertical"><span class="setting-title">Icono de usuario</span><div class="avatar-picker account-avatar-picker" id="avatar-picker" role="radiogroup" aria-label="Icono de usuario">
+            <button type="button" class="avatar-option" data-avatar="🎧" role="radio">🎧</button><button type="button" class="avatar-option" data-avatar="🎵" role="radio">🎵</button><button type="button" class="avatar-option" data-avatar="🎤" role="radio">🎤</button><button type="button" class="avatar-option" data-avatar="🎸" role="radio">🎸</button><button type="button" class="avatar-option" data-avatar="🌙" role="radio">🌙</button><button type="button" class="avatar-option" data-avatar="⭐" role="radio">⭐</button><button type="button" class="avatar-option" data-avatar="🔥" role="radio">🔥</button><button type="button" class="avatar-option" data-avatar="🐱" role="radio">🐱</button>
+            <button type="button" class="avatar-option avatar-option-upload" id="avatar-upload-btn" title="Usar mi propia foto" aria-label="Usar mi propia foto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div><input type="file" id="avatar-upload-input" accept="image/*" hidden></div>
+        </section>
+        <section class="account-step" data-account-step="3" id="account-step-3">
+          <div class="account-step-heading"><span class="account-step-kicker">PASO 3</span><h4>Datos de acceso</h4><p>Puedes usar tu correo Gmail como identificador de esta cuenta local.</p></div>
+          <label class="setting-item vertical account-field"><span class="setting-title">Correo de Google</span><input id="input-account-email" class="text-input" type="email" placeholder="tu.nombre@gmail.com" autocomplete="email"></label>
+          <label class="setting-item vertical account-field"><span class="setting-title">Contraseña</span><input id="input-account-password" class="text-input" type="password" placeholder="Crea una contraseña" autocomplete="new-password"></label>
+          <label class="setting-item vertical account-field"><span class="setting-title">Repetir contraseña</span><input id="input-account-password-confirm" class="text-input" type="password" placeholder="Repite la contraseña" autocomplete="new-password"></label>
+        </section>
+        <section class="account-step" data-account-step="4" id="account-step-4">
+          <div class="account-final-card"><div class="account-final-avatar" id="account-final-avatar" aria-hidden="true">🎧</div><div><span class="account-welcome-kicker">PERFIL LISTO</span><h4 id="account-final-name">Hola, Invitado</h4><p id="account-final-email">Sin correo guardado</p></div></div>
+          <div class="account-security-card"><div class="account-security-icon" aria-hidden="true">🛡️</div><div class="account-security-copy"><strong>Protección de cuenta activa</strong><span>La contraseña se guarda solo como una huella local. Se pedirá al editar o cambiar de cuenta.</span></div><label class="switch"><input type="checkbox" id="toggle-account-protection" checked><span class="slider"></span></label></div>
+          <p class="account-status-msg" id="account-status-msg" aria-live="polite">Esta pantalla solo aparece al crear la cuenta.</p>
+        </section>
+      </div>
+      <div class="account-wizard-nav hidden" id="account-wizard-nav"><button id="btn-account-back" class="menu-opt-btn" type="button">Atrás</button><button id="btn-account-next" class="menu-opt-btn primary-opt" type="button">Continuar</button><button id="btn-account-save" class="menu-opt-btn primary-opt hidden" type="button">Crear cuenta</button></div>
+    </div>
+  </div>
+
+  <!-- REPRODUCTOR DE YOUTUBE -->
+  <div class="modal-overlay" id="modal-youtube-player">
+    <div class="modal-window youtube-player-window">
+      <div class="modal-header">
+        <h3 id="youtube-player-title">YouTube</h3>
+        <button id="btn-close-youtube-player" class="icon-btn" type="button" title="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="youtube-embed-wrap" id="youtube-embed-wrap"></div>
+      <p class="setting-desc" id="youtube-player-artist"></p>
+    </div>
   </div>
 
   <!-- VENTANA DE AJUSTES -->
@@ -377,7 +677,7 @@
     <div class="modal-window settings-window">
       <div class="modal-header">
         <h3 id="settings-title">Ajustes generales</h3>
-        <button id="btn-close-settings" class="icon-btn" title="Cerrar">
+        <button id="btn-close-settings" class="icon-btn" data-ui-tooltip="Cerrar ajustes" aria-label="Cerrar ajustes">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -442,6 +742,17 @@
             <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
 
+
+          <div class="setting-card-item" data-target="sub-visual-style-settings">
+            <div class="setting-card-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+            </div>
+            <div class="setting-card-content">
+              <span class="setting-card-title">Personalizar Modo Estilo</span>
+              <span class="setting-card-desc">Partículas, ondas, aro, beat, halo y efectos visuales</span>
+            </div>
+            <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
 
           <div class="setting-card-item" data-target="sub-performance">
             <div class="setting-card-icon">
@@ -515,7 +826,7 @@
             </div>
             <div class="setting-card-content">
               <span class="setting-card-title">Presets de Modo</span>
-              <span class="setting-card-desc">Juego, Noche o Estudio</span>
+              <span class="setting-card-desc">Juego o Noche</span>
             </div>
             <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
@@ -606,7 +917,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver
           </button>
           <div class="sub-content">
-            <button id="btn-open-visual-editor" class="menu-opt-btn primary-opt"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Abrir Editor Visual de Reproductor</button>
+            
 
             <div class="setting-item">
               <div class="setting-info">
@@ -665,18 +976,42 @@
             </div>
 
             <div class="setting-item vertical">
-              <span class="setting-title">Color de Acento Manual</span>
-              <div class="color-picker-group">
-                <button class="color-dot active" data-color="#ffffff" style="background:#ffffff;"></button>
-                <button class="color-dot" data-color="#3b82f6" style="background:#3b82f6;"></button>
-                <button class="color-dot" data-color="#22c55e" style="background:#22c55e;"></button>
-                <button class="color-dot" data-color="#ec4899" style="background:#ec4899;"></button>
-                <button class="color-dot" data-color="#f97316" style="background:#f97316;"></button>
-                <label class="color-dot custom-color-btn" title="Personalizado">
+              <span class="setting-title">Cambiar color de interfaz</span>
+              <span class="setting-desc">Elige uno de los 3 colores o abre Personalizado para usar cualquier color.</span>
+              <div class="color-picker-group interface-color-presets">
+                <button class="color-dot active" data-color="#ffffff" aria-label="Blanco" title="Blanco" style="background:#ffffff;"></button>
+                <button class="color-dot" data-color="#3b82f6" aria-label="Azul" title="Azul" style="background:#3b82f6;"></button>
+                <button class="color-dot" data-color="#a855f7" aria-label="Morado" title="Morado" style="background:#a855f7;"></button>
+                <label class="color-dot custom-color-btn" title="Personalizado" aria-label="Color personalizado">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                   <input type="color" id="input-custom-color" hidden>
                 </label>
               </div>
+            </div>
+
+            <div class="setting-item vertical balance-lr-color-setting">
+              <span class="setting-title">Balance L/R — Colores dinámicos</span>
+              <span class="setting-desc">Conserva los 9 segmentos y los audífonos L/R. El degradado sigue el color principal de la interfaz; el modo uniforme utiliza ese mismo color en toda la barra.</span>
+              <select id="balance-lr-color-mode" class="custom-select" aria-label="Color de la barra de balance">
+                <option value="gradient">Degradado dinámico del tema</option>
+                <option value="interface">Degradado suave de la interfaz</option>
+              </select>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Iconos y texto en negro</span>
+                <span class="setting-desc">Actívalo si el color de interfaz elegido es muy claro y los iconos se ven poco visibles.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="toggle-force-black-icons"><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Barra serpiente animada</span>
+                <span class="setting-desc">Reemplaza visualmente la línea recta por una barra fluida que avanza con la canción.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="toggle-snake-progress"><span class="slider"></span></label>
             </div>
 
             <div class="setting-item vertical">
@@ -710,7 +1045,198 @@
                 <option value="'Cinzel', serif">Cinzel (Clásica & Dramática)</option>
                 <option value="'Fira Code', monospace">Fira Code (Hacker Console)</option>
                 <option value="'Oswald', sans-serif">Oswald (Compacta de Cartel)</option>
+                <option value="'Lato', sans-serif">Lato (Limpia y legible)</option>
+                <option value="'Nunito', sans-serif">Nunito (Redondeada)</option>
+                <option value="'Raleway', sans-serif">Raleway (Elegante)</option>
+                <option value="'Rubik', sans-serif">Rubik (Geométrica)</option>
+                <option value="'Bebas Neue', sans-serif">Bebas Neue (Condensada)</option>
+                <option value="'Playfair Display', serif">Playfair Display (Editorial)</option>
+                <option value="'Press Start 2P', cursive">Press Start 2P (Pixel retro)</option>
               </select>
+
+              <div class="b32-font-preview" aria-live="polite">Aa — Glasstrack Pro</div>
+
+              <label class="b32-setting-row">
+                <span>Tamaño general</span>
+                <span class="range-with-value b32-range">
+                  <input type="range" id="b32-font-size-range" min="80" max="125" step="5" value="100">
+                  <span id="b32-font-size-value" class="setting-value-badge">100%</span>
+                </span>
+              </label>
+
+              <div class="b32-setting-row b32-weight-row">
+                <span>Peso</span>
+                <div class="btn-group" id="b32-font-weight-buttons" role="group" aria-label="Peso de tipografía">
+                  <button type="button" class="b32-choice-btn active" data-font-weight="400">Normal</button>
+                  <button type="button" class="b32-choice-btn" data-font-weight="500">Medio</button>
+                  <button type="button" class="b32-choice-btn" data-font-weight="600">Seminegrita</button>
+                  <button type="button" class="b32-choice-btn" data-font-weight="700">Negrita</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="b31-section-label">Personalización avanzada</div>
+
+            <!-- B31.1 PERSONALIZAR APARIENCIA -->
+            <div class="setting-item vertical b31-custom-card">
+              <div class="setting-info">
+                <span class="setting-title">Personalizar apariencia</span>
+                <span class="setting-desc">Controla el cristal sin tocar la apariencia actual hasta que cambies una de estas opciones.</span>
+              </div>
+
+              <label class="b31-control-row">
+                <span>Desenfoque</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-glass-blur" min="0" max="24" step="1" value="12">
+                  <span id="glass-blur-val" class="setting-value-badge">12px</span>
+                </div>
+              </label>
+
+              <label class="b31-control-row">
+                <span>Intensidad de borde</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-glass-border" min="0" max="0.30" step="0.01" value="0.08">
+                  <span id="glass-border-val" class="setting-value-badge">8%</span>
+                </div>
+              </label>
+
+              <label class="b31-control-row">
+                <span>Intensidad de sombra</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-glass-shadow" min="0" max="1" step="0.05" value="0.40">
+                  <span id="glass-shadow-val" class="setting-value-badge">40%</span>
+                </div>
+              </label>
+
+              <label class="b31-control-row">
+                <span>Redondez de ventanas</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-glass-radius" min="8" max="32" step="1" value="20">
+                  <span id="glass-radius-val" class="setting-value-badge">20px</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- B31.2 FONDOS AVANZADOS -->
+            <div class="setting-item vertical b31-custom-card">
+              <div class="setting-info">
+                <span class="setting-title">Fondo avanzado</span>
+                <span class="setting-desc">Puedes conservar el fondo actual, usar un color, un gradiente o hacer que el fondo reaccione a la carátula.</span>
+              </div>
+
+              <label class="b31-control-column">
+                <span>Tipo de fondo</span>
+                <select id="select-bg-mode" class="custom-select">
+                  <option value="stored">Fondo actual / subido</option>
+                  <option value="solid">Color sólido</option>
+                  <option value="gradient">Gradiente</option>
+                  <option value="dynamic">Dinámico (carátula)</option>
+                </select>
+              </label>
+
+              <div class="b31-bg-grid">
+                <label class="b31-color-control">
+                  <span>Color sólido</span>
+                  <input type="color" id="input-bg-solid-color" value="#0a0a0f">
+                </label>
+                <label class="b31-color-control">
+                  <span>Gradiente A</span>
+                  <input type="color" id="input-bg-gradient-a" value="#0a0a0f">
+                </label>
+                <label class="b31-color-control">
+                  <span>Gradiente B</span>
+                  <input type="color" id="input-bg-gradient-b" value="#12131c">
+                </label>
+                <label class="b31-color-control">
+                  <span>Dirección</span>
+                  <select id="select-bg-gradient-direction" class="custom-select">
+                    <option value="135deg">↘ Diagonal</option>
+                    <option value="90deg">↓ Vertical</option>
+                    <option value="0deg">→ Horizontal</option>
+                    <option value="225deg">↙ Diagonal inversa</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="b31-control-row">
+                <span>Oscurecimiento</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-bg-darken" min="0" max="80" step="5" value="60">
+                  <span id="bg-darken-val" class="setting-value-badge">60%</span>
+                </div>
+              </label>
+
+              <label class="b31-control-row">
+                <span>Desenfoque del fondo</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-bg-blur" min="0" max="30" step="1" value="0">
+                  <span id="bg-blur-val" class="setting-value-badge">0px</span>
+                </div>
+              </label>
+
+              <label class="b31-control-row">
+                <span>Saturación del fondo</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-bg-saturation" min="50" max="160" step="5" value="100">
+                  <span id="bg-saturation-val" class="setting-value-badge">100%</span>
+                </div>
+              </label>
+
+              <div class="b31-bg-note">Imagen y video usan el fondo que ya estaba guardado en Glasstrack. Cambiar el tipo solo entra en efecto cuando tú lo seleccionas.</div>
+            </div>
+
+            <!-- B31.3 DISEÑO DEL REPRODUCTOR -->
+            <div class="setting-item vertical b31-custom-card">
+              <div class="setting-info">
+                <span class="setting-title">Personalizar reproductor</span>
+                <span class="setting-desc">Muestra u oculta partes del reproductor principal y personaliza la carátula.</span>
+              </div>
+
+              <div class="b31-player-options">
+                <label class="b31-check-row"><span>Herramientas superiores</span><input type="checkbox" id="toggle-player-top-tools" checked></label>
+                <label class="b31-check-row"><span>Portada</span><input type="checkbox" id="toggle-player-cover" checked></label>
+                <label class="b31-check-row"><span>Visualizador</span><input type="checkbox" id="toggle-player-visualizer" checked></label>
+                <label class="b31-check-row"><span>Título</span><input type="checkbox" id="toggle-player-title" checked></label>
+                <label class="b31-check-row"><span>Artista</span><input type="checkbox" id="toggle-player-artist" checked></label>
+                <label class="b31-check-row"><span>Barra de tiempo</span><input type="checkbox" id="toggle-player-progress" checked></label>
+                <label class="b31-check-row"><span>Tiempos</span><input type="checkbox" id="toggle-player-times" checked></label>
+                <label class="b31-check-row"><span>Controles principales</span><input type="checkbox" id="toggle-player-controls" checked></label>
+                <label class="b31-check-row"><span>Volumen</span><input type="checkbox" id="toggle-player-volume" checked></label>
+              </div>
+
+              <div class="b31-subheading">Carátula</div>
+              <label class="b31-control-row">
+                <span>Redondez</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-player-cover-radius" min="0" max="50" step="1" value="50">
+                  <span id="player-cover-radius-val" class="setting-value-badge">50%</span>
+                </div>
+              </label>
+
+              <label class="b31-control-column">
+                <span>Animación</span>
+                <select id="select-player-cover-animation" class="custom-select">
+                  <option value="rotate">Girar</option>
+                  <option value="breathe">Respirar</option>
+                  <option value="pulse">Pulso suave</option>
+                  <option value="quick-pulse">Pulso rápido</option>
+                  <option value="gradient-pulse">Pulso gradiente</option>
+                  <option value="none">Sin animación</option>
+                </select>
+              </label>
+
+              <label class="b31-control-row">
+                <span id="b31-cover-intensity-label">Intensidad de animación</span>
+                <div class="range-with-value b31-range">
+                  <input type="range" id="input-player-cover-intensity" min="0" max="100" step="5" value="100">
+                  <span id="player-cover-intensity-val" class="setting-value-badge">100%</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="b32-advanced-reset-wrap">
+              <button id="btn-reset-advanced-personalization" class="menu-opt-btn b32-reset-advanced" type="button">Restablecer opciones avanzadas</button>
+              <span class="setting-desc b32-reset-hint">Devuelve la personalización avanzada de B31 a la apariencia normal sin borrar cuentas, canciones ni letras.</span>
             </div>
           </div>
         </div>
@@ -762,20 +1288,22 @@
               </label>
             </div>
 
-            <div class="setting-item vertical">
-              <span class="setting-title">Balance L / R</span>
-              <input type="range" id="input-audio-balance" min="-1" max="1" step="0.05" value="0">
-            </div>
-
-            <div class="setting-item">
-              <div class="setting-info">
-                <span class="setting-title">Visualizador de Audio</span>
-                <span class="setting-desc">Muestra un espectro de frecuencias animado sobre el reproductor</span>
+            <div class="setting-item vertical balance-lr-setting">
+              <span class="setting-title balance-lr-title-row"><span>Balance L / R</span><output id="audio-balance-value">Centro · 0%</output></span>
+              <div class="balance-lr-control" aria-label="Balance estéreo izquierda y derecha">
+                <div class="balance-lr-side balance-lr-left" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="presentation"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="3" y="13" width="5" height="8" rx="2"/><rect x="16" y="13" width="5" height="8" rx="2"/></svg>
+                  <span>L</span>
+                </div>
+                <div class="balance-lr-slider-wrap">
+                  <div class="balance-lr-segment-track" aria-hidden="true"></div>
+                  <input type="range" id="input-audio-balance" min="-1" max="1" step="0.05" value="0" aria-label="Balance de audio izquierda a derecha">
+                </div>
+                <div class="balance-lr-side balance-lr-right" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="presentation"><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="3" y="13" width="5" height="8" rx="2"/><rect x="16" y="13" width="5" height="8" rx="2"/></svg>
+                  <span>R</span>
+                </div>
               </div>
-              <label class="switch">
-                <input type="checkbox" id="toggle-audio-visualizer">
-                <span class="slider"></span>
-              </label>
             </div>
 
             <div class="setting-item">
@@ -892,29 +1420,247 @@
                 <span class="slider"></span>
               </label>
             </div>
+
+            <div class="setting-item vertical">
+              <span class="setting-title">Fondo del Modo Cine</span>
+              <span class="setting-desc">Animado comparte el mismo fondo de video elegido en Tema y Diseño.</span>
+              <div class="btn-group b32-cinema-bg-group" id="cinema-bg-mode-buttons" role="group" aria-label="Fondo del Modo Cine">
+                <button type="button" class="cinema-bg-mode-btn active" data-cinema-bg="normal">Normal</button>
+                <button type="button" class="cinema-bg-mode-btn" data-cinema-bg="black">Negro</button>
+                <button type="button" class="cinema-bg-mode-btn" data-cinema-bg="white">Blanco</button>
+                <button type="button" class="cinema-bg-mode-btn" data-cinema-bg="animated">Animado</button>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Sub-panel: Modo Estudio Y2K Stream (descontinuado temporalmente) -->
-        <div class="settings-panel settings-sub-panel stream-deprecated-panel" id="sub-stream-studio-settings" aria-disabled="true">
-          <button class="btn-sub-back">
+        
+
+
+        <!-- Sub-panel: Personalizar Modo Estilo / Modo Visual -->
+        <div class="settings-panel settings-sub-panel visual-style-settings-panel" id="sub-visual-style-settings">
+          <button class="btn-sub-back" type="button">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver
           </button>
           <div class="sub-content">
-            <div class="setting-item">
+            <div class="visual-style-settings-intro">
+              <span class="setting-title">Personalizar Modo Estilo</span>
+              <span class="setting-desc">Controla cada elemento del Modo Visual sin cambiar el reproductor normal.</span>
+            </div>
+
+            <div class="setting-item visual-yuki-mode-setting">
               <div class="setting-info">
-                <span class="setting-title">Modo Stream / Modo Estudio <span class="deprecated-lock" aria-hidden="true">🔒</span></span>
-                <span class="setting-desc">Función descontinuada temporalmente / En mantenimiento para próximas actualizaciones</span>
+                <span class="setting-title">Modo Yuki</span>
+                <span class="setting-desc">Presentación alternativa del Modo Visual: geometría, anillos y espectro invertido.</span>
               </div>
-              <label class="switch" title="Función descontinuada temporalmente / En mantenimiento para próximas actualizaciones">
-                <input type="checkbox" id="toggle-stream-studio" disabled>
+              <label class="switch">
+                <input type="checkbox" id="visual-setting-yuki-mode">
                 <span class="slider"></span>
               </label>
             </div>
-            <div class="stream-settings-hint">
-              Este módulo permanece bloqueado temporalmente. El nuevo Modo Perspectiva Mobile 3D es independiente.
+
+            <div class="visual-yuki-setting-note">
+              <span class="setting-title">Presentación Yuki</span>
+              <span class="setting-desc">Solo aparece cuando Modo Yuki está activado al abrir Modo Visual. Las opciones de abajo controlan sus efectos igual que el Modo Visual normal.</span>
             </div>
-            <button id="btn-open-stream-studio" class="menu-opt-btn" disabled>🔒 Editor Y2K en mantenimiento</button>
+
+            <div class="visual-yuki-options-title">
+              <span class="setting-title">Capas del diseño Yuki</span>
+              <span class="setting-desc">Activa o desactiva cada capa sin modificar el reproductor normal.</span>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Geometría HUD</span>
+                <span class="setting-desc">Rombos, diagonales y líneas de cristal del fondo inspirados en la referencia.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-yuki-geometry" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Decoración orbital</span>
+                <span class="setting-desc">Activa los segmentos, rayos, estrellas grandes y microdetalles que giran con el aro.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-yuki-ring-decor" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Espectro invertido Yuki</span>
+                <span class="setting-desc">Bloques finos que nacen desde la barra y caen hacia abajo según las frecuencias reales.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-yuki-spectrum" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Partículas flotantes</span>
+                <span class="setting-desc">Estrellas y símbolos que aparecen y se alejan hacia el fondo.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-particles" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Profundidad tipo frisbee</span>
+                <span class="setting-desc">Las partículas avanzan hacia el fondo, cambian de escala y desaparecen.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-particle-depth" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item vertical">
+              <div class="setting-info">
+                <span class="setting-title">Densidad de partículas</span>
+                <span class="setting-desc">Cantidad de partículas que aparecen durante la reproducción.</span>
+              </div>
+              <input class="visual-style-range" type="range" id="visual-setting-particle-density" min="2" max="10" step="1" value="8">
+              <div class="visual-style-range-meta"><span>Pocas</span><strong id="visual-setting-particle-density-value">8</strong><span>Muchas</span></div>
+            </div>
+
+            <div class="setting-item vertical">
+              <div class="setting-info">
+                <span class="setting-title">Velocidad de partículas</span>
+                <span class="setting-desc">Controla qué tan rápido recorren la escena.</span>
+              </div>
+              <input class="visual-style-range" type="range" id="visual-setting-particle-speed" min="60" max="160" step="5" value="100">
+              <div class="visual-style-range-meta"><span>Lenta</span><strong id="visual-setting-particle-speed-value">100%</strong><span>Rápida</span></div>
+            </div>
+
+            <div class="setting-item vertical visual-particle-picker-item">
+              <div class="setting-info">
+                <span class="setting-title">Tipos de partículas</span>
+                <span class="setting-desc">Pulsa un icono para activar u ocultar esa partícula. ACTIVA = aparecerá; OCULTA = no aparecerá.</span>
+              </div>
+              <div class="visual-particle-picker" id="visual-particle-picker" role="group" aria-label="Tipos de partículas">
+                <button type="button" class="visual-particle-option is-selected" data-particle="✦" aria-pressed="true"><span class="visual-particle-glyph">✦</span><small>Estrella</small></button>
+                <button type="button" class="visual-particle-option is-selected" data-particle="✧" aria-pressed="true"><span class="visual-particle-glyph">✧</span><small>Brillo</small></button>
+                <button type="button" class="visual-particle-option is-selected" data-particle="◇" aria-pressed="true"><span class="visual-particle-glyph">◇</span><small>Rombo</small></button>
+                <button type="button" class="visual-particle-option is-selected" data-particle="✣" aria-pressed="true"><span class="visual-particle-glyph">✣</span><small>Partida</small></button>
+                <button type="button" class="visual-particle-option is-selected" data-particle="·" aria-pressed="true"><span class="visual-particle-glyph">·</span><small>Punto</small></button>
+                <button type="button" class="visual-particle-option is-selected" data-particle="❀" aria-pressed="true"><span class="visual-particle-glyph">❀</span><small>Pétalo</small></button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Ondas inferiores</span>
+                <span class="setting-desc">Dos ondas rellenas que reaccionan al audio con colores de la carátula.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-waves" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item vertical">
+              <div class="setting-info">
+                <span class="setting-title">Altura de las ondas</span>
+                <span class="setting-desc">Eleva las ondas sin cubrir el volumen ni el logotipo de Glasstrack.</span>
+              </div>
+              <input class="visual-style-range" type="range" id="visual-setting-wave-height" min="70" max="170" step="5" value="120">
+              <div class="visual-style-range-meta"><span>Baja</span><strong id="visual-setting-wave-height-value">120 px</strong><span>Alta</span></div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Aro giratorio y estrellas</span>
+                <span class="setting-desc">Mantiene el aro detrás de la carátula con sus estrellas unidas al giro.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-ring" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item vertical">
+              <div class="setting-info">
+                <span class="setting-title">Velocidad del aro</span>
+                <span class="setting-desc">Tiempo que tarda en completar una vuelta.</span>
+              </div>
+              <input class="visual-style-range" type="range" id="visual-setting-ring-speed" min="8" max="48" step="1" value="24">
+              <div class="visual-style-range-meta"><span>Rápido</span><strong id="visual-setting-ring-speed-value">24 s/vuelta</strong><span>Lento</span></div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Halo ambiental</span>
+                <span class="setting-desc">Luz suave con los colores principal y secundario de la portada.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-halo" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Reacción de carátula al beat</span>
+                <span class="setting-desc">Hace que la portada sobresalga un poco más con los golpes de la música.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-beat" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item vertical">
+              <div class="setting-info">
+                <span class="setting-title">Intensidad del beat</span>
+                <span class="setting-desc">Ajusta cuánto aumenta y se eleva la carátula al detectar un golpe.</span>
+              </div>
+              <input class="visual-style-range" type="range" id="visual-setting-beat-intensity" min="35" max="100" step="5" value="70">
+              <div class="visual-style-range-meta"><span>Sutil</span><strong id="visual-setting-beat-intensity-value">70%</strong><span>Marcado</span></div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Reflejo blanco en título y artista</span>
+                <span class="setting-desc">Destello horizontal ocasional, como un reflejo sobre vidrio.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-text-flash"><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Microparallax 3D</span>
+                <span class="setting-desc">Pequeño desplazamiento de profundidad con el puntero o movimiento táctil.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-parallax"><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Contraste de controles</span>
+                <span class="setting-desc">Hace más visibles Play/Pausa, volumen y reproducción sin perder el cristal.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-controls" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Sticker PNG / GIF transparente</span>
+                <span class="setting-desc">Añade un personaje, muñeco o decoración transparente al Modo Visual.</span>
+              </div>
+              <label class="switch"><input type="checkbox" id="visual-setting-sticker-enabled"><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-item vertical visual-sticker-settings-item">
+              <div class="setting-info">
+                <span class="setting-title">Archivo del sticker</span>
+                <span class="setting-desc" id="visual-sticker-file-status">Ningún PNG o GIF cargado.</span>
+              </div>
+              <div class="visual-sticker-actions">
+                <label class="custom-file-btn">
+                  Subir PNG / GIF
+                  <input type="file" id="visual-sticker-file" accept="image/png,image/gif,.png,.gif" hidden>
+                </label>
+                <button type="button" id="visual-sticker-clear" class="action-btn-danger">Quitar sticker</button>
+              </div>
+            </div>
+
+            <div class="setting-item vertical">
+              <div class="setting-info">
+                <span class="setting-title">Posición del sticker</span>
+                <span class="setting-desc">Elige dónde aparece dentro del Modo Visual.</span>
+              </div>
+              <select id="visual-setting-sticker-position" class="custom-select">
+                <option value="progress-top">Encima de la barra de música</option>
+                <option value="top-left">Esquina superior izquierda</option>
+                <option value="top-right">Esquina superior derecha</option>
+                <option value="bottom-left">Esquina inferior izquierda</option>
+                <option value="bottom-right">Esquina inferior derecha</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -924,14 +1670,74 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver
           </button>
           <div class="sub-content">
-            <div class="setting-item vertical">
-              <span class="setting-title">Optimizador Gráfico</span>
-              <span class="setting-desc" style="margin-bottom:10px;">Si la app se traba, baja el nivel para aligerar los efectos visuales</span>
-              <input type="range" id="input-graphics-level" min="0" max="2" step="1" value="2">
-              <div class="graphics-level-labels">
-                <span>Ahorro</span>
-                <span>Equilibrado</span>
-                <span>Máxima Calidad</span>
+            <div class="setting-item vertical b32-performance-profile-card">
+              <span class="setting-title">Rendimiento</span>
+              <span class="setting-desc">Elige un perfil general. Personalizado abre controles avanzados.</span>
+              <div class="b32-performance-profiles" id="b32-performance-profiles" role="group" aria-label="Perfil de rendimiento">
+                <button type="button" class="b32-performance-btn" data-performance-profile="0">Ahorro</button>
+                <button type="button" class="b32-performance-btn" data-performance-profile="1">Equilibrado</button>
+                <button type="button" class="b32-performance-btn" data-performance-profile="2">Calidad</button>
+                <button type="button" class="b32-performance-btn" data-performance-profile="custom">Personalizado</button>
+              </div>
+
+              <div id="b32-performance-custom-panel" class="b32-performance-custom-panel hidden" aria-hidden="true">
+                <div class="b32-performance-custom-heading">Personalizado</div>
+
+                <label class="setting-item b32-performance-row">
+                  <span class="setting-info"><span class="setting-title">Animación de fondo</span><span class="setting-desc">Detiene el movimiento del fondo de video/efectos animados.</span></span>
+                  <input type="checkbox" id="b32-perf-bg-animation" checked>
+                </label>
+
+                <label class="setting-item b32-performance-row">
+                  <span class="setting-info"><span class="setting-title">Sombras</span><span class="setting-desc">Mantiene o elimina sombras decorativas.</span></span>
+                  <input type="checkbox" id="b32-perf-shadows" checked>
+                </label>
+
+                <label class="setting-item b32-performance-row">
+                  <span class="setting-info"><span class="setting-title">Efectos de portada</span><span class="setting-desc">Permite los efectos de animación de la carátula.</span></span>
+                  <input type="checkbox" id="b32-perf-cover-effects" checked>
+                </label>
+
+                <label class="setting-item b32-performance-row">
+                  <span class="setting-info"><span class="setting-title">Animaciones</span><span class="setting-desc">Controla las animaciones generales de la interfaz.</span></span>
+                  <input type="checkbox" id="b32-perf-animations" checked>
+                </label>
+
+                <label class="setting-item b32-performance-row">
+                  <span class="setting-info"><span class="setting-title">Partículas</span><span class="setting-desc">Controla las partículas de los modos visuales.</span></span>
+                  <input type="checkbox" id="b32-perf-particles" checked>
+                </label>
+
+                <label class="setting-item b32-performance-row">
+                  <span class="setting-info"><span class="setting-title">Transiciones</span><span class="setting-desc">Controla las transiciones CSS de la interfaz.</span></span>
+                  <input type="checkbox" id="b32-perf-transitions" checked>
+                </label>
+
+                <label class="b32-setting-row">
+                  <span>Blur máximo</span>
+                  <span class="range-with-value b32-range"><input type="range" id="b32-perf-blur" min="0" max="24" step="1" value="12"><span id="b32-perf-blur-value" class="setting-value-badge">12px</span></span>
+                </label>
+
+                <div class="b32-setting-row b32-select-row">
+                  <span>Calidad del visualizador</span>
+                  <select id="b32-perf-visualizer-quality" class="custom-select">
+                    <option value="low">Baja</option><option value="medium" selected>Media</option><option value="high">Alta</option>
+                  </select>
+                </div>
+
+                <div class="b32-setting-row b32-select-row">
+                  <span>Calidad de fondo</span>
+                  <select id="b32-perf-background-quality" class="custom-select">
+                    <option value="low">Baja</option><option value="medium" selected>Media</option><option value="high">Alta</option>
+                  </select>
+                </div>
+
+                <div class="b32-setting-row b32-select-row">
+                  <span>Frecuencia visual</span>
+                  <select id="b32-perf-fps" class="custom-select">
+                    <option value="30">30 FPS</option><option value="45">45 FPS</option><option value="60" selected>60 FPS</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -999,6 +1805,22 @@
               <div class="hotkey-row">
                 <span>Mostrar Letras</span>
                 <button class="hotkey-bind-btn" data-action="toggleLyrics">KeyE</button>
+              </div>
+              <div class="hotkey-row">
+                <span>Alternar Modo Karaoke</span>
+                <button class="hotkey-bind-btn" data-action="toggleKaraoke">KeyK</button>
+              </div>
+              <div class="hotkey-row">
+                <span>Abrir / cerrar Ecualizador</span>
+                <button class="hotkey-bind-btn" data-action="toggleEQ">KeyG</button>
+              </div>
+              <div class="hotkey-row">
+                <span>Abrir / cerrar Voz y Música</span>
+                <button class="hotkey-bind-btn" data-action="toggleVM">KeyV</button>
+              </div>
+              <div class="hotkey-row">
+                <span>Activar / desactivar Aleatorio</span>
+                <button class="hotkey-bind-btn" data-action="toggleShuffle">KeyR</button>
               </div>
             </div>
           </div>
@@ -1138,9 +1960,9 @@
               </label>
             </div>
             <button id="btn-open-rhythm-game" class="menu-opt-btn primary-opt">🎵 Abrir Juego de Ritmo</button>
-            <button id="btn-open-rhythm-study" class="menu-opt-btn">🛠 Abrir Modo Estudio de Chart</button>
+            
             <div class="rhythm-settings-hint">
-              <strong>Atajo:</strong> X abre/cierra el modo. <strong>Guardar Chart:</strong> L mientras el Modo Estudio esté activo.
+              <strong>Atajo:</strong> X abre/cierra el modo.
             </div>
           </div>
         </div>
@@ -1151,22 +1973,10 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver
           </button>
           <div class="sub-content">
-            <button id="btn-open-karaoke" class="menu-opt-btn primary-opt">Abrir Modo Karaoke / Letras</button>
-            <button id="btn-configure-karaoke" class="menu-opt-btn">Configurar (Calibración y Fondo)</button>
-
-            <div class="setting-item" style="margin-top: 10px;">
-              <div class="setting-info">
-                <span class="setting-title">Fondo visual de la pantalla de letras</span>
-                <span class="setting-desc">Elige cómo se ve el fondo del Modo Cine / Karaoke</span>
-              </div>
-            </div>
-            <div class="btn-group">
-              <button class="lyrics-bg-mode-btn active" data-bg="auto">Automático</button>
-              <button class="lyrics-bg-mode-btn" data-bg="cover">Carátula difuminada</button>
-              <button class="lyrics-bg-mode-btn" data-bg="animated">Fondo animado</button>
-              <button class="lyrics-bg-mode-btn" data-bg="black">Negro sólido</button>
-              <button class="lyrics-bg-mode-btn" data-bg="white">Blanco sólido</button>
-            </div>
+            <button id="btn-open-karaoke" class="menu-opt-btn primary-opt">Abrir Modo Karaoke</button>
+            <button id="btn-configure-karaoke" class="menu-opt-btn">Calibrar letras (Estudio existente)</button>
+            <button id="btn-karaoke-settings-open" class="menu-opt-btn">Ajustes propios del Karaoke</button>
+            <p class="setting-desc">El Karaoke usa la reproducción, las letras calibradas y el mezclador Voz/Música existentes, pero mantiene una interfaz independiente del Modo Cine.</p>
           </div>
         </div>
 
@@ -1179,7 +1989,7 @@
             <button id="preset-normal" class="menu-opt-btn">Normal (quitar presets)</button>
             <button id="preset-game" class="menu-opt-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="10" rx="5"/><line x1="7" y1="12" x2="9" y2="12"/><line x1="8" y1="11" x2="8" y2="13"/><circle cx="16" cy="10.5" r="0.9" fill="currentColor"/><circle cx="18" cy="13.5" r="0.9" fill="currentColor"/></svg> Modo Juego (menos animaciones, ahorra recursos)</button>
             <button id="preset-night" class="menu-opt-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Modo Noche (filtro cálido, protege la vista)</button>
-            <button id="preset-study" class="menu-opt-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Modo Estudio (colores neutros, sin distracciones)</button>
+            
           </div>
         </div>
 
@@ -1289,6 +2099,14 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
           <span id="txt-hide-opt">Ocultar Canción</span>
         </button>
+        <button id="opt-edit-metadata" class="menu-opt-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+          Editar metadatos
+        </button>
+        <button id="opt-song-metadata" class="menu-opt-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>
+          Todos los metadatos
+        </button>
         <button id="opt-delete-song" class="menu-opt-btn danger">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           Eliminar permanentemente
@@ -1321,6 +2139,84 @@
     </div>
   </div>
 
+  <!-- VISTA DE METADATOS: SOLO LECTURA -->
+  <div class="modal-overlay hidden" id="modal-song-metadata" aria-hidden="true">
+    <div class="modal-window song-metadata-window" role="dialog" aria-modal="true" aria-labelledby="song-metadata-title">
+      <div class="modal-header">
+        <div>
+          <h3 id="song-metadata-title">Todos los metadatos</h3>
+          <span id="song-metadata-subtitle" class="song-metadata-subtitle">Información de la canción</span>
+        </div>
+        <button id="btn-close-song-metadata" class="icon-btn" type="button" title="Cerrar" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+      </div>
+      <div class="song-metadata-body">
+        <div class="song-metadata-summary" id="song-metadata-summary"></div>
+        <div id="song-metadata-info" class="song-metadata-section hidden">
+          <div class="song-metadata-columns">
+            <section>
+              <div class="song-metadata-section-title positive">Datos encontrados</div>
+              <div id="song-metadata-found" class="song-metadata-list"></div>
+            </section>
+            <section>
+              <div class="song-metadata-section-title negative">Datos faltantes / no disponibles</div>
+              <div id="song-metadata-missing" class="song-metadata-list"></div>
+            </section>
+          </div>
+          <div class="song-metadata-section-title">Detalle de fuente</div>
+          <pre id="song-metadata-raw" class="song-metadata-raw">Sin lectura de metadatos todavía.</pre>
+          <div class="song-metadata-actions">
+            <button id="btn-export-song-metadata-info" class="menu-opt-btn" type="button">Exportar diagnóstico</button>
+            <button id="btn-download-song-file-info" class="menu-opt-btn" type="button">Descargar archivo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDICIÓN DE METADATOS: FORMULARIO INDEPENDIENTE -->
+  <div class="modal-overlay hidden" id="modal-edit-song-metadata" aria-hidden="true">
+    <div class="modal-window song-metadata-window" role="dialog" aria-modal="true" aria-labelledby="song-metadata-edit-title">
+      <div class="modal-header">
+        <div>
+          <h3 id="song-metadata-edit-title">Editar metadatos</h3>
+          <span id="song-metadata-edit-subtitle" class="song-metadata-subtitle">Editar datos en Glasstrack</span>
+        </div>
+        <button id="btn-close-edit-song-metadata" class="icon-btn" type="button" title="Cerrar" aria-label="Cerrar editor de metadatos">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>
+        </button>
+      </div>
+      <div class="song-metadata-body">
+        <div class="song-metadata-summary" id="song-metadata-edit-summary"></div>
+        <div id="song-metadata-editor" class="song-metadata-section hidden">
+          <div class="song-metadata-section-title">Editar información en Glasstrack</div>
+          <div class="song-metadata-grid">
+            <label> Título <input id="meta-title" class="custom-input" maxlength="160"></label>
+            <label> Artista <input id="meta-artist" class="custom-input" maxlength="160"></label>
+            <label> Álbum <input id="meta-album" class="custom-input" maxlength="160"></label>
+            <label> Artista del álbum <input id="meta-album-artist" class="custom-input" maxlength="160"></label>
+            <label> Género <input id="meta-genre" class="custom-input" maxlength="120"></label>
+            <label> Año <input id="meta-year" class="custom-input" inputmode="numeric" maxlength="6"></label>
+            <label> Número de pista <input id="meta-track" class="custom-input" inputmode="numeric" maxlength="16"></label>
+            <label> Disco <input id="meta-disc" class="custom-input" inputmode="numeric" maxlength="16"></label>
+            <label> Compositor <input id="meta-composer" class="custom-input" maxlength="160"></label>
+            <label> Editorial <input id="meta-publisher" class="custom-input" maxlength="160"></label>
+            <label class="full"> Derechos de autor <input id="meta-copyright" class="custom-input" maxlength="240"></label>
+            <label class="full"> Comentario <textarea id="meta-comment" class="custom-input" rows="3" maxlength="1000"></textarea></label>
+            <label class="full"> Letras incrustadas <textarea id="meta-lyrics" class="custom-input" rows="5" maxlength="12000" placeholder="Solo se guarda en Glasstrack; no reescribe el archivo de audio."></textarea></label>
+          </div>
+          <div class="song-metadata-note">Los cambios se guardan en la biblioteca de Glasstrack. No reescriben físicamente las etiquetas del archivo original.</div>
+          <div class="song-metadata-actions">
+            <button id="btn-save-song-metadata" class="menu-opt-btn primary-opt" type="button">Guardar metadatos</button>
+            <button id="btn-download-song-file" class="menu-opt-btn" type="button">Descargar archivo</button>
+            <button id="btn-export-song-metadata" class="menu-opt-btn" type="button">Exportar JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL SELECCIONAR PLAYLIST -->
   <div class="modal-overlay hidden" id="modal-select-playlist">
     <div class="modal-window">
@@ -1342,16 +2238,19 @@
     <div class="lyrics-header">
       <h3>Letra</h3>
       <div class="lyrics-actions">
-        <button id="btn-cinema-mode" class="icon-btn" title="Modo Cine">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><line x1="2" y1="9" x2="7" y2="9"/><line x1="2" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="22" y2="9"/><line x1="17" y1="15" x2="22" y2="15"/></svg>
+        <button id="btn-cinema-mode" class="icon-btn" type="button" data-ui-tooltip="Modo Cine" aria-label="Abrir Modo Cine">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="7" y1="4" x2="7" y2="20"/><line x1="17" y1="4" x2="17" y2="20"/><line x1="2" y1="9" x2="7" y2="9"/><line x1="2" y1="15" x2="7" y2="15"/><line x1="17" y1="9" x2="22" y2="9"/><line x1="17" y1="15" x2="22" y2="15"/></svg>
         </button>
-        <button id="btn-calibrate-lyrics" class="icon-btn" title="Calibrar Letras">
+        <button id="btn-open-karaoke-main" class="icon-btn karaoke-open-shortcut" type="button" data-ui-tooltip="Modo Karaoke" aria-label="Abrir Modo Karaoke">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5v1.2a6.5 6.5 0 0 0 13 0v-1.2M12 18.2v3.3M8.5 21.5h7"/><path d="M3 6v3M21 6v3"/></svg>
+        </button>
+        <button id="btn-calibrate-lyrics" class="icon-btn" data-ui-tooltip="Calibrar letras" aria-label="Calibrar letras">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
         </button>
-        <button id="btn-edit-lyrics" class="icon-btn" title="Editar tu letra">
+        <button id="btn-edit-lyrics" class="icon-btn" data-ui-tooltip="Editar tu letra" aria-label="Editar tu letra">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
         </button>
-        <button id="btn-close-lyrics" class="icon-btn" title="Cerrar">
+        <button id="btn-close-lyrics" class="icon-btn" data-ui-tooltip="Cerrar letras" aria-label="Cerrar letras">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
@@ -1370,18 +2269,34 @@
 
   <!-- MODO CINE DE LETRAS -->
   <div class="cinema-mode" id="cinema-mode">
+    <video id="cinema-shared-bg-video" class="cinema-shared-bg-video hidden" muted loop playsinline aria-hidden="true"></video>
     <div class="cinema-bg" id="cinema-bg"></div>
-    <button id="btn-close-cinema" class="icon-btn cinema-close" title="Cerrar Modo Cine">
+    <button id="btn-close-cinema" class="icon-btn cinema-close" type="button" title="Cerrar Modo Cine" aria-label="Cerrar Modo Cine">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <button id="btn-cinema-lyrics-style" class="cinema-lyrics-style-btn decorated" type="button" title="Cambiar a letras normales" aria-label="Cambiar a letras normales" aria-pressed="true">
+      <img src="img/letras/a_3.png" alt="Letras decoradas" draggable="false">
+      <span aria-hidden="true">A</span>
+    </button>
+    <button id="btn-cinema-audio-visualizer" class="cinema-audio-visualizer-toggle" type="button" title="Activar visualizador compacto" aria-label="Activar visualizador compacto" aria-pressed="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v4M7 6v12M11 3v18M15 7v10M19 10v4M22 11v2"/></svg>
     </button>
     <div class="cinema-content">
       <div class="cinema-cover-col">
         <img id="cinema-cover" class="cinema-cover-art" src="" alt="Portada">
         <div class="cinema-track-info">
           <h4 id="cinema-title">-</h4>
-          <p id="cinema-artist">-</p>
+          <div class="cinema-track-meta-row">
+            <p id="cinema-artist">-</p>
+            <button id="btn-cinema-song-menu" class="icon-btn cinema-song-menu" type="button" title="Opciones de la canción" aria-label="Opciones de la canción">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+            </button>
+          </div>
         </div>
 
+        <div class="cinema-audio-visualizer-bar" id="cinema-audio-visualizer-bar" aria-label="Visualizador de audio" role="img">
+          <canvas id="cinema-audio-visualizer-bar-canvas" aria-hidden="true"></canvas>
+        </div>
         <div class="cinema-seekbar-wrapper" id="cinema-seekbar-wrapper">
           <span id="cinema-current-time">0:00</span>
           <div class="progress-container" id="cinema-progress-container">
@@ -1390,27 +2305,127 @@
           <span id="cinema-duration">0:00</span>
         </div>
 
-        <div class="cinema-controls">
-          <button id="cinema-prev" class="icon-btn" title="Anterior">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        <div class="cinema-controls" role="group" aria-label="Controles de reproducción del Modo Cine">
+          <button id="cinema-shuffle" class="icon-btn cinema-utility-btn cinema-shuffle" type="button" title="Aleatorio activado" aria-label="Aleatorio activado" aria-pressed="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
           </button>
-          <button id="cinema-play" class="btn-play" title="Reproducir / Pausa">
-            <svg id="cinema-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <button id="cinema-prev" class="icon-btn cinema-transport-btn" type="button" title="Anterior" aria-label="Canción anterior">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
           </button>
-          <button id="cinema-next" class="icon-btn" title="Siguiente">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          <button id="cinema-play" class="btn-play cinema-play-btn" type="button" title="Reproducir" aria-label="Reproducir">
+            <svg id="cinema-play-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
           </button>
-          <button id="cinema-eq" class="icon-btn" title="Ecualizador">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          <button id="cinema-next" class="icon-btn cinema-transport-btn" type="button" title="Siguiente" aria-label="Siguiente canción">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
           </button>
+          <button id="cinema-loop" class="icon-btn cinema-utility-btn cinema-loop" type="button" title="Repetición desactivada" aria-label="Repetición desactivada" aria-pressed="false">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          </button>
+          <button id="cinema-fav" class="icon-btn cinema-utility-btn cinema-fav" type="button" title="Me gusta" aria-label="Me gusta" aria-pressed="false">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.72-8.72 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </button>
+          <button id="cinema-speed" class="icon-btn cinema-utility-btn cinema-speed" type="button" title="Cambiar velocidad" aria-label="Velocidad 1x"><span id="cinema-speed-label">1x</span></button>
+        </div>
+        <div class="cinema-volume-row">
+          <label class="cinema-volume-control" title="Volumen" aria-label="Volumen del reproductor">
+            <svg class="cinema-volume-min" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+            <input id="cinema-volume" type="range" min="0" max="1" step="0.01" value="1" draggable="false" aria-label="Volumen del Modo Cine">
+            <svg class="cinema-volume-max" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          </label>
         </div>
       </div>
       <div class="cinema-lyrics-col">
+        <canvas id="cinema-audio-visualizer-stage" class="cinema-audio-visualizer-stage" aria-label="Visualizador de audio ampliado" role="img"></canvas>
         <div class="lyrics-body cinema-lyrics-body" id="cinema-lyrics-body">
           <p class="lyrics-placeholder">Sin letra disponible.</p>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- MODO KARAOKE INDEPENDIENTE: no reutiliza el contenedor del Modo Cine -->
+  <section id="karaoke-mode" class="karaoke-mode" role="dialog" aria-modal="true" aria-label="Modo Karaoke" aria-hidden="true" data-layout="simple">
+    <div class="karaoke-window">
+      <div class="karaoke-background-layer" aria-hidden="true">
+        <video id="karaoke-background-video" class="karaoke-background-video" muted loop playsinline></video>
+        <img id="karaoke-background-cover" class="karaoke-background-cover" alt="">
+        <canvas id="karaoke-background-waves" class="karaoke-background-waves"></canvas>
+        <div class="karaoke-background-shade"></div>
+      </div>
+      <header class="karaoke-header">
+        <div class="karaoke-heading">
+          <span class="karaoke-eyebrow">GLASSTRACK · KARAOKE</span>
+          <h2 id="karaoke-title">Sin canción cargada</h2>
+          <p id="karaoke-artist">Selecciona una canción para comenzar</p>
+        </div>
+        <div class="karaoke-header-actions">
+          <div class="karaoke-layout-switch" role="group" aria-label="Presentación del Karaoke">
+            <button type="button" data-karaoke-layout="simple" class="active" aria-pressed="true" title="Modo Simple"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16M4 10h12M4 15h16M4 20h9"/></svg><span>Simple</span></button>
+            <button type="button" data-karaoke-layout="cover" aria-pressed="false" title="Modo Carátula"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><path d="M14 5h7M14 9h7M3 15h18M3 19h18"/></svg><span>Carátula</span></button>
+          </div>
+          <button id="btn-karaoke-settings" class="icon-btn" type="button" title="Ajustes de Karaoke" aria-label="Ajustes de Karaoke"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.1-.03a1.7 1.7 0 0 0-1.82.42l-.06.07h-3.4l-.02-.1a1.7 1.7 0 0 0-1.15-1.34l-.1-.03-2.4 1.39-1.7-2.94.08-.07a1.7 1.7 0 0 0 .42-1.82l-.04-.1L4.3 13.4V10l.1-.02a1.7 1.7 0 0 0 1.34-1.15l.03-.1-1.39-2.4 2.94-1.7.07.08a1.7 1.7 0 0 0 1.82.42l.1-.04L10.6 2.7H14l.02.1a1.7 1.7 0 0 0 1.15 1.34l.1.03 2.4-1.39 1.7 2.94-.08.07a1.7 1.7 0 0 0-.42 1.82l.04.1 2.36 1.37v3.4l-.1.02a1.7 1.7 0 0 0-1.34 1.15z"/></svg></button>
+          <button id="btn-close-karaoke" class="icon-btn" type="button" data-ui-tooltip="Cerrar Karaoke" aria-label="Cerrar Modo Karaoke"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+        </div>
+      </header>
+
+      <main class="karaoke-stage">
+        <section id="karaoke-simple-view" class="karaoke-simple-view" aria-label="Letras en modo simple">
+          <div class="karaoke-lyrics-body" id="karaoke-lyrics-simple"><p class="lyrics-placeholder">Sin letra disponible.</p></div>
+        </section>
+        <section id="karaoke-cover-view" class="karaoke-cover-view" aria-label="Letras con carátula">
+          <aside class="karaoke-cover-column"><img id="karaoke-cover" src="" alt="Carátula de la canción"><div><strong id="karaoke-cover-title">Sin canción cargada</strong><span id="karaoke-cover-artist">—</span></div></aside>
+          <div class="karaoke-cover-lyrics"><div class="karaoke-lyrics-body" id="karaoke-lyrics-cover"><p class="lyrics-placeholder">Sin letra disponible.</p></div></div>
+        </section>
+      </main>
+
+      <footer class="karaoke-footer">
+        <div class="karaoke-timeline">
+          <span id="karaoke-current-time">0:00</span>
+          <input id="karaoke-progress" type="range" min="0" max="1000" step="1" value="0" aria-label="Posición de la canción">
+          <span id="karaoke-duration">0:00</span>
+        </div>
+        <div class="karaoke-transport">
+          <button id="karaoke-prev" class="icon-btn" type="button" title="Anterior" aria-label="Canción anterior"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+          <button id="karaoke-play" class="btn-play" type="button" title="Reproducir" aria-label="Reproducir"><svg id="karaoke-play-icon" width="23" height="23" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+          <button id="karaoke-next" class="icon-btn" type="button" title="Siguiente" aria-label="Siguiente canción"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+          <div class="karaoke-volume"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zM16 9a5 5 0 0 1 0 6M18.5 6.5a9 9 0 0 1 0 11"/></svg><input id="karaoke-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volumen del Karaoke"></div>
+          <button id="btn-karaoke-tracks" class="karaoke-footer-tool" type="button" title="Abrir pistas existentes" aria-label="Abrir mezclador de pistas"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/><circle cx="8" cy="5" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="11" cy="19" r="2" fill="currentColor"/></svg><span>Pistas</span></button>
+          <button id="btn-karaoke-vm" class="karaoke-footer-tool" type="button" title="Voz y Música"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5v1.2a6.5 6.5 0 0 0 13 0v-1.2M12 18.2v3.3M8.5 21.5h7"/></svg></button>
+          <button id="btn-karaoke-follow" class="karaoke-footer-tool karaoke-follow-toggle" type="button" title="Seguir letra activado" aria-label="Seguir letra" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M5 10l7-7 7 7"/></svg><span>Seguir letra</span></button>
+        </div>
+      </footer>
+    </div>
+  </section>
+
+  <!-- AJUSTES PROPIOS DEL MODO KARAOKE -->
+  <div id="karaoke-settings-modal" class="karaoke-settings-backdrop" role="dialog" aria-modal="true" aria-labelledby="karaoke-settings-title" aria-hidden="true">
+    <section class="karaoke-settings-window">
+      <header class="karaoke-settings-header"><div><span class="karaoke-eyebrow">PERSONALIZACIÓN</span><h3 id="karaoke-settings-title">Ajustes del Modo Karaoke</h3></div><button id="btn-close-karaoke-settings" class="icon-btn" type="button" data-ui-tooltip="Cerrar ajustes" aria-label="Cerrar ajustes">×</button></header>
+      <label class="karaoke-setting-row"><span><strong>Estilo de presentación</strong><small>Elige cómo se organizan las letras.</small></span><select id="karaoke-display-mode" class="custom-input"><option value="simple">Modo Simple</option><option value="cover">Modo Carátula</option></select></label>
+      <label class="karaoke-setting-row karaoke-setting-stack"><span><strong>Tamaño de las letras</strong><small id="karaoke-font-size-label">44 px</small></span><input id="karaoke-font-size" type="range" min="24" max="76" step="1" value="44"></label>
+      <label class="karaoke-setting-check"><input id="karaoke-show-neighbors" type="checkbox" checked><span><strong>Mostrar líneas anterior y siguiente</strong><small>La línea actual mantiene el mayor protagonismo.</small></span></label>
+      <label class="karaoke-setting-check"><input id="karaoke-follow-enabled" type="checkbox" checked><span><strong>Seguir automáticamente la letra</strong><small>Puedes desplazarla con el ratón o el dedo temporalmente.</small></span></label>
+      <div class="karaoke-settings-divider"></div>
+      <section class="karaoke-background-settings" aria-labelledby="karaoke-background-title">
+        <h4 id="karaoke-background-title">Fondo y apariencia</h4>
+        <label class="karaoke-setting-row"><span><strong>Tipo de fondo</strong><small>Personaliza solo la ventana de Karaoke.</small></span><select id="karaoke-background-mode" class="custom-input">
+          <option value="normal">Normal</option><option value="black">Negro sólido</option><option value="white">Blanco sólido</option><option value="custom">Color personalizado</option><option value="animated">Ondas reactivas</option><option value="cover">Carátula desenfocada</option><option value="video">Video local</option>
+        </select></label>
+        <label class="karaoke-setting-row karaoke-bg-color-row" id="karaoke-bg-color-row"><span><strong>Color de fondo</strong><small>Elige un color sólido.</small></span><input id="karaoke-background-color" type="color" value="#11131b" aria-label="Color de fondo personalizado"></label>
+        <label class="karaoke-setting-row karaoke-bg-video-row" id="karaoke-bg-video-row"><span><strong>Video de fondo</strong><small>Elige un video desde tu dispositivo. Se usa solo en Karaoke.</small></span><input id="karaoke-background-file" type="file" accept="video/*" aria-label="Seleccionar video local"></label>
+        <p class="karaoke-settings-help">El video local se mantiene mientras esta pestaña siga abierta; por seguridad del navegador, tendrás que seleccionarlo de nuevo después de recargar.</p>
+      </section>
+      <div class="karaoke-settings-divider"></div>
+      <label class="karaoke-setting-check"><input id="karaoke-duet-enabled" type="checkbox"><span><strong>Activar Modo Dueto</strong><small>Permite diferenciar líneas marcadas como A: y B: en las letras.</small></span></label>
+      <div id="karaoke-duet-options" class="karaoke-duet-options hidden">
+        <label class="karaoke-setting-row"><span><strong>Nombre de la voz A</strong><small>Participante 1</small></span><input id="karaoke-duet-name-a" class="custom-input" type="text" maxlength="24" value="Voz A"></label>
+        <label class="karaoke-setting-row"><span><strong>Color de la voz A</strong></span><input id="karaoke-duet-color-a" type="color" value="#f2c94c"></label>
+        <label class="karaoke-setting-row"><span><strong>Nombre de la voz B</strong><small>Participante 2</small></span><input id="karaoke-duet-name-b" class="custom-input" type="text" maxlength="24" value="Voz B"></label>
+        <label class="karaoke-setting-row"><span><strong>Color de la voz B</strong></span><input id="karaoke-duet-color-b" type="color" value="#8bb8ff"></label>
+        <p class="karaoke-settings-help">Marca las líneas de la letra con <code>A:</code> o <code>B:</code> para asignarlas a cada participante. Las líneas sin etiqueta conservan el color del tema.</p>
+      </div>
+      <footer class="karaoke-settings-footer"><button id="btn-save-karaoke-settings" class="save-btn" type="button">Guardar ajustes</button></footer>
+    </section>
   </div>
 
   <!-- MODAL CALIBRAR LETRAS -->
@@ -1451,6 +2466,12 @@
           </div>
           <p class="calibrate-hint">Escribe el BPM real de la canción (lo puedes buscar en internet: "[nombre de la canción] BPM"). Con eso, la velocidad de la letra se ajusta sola para que se sincronice mejor.</p>
         </div>
+
+        <button id="btn-open-lyrics-custom" class="menu-opt-btn" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.93 4.93 7.05 7.05M16.95 16.95 19.07 19.07M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/></svg>
+          Personalizar letras
+        </button>
+
         <button id="btn-lyrics-studio" class="menu-opt-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Abrir Modo Estudio de Letras
@@ -1460,8 +2481,163 @@
     </div>
   </div>
 
+  <!-- MODAL PERSONALIZAR LETRAS NORMALES -->
+  <div class="modal-overlay hidden" id="modal-lyrics-customization">
+    <div class="modal-window b32-lyrics-custom-window">
+      <div class="modal-header">
+        <h3>Personalizar letras</h3>
+        <button id="btn-close-lyrics-custom" class="icon-btn" title="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="b32-lyrics-custom-body">
+        <div class="b32-setting-row">
+          <span>Tamaño de fuente</span>
+          <span class="range-with-value b32-range"><input type="range" id="b32-lyrics-size" min="70" max="160" step="5" value="100"><span id="b32-lyrics-size-value" class="setting-value-badge">100%</span></span>
+        </div>
+        <div class="b32-setting-row">
+          <span>Posición del bloque</span>
+          <span class="range-with-value b32-range"><input type="range" id="b32-lyrics-position" min="0" max="100" step="5" value="50"><span id="b32-lyrics-position-value" class="setting-value-badge">Centro</span></span>
+        </div>
+        <div class="b32-setting-row">
+          <span>Separación entre líneas</span>
+          <span class="range-with-value b32-range"><input type="range" id="b32-lyrics-spacing" min="0" max="5" step="0.1" value="2.2"><span id="b32-lyrics-spacing-value" class="setting-value-badge">2.2x</span></span>
+        </div>
+        <div class="b32-setting-row">
+          <span>Opacidad</span>
+          <span class="range-with-value b32-range"><input type="range" id="b32-lyrics-opacity" min="10" max="100" step="5" value="100"><span id="b32-lyrics-opacity-value" class="setting-value-badge">100%</span></span>
+        </div>
+        <div class="b32-color-grid">
+          <label>
+            <span>Línea activa</span><input type="color" id="b32-lyrics-active-color" value="#ffffff">
+          </label>
+          <label>
+            <span>Líneas anteriores</span><input type="color" id="b32-lyrics-past-color" value="#8f9aab">
+          </label>
+          <label>
+            <span>Líneas futuras</span><input type="color" id="b32-lyrics-future-color" value="#566070">
+          </label>
+        </div>
+        <div class="b32-lyrics-custom-actions">
+          <button id="btn-reset-lyrics-custom" class="menu-opt-btn">Restablecer letras</button>
+          <button id="btn-apply-lyrics-custom" class="menu-opt-btn primary-opt">Aplicar y guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <audio id="audio-player-1" crossorigin="anonymous"></audio>
   <audio id="audio-player-2" crossorigin="anonymous"></audio>
+
+  <!-- MODO ESTUDIO DE LETRAS -->
+  <div class="modal-overlay hidden" id="modal-studio-help">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Cómo calibrar bien tu letra</h3>
+        <button id="btn-close-studio-help" class="icon-btn" title="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <ul class="studio-help-list">
+        <li><b>1. Escucha atenta y volumen.</b> Sube el volumen o usa audífonos para escuchar el momento exacto en que inicia cada sílaba.</li>
+        <li><b>2. Velocidad y retroceso.</b> Si el tema es rápido, usa velocidad 0.5x o 0.75x y el botón -5s para repetir versos difíciles.</li>
+        <li><b>3. Tap-Sync.</b> Presiona Tap-Sync (o la barra espaciadora) justo al inicio de cada verso para asignar el tiempo en tiempo real.</li>
+        <li><b>4. Archivos y retoque.</b> Arrastra archivos .txt o .lrc para cargar letras de golpe, y retoca marcas desfasadas con los botones de +/- segundos.</li>
+        <li><b>5. No hace falta terminar de una sola vez.</b> Todo se guarda solo en cada marca — puedes cerrar el Estudio y seguir calibrando otro día desde donde quedaste.</li>
+        <li><b>6. Empieza por los coros.</b> Si una canción tiene coros repetidos, cronometra el primero con calma; el Ajuste en Lote te sirve después para correr solo un tramo si algo se desfasa.</li>
+        <li><b>7. Exporta cuando termines.</b> El botón "Exportar .lrc" te sirve como respaldo — puedes guardarlo aparte o usarlo en otro reproductor compatible con letras sincronizadas.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lyrics-studio" id="lyrics-studio">
+    <div class="studio-header">
+      <h3>Modo Estudio de Letras</h3>
+      <div class="studio-tabs">
+        <button id="studio-tab-lines" class="studio-tab-btn active" data-tab="lines">Letras Normales</button>
+        <button id="studio-tab-karaoke" class="studio-tab-btn" data-tab="karaoke">Calibración Karaoke</button>
+      </div>
+      <div class="studio-header-actions">
+        <button id="btn-studio-help" class="icon-btn btn-studio-square" title="Ayuda">?</button>
+        <button id="btn-studio-export" class="menu-opt-btn">Exportar .lrc</button>
+        <button id="btn-close-studio" class="icon-btn" title="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="studio-body">
+      <div class="studio-preview">
+        <img id="studio-cover" class="studio-preview-cover" src="" alt="Carátula">
+        <div id="studio-title" class="studio-preview-title">-</div>
+        <div id="studio-artist" class="studio-preview-artist">-</div>
+        <div class="studio-progress-container" id="studio-progress-container">
+          <div class="progress-bar" id="studio-progress"></div>
+        </div>
+        <div class="time-stamps"><span id="studio-current-time">0:00</span><span id="studio-duration">0:00</span></div>
+        <div class="studio-preview-line" id="studio-preview-line">Sin letra cargada todavía</div>
+        <div class="studio-controls">
+          <button id="btn-studio-back5" class="icon-btn" title="Retroceder 5 segundos">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            <span class="studio-skip-label">5s</span>
+          </button>
+          <button id="btn-studio-playpause" class="btn-play" title="Reproducir/Pausa">
+            <svg id="studio-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button id="btn-studio-fwd5" class="icon-btn" title="Adelantar 5 segundos">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span class="studio-skip-label">5s</span>
+          </button>
+        </div>
+        <div class="studio-speed-row">
+          <span>Velocidad:</span>
+          <button class="studio-speed-btn" data-speed="0.5">0.5x</button>
+          <button class="studio-speed-btn" data-speed="0.75">0.75x</button>
+          <button class="studio-speed-btn active" data-speed="1">1.0x</button>
+        </div>
+        <button id="btn-tap-sync" class="btn-tap-sync">TAP SYNC<br><span>(o barra espaciadora)</span></button>
+      </div>
+
+      <div class="studio-panel">
+        <div class="studio-dropzone" id="studio-dropzone">
+          <p>Arrastra un archivo <b>.txt</b> o <b>.lrc</b> aquí</p>
+          <button id="btn-studio-browse" class="menu-opt-btn">Buscar archivo</button>
+          <input type="file" id="input-studio-file" accept=".txt,.lrc" hidden>
+        </div>
+
+        <div class="studio-batch-row">
+          <span>Ajuste en lote:</span>
+          <button class="studio-mini-btn" data-batch="-1000">-1s</button>
+          <button class="studio-mini-btn" data-batch="-100">-100ms</button>
+          <button class="studio-mini-btn" data-batch="100">+100ms</button>
+          <button class="studio-mini-btn" data-batch="1000">+1s</button>
+          <button id="btn-studio-distribute" class="studio-mini-btn" title="Reparte el tiempo entre la primera y última fila marcada">Distribuir</button>
+        </div>
+
+        <div class="studio-batch-row">
+          <button id="btn-studio-add-line" class="studio-mini-btn">+ Agregar Línea</button>
+          <button id="btn-studio-reset-all" class="studio-mini-btn studio-mini-danger">Eliminar y Resetear Todo</button>
+        </div>
+
+        <ul class="studio-line-list" id="studio-line-list">
+          <li class="empty-msg">Importa un archivo o edita la letra normal primero.</li>
+        </ul>
+
+        <div class="studio-karaoke-panel hidden" id="studio-karaoke-panel">
+          <p class="studio-karaoke-hint">El Tap-Sync general está desactivado aquí, pero puedes tocar cada palabra justo cuando se canta para marcar su tiempo exacto — usa los botones ±ms solo para ajustar fino después.</p>
+          <div class="studio-karaoke-line-progress-wrap">
+            <div class="studio-karaoke-line-progress-container"><div class="studio-karaoke-line-progress-bar" id="studio-karaoke-line-progress"></div></div>
+            <div class="studio-karaoke-line-progress-label">Progreso de la línea actual</div>
+          </div>
+          <div class="studio-karaoke-context" id="studio-karaoke-prev-line"></div>
+          <div class="studio-karaoke-words" id="studio-karaoke-words">
+            <p class="empty-msg">Esperando a que suene una línea con tiempo asignado...</p>
+          </div>
+          <div class="studio-karaoke-context" id="studio-karaoke-next-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- MODO VEHÍCULO -->
   <div class="vehicle-mode" id="vehicle-mode">
@@ -1502,9 +2678,9 @@
         <div class="rhythm-header-actions">
           <div class="rhythm-mode-switch" role="tablist" aria-label="Modo Ritmo">
             <button id="rhythm-tab-game" class="rhythm-tab active" data-rhythm-tab="game" role="tab" aria-selected="true">Jugar</button>
-            <button id="rhythm-tab-study" class="rhythm-tab" data-rhythm-tab="study" role="tab" aria-selected="false">Estudio de Chart</button>
+            
           </div>
-          <button id="rhythm-close" class="icon-btn" title="Cerrar Modo Ritmo (X)" aria-label="Cerrar Modo Ritmo">×</button>
+          <button id="rhythm-close" class="icon-btn" title="Cerrar Modo Ritmo (X)" aria-label="Cerrar Modo Ritmo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
       </header>
 
@@ -1534,7 +2710,7 @@
           </div>
           <div class="rhythm-toolbar-spacer"></div>
           <button id="rhythm-game-restart" class="menu-opt-btn">↻ Reiniciar</button>
-          <button id="rhythm-game-study" class="menu-opt-btn">Abrir Editor</button>
+          
         </div>
 
         <div class="rhythm-game-area" id="rhythm-game-area">
@@ -1573,69 +2749,7 @@
       </section>
 
       <!-- CHART STUDIO -->
-      <section id="rhythm-study-view" class="rhythm-view" aria-label="Modo Estudio de Chart">
-        <div class="rhythm-study-layout">
-          <div class="rhythm-study-main">
-            <div class="rhythm-editor-toolbar">
-              <div class="rhythm-editor-play-controls">
-                <button id="rhythm-editor-play" class="rhythm-round-btn" title="Play / Pausa">▶</button>
-                <button id="rhythm-editor-back" class="menu-opt-btn" title="Atrasar 5 segundos">−5s</button>
-                <button id="rhythm-editor-forward" class="menu-opt-btn" title="Adelantar 5 segundos">+5s</button>
-              </div>
-              <div class="rhythm-editor-song">
-                <img id="rhythm-editor-cover" src="" alt="Portada" class="rhythm-editor-cover">
-                <div class="rhythm-editor-song-meta"><strong id="rhythm-editor-title">Sin canción</strong><span id="rhythm-editor-artist">—</span></div>
-              </div>
-              <div class="rhythm-editor-time" id="rhythm-editor-time">0.000 ms</div>
-              <div class="rhythm-speed-group" role="group" aria-label="Velocidad del editor">
-                <button class="rhythm-speed-btn" data-rhythm-speed="0.25">0.25x</button>
-                <button class="rhythm-speed-btn" data-rhythm-speed="0.5">0.5x</button>
-                <button class="rhythm-speed-btn" data-rhythm-speed="0.75">0.75x</button>
-                <button class="rhythm-speed-btn active" data-rhythm-speed="1">1.0x</button>
-                <button class="rhythm-speed-btn" data-rhythm-speed="1.25">1.25x</button>
-              </div>
-            </div>
-
-            <div class="rhythm-editor-stage" id="rhythm-editor-stage">
-              <div class="rhythm-editor-grid" id="rhythm-editor-grid"></div>
-              <div class="rhythm-editor-cursor" id="rhythm-editor-cursor"></div>
-              <div class="rhythm-editor-readhead-label" id="rhythm-editor-readhead-label">0.000 ms</div>
-            </div>
-
-            <div class="rhythm-editor-actions-row">
-              <button id="rhythm-save-chart" class="menu-opt-btn primary-opt">💾 Guardar Chart <kbd>L</kbd></button>
-              <button id="rhythm-export-chart" class="menu-opt-btn">⬇ Exportar JSON</button>
-              <button id="rhythm-import-chart" class="menu-opt-btn">⬆ Importar JSON</button>
-              <input type="file" id="rhythm-import-input" accept="application/json,.json" hidden>
-              <button id="rhythm-clear-chart" class="menu-opt-btn danger">Vaciar Chart</button>
-            </div>
-          </div>
-
-          <aside class="rhythm-study-sidebar">
-            <div class="glass-panel rhythm-config-card">
-              <div class="rhythm-panel-heading">
-                <strong>Mapeo de teclas</strong>
-                <span id="rhythm-key-mode-label">2K</span>
-              </div>
-              <div class="rhythm-map-presets">
-                <button class="rhythm-map-preset active" data-rhythm-mapping="2k">2K</button>
-                <button class="rhythm-map-preset" data-rhythm-mapping="4k">4K</button>
-                <button class="rhythm-map-preset" data-rhythm-mapping="custom">Custom</button>
-              </div>
-              <div id="rhythm-key-config" class="rhythm-key-config"></div>
-              <button id="rhythm-apply-mapping" class="menu-opt-btn primary-opt">Aplicar mapeo</button>
-              <p class="rhythm-tip">Ejemplo 2K: Numpad2 + Numpad3. Presiona las teclas mientras suena la canción para grabar notas.</p>
-            </div>
-
-            <div class="glass-panel rhythm-notes-card">
-              <div class="rhythm-panel-heading"><strong>Notas del chart</strong><span id="rhythm-notes-count">0</span></div>
-              <div id="rhythm-note-list" class="rhythm-note-list">
-                <div class="rhythm-empty-notes">Aún no hay notas. Reproduce la canción y usa las teclas mapeadas.</div>
-              </div>
-            </div>
-          </aside>
-        </div>
-      </section>
+      
     </div>
   </div>
 
@@ -1682,366 +2796,80 @@
     </button>
   </div>
 
-  <!-- MODO CONCLUIDOR -->
-  <div class="concludor-mode" id="concludor-mode">
-    <div class="concludor-header">
-      <h2>MODO CONCLUIDOR <span>— MEZCLA FINAL</span></h2>
-      <div class="concludor-header-actions">
-        <button id="btn-concludor-finish" class="concludor-finish-btn">Concluir</button>
-        <button id="btn-concludor-close" class="icon-btn" title="Salir sin guardar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="concludor-carousel-wrapper">
-      <div class="concludor-cable" id="concludor-cable"></div>
-      <div class="concludor-carousel" id="concludor-carousel">
-        <p class="empty-msg">Toca "Elegir Música" para armar tu cadena de canciones.</p>
-      </div>
-    </div>
-
-    <div class="concludor-eq-viz" id="concludor-eq-viz"></div>
-
-    <div class="concludor-bottom-bar">
-      <div class="concludor-src-group">
-        <button id="btn-concludor-voice" class="concludor-src-btn" title="Resaltar Voz">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4"/></svg>
-          Voz
-        </button>
-        <button id="btn-concludor-music" class="concludor-src-btn active" title="Resaltar Música">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-          Música
-        </button>
-      </div>
-      <button id="btn-concludor-add" class="concludor-src-btn" title="Elegir Música">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-        Elegir Música
-      </button>
-      <button id="btn-concludor-play" class="concludor-play-btn">▶ REPRODUCIR MEZCLA COMPLETA</button>
-    </div>
-  </div>
-
-  <!-- MODO ESTUDIO DE LETRAS -->
-  <!-- AYUDA DEL MODO ESTUDIO DE LETRAS -->
-  <div class="modal-overlay hidden" id="modal-studio-help">
-    <div class="modal-window">
-      <div class="modal-header">
-        <h3>Cómo calibrar bien tu letra</h3>
-        <button id="btn-close-studio-help" class="icon-btn" title="Cerrar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <ul class="studio-help-list">
-        <li><b>1. Escucha atenta y volumen.</b> Sube el volumen o usa audífonos para escuchar el momento exacto en que inicia cada sílaba.</li>
-        <li><b>2. Velocidad y retroceso.</b> Si el tema es rápido, usa velocidad 0.5x o 0.75x y el botón -5s para repetir versos difíciles.</li>
-        <li><b>3. Tap-Sync.</b> Presiona Tap-Sync (o la barra espaciadora) justo al inicio de cada verso para asignar el tiempo en tiempo real.</li>
-        <li><b>4. Archivos y retoque.</b> Arrastra archivos .txt o .lrc para cargar letras de golpe, y retoca marcas desfasadas con los botones de +/- segundos.</li>
-        <li><b>5. No hace falta terminar de una sola vez.</b> Todo se guarda solo en cada marca — puedes cerrar el Estudio y seguir calibrando otro día desde donde quedaste.</li>
-        <li><b>6. Empieza por los coros.</b> Si una canción tiene coros repetidos, cronometra el primero con calma; el Ajuste en Lote te sirve después para correr solo un tramo si algo se desfasa.</li>
-        <li><b>7. Exporta cuando termines.</b> El botón "Exportar .lrc" te sirve como respaldo — puedes guardarlo aparte o usarlo en otro reproductor compatible con letras sincronizadas.</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="lyrics-studio" id="lyrics-studio">
-    <div class="studio-header">
-      <h3>Modo Estudio de Letras</h3>
-      <div class="studio-tabs">
-        <button id="studio-tab-lines" class="studio-tab-btn active" data-tab="lines">Letras Normales</button>
-        <button id="studio-tab-karaoke" class="studio-tab-btn" data-tab="karaoke">Calibración Karaoke</button>
-      </div>
-      <div class="studio-header-actions">
-        <button id="btn-studio-help" class="icon-btn btn-studio-square" title="Ayuda">?</button>
-        <button id="btn-studio-export" class="menu-opt-btn">Exportar .lrc</button>
-        <button id="btn-close-studio" class="icon-btn" title="Cerrar">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="studio-body">
-      <!-- Lado Izquierdo: vista previa en vivo -->
-      <div class="studio-preview">
-        <img id="studio-cover" class="studio-preview-cover" src="" alt="Carátula">
-        <div id="studio-title" class="studio-preview-title">-</div>
-        <div id="studio-artist" class="studio-preview-artist">-</div>
-        <div class="studio-progress-container" id="studio-progress-container">
-          <div class="progress-bar" id="studio-progress"></div>
+  <!-- CONCLUIDOR / MIX STUDIO: ventana completa independiente del Karaoke -->
+  <section class="concludor-mode" id="concludor-mode" role="dialog" aria-modal="true" aria-labelledby="concludor-main-title" aria-hidden="true">
+    <div class="concludor-shell">
+      <header class="concludor-header">
+        <div class="concludor-brand-block">
+          <div class="concludor-brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="28" height="28" fill="none"><path d="M4 17h5l3-9 5 17 4-12 3 4h4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="16" r="14" stroke="currentColor" stroke-opacity=".35"/></svg></div>
+          <div class="concludor-brand-copy"><span class="concludor-eyebrow">GLASSTRACK PRO / MIX STUDIO</span><h2 id="concludor-main-title">Concluidor <span>Mix</span></h2><p>Construye una sesión continua a tu manera.</p></div>
         </div>
-        <div class="time-stamps"><span id="studio-current-time">0:00</span><span id="studio-duration">0:00</span></div>
-        <div class="studio-preview-line" id="studio-preview-line">Sin letra cargada todavía</div>
-        <div class="studio-controls">
-          <button id="btn-studio-back5" class="icon-btn" title="Retroceder 5 segundos">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-            <span class="studio-skip-label">5s</span>
-          </button>
-          <button id="btn-studio-playpause" class="btn-play" title="Reproducir/Pausa">
-            <svg id="studio-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </button>
-          <button id="btn-studio-fwd5" class="icon-btn" title="Adelantar 5 segundos">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            <span class="studio-skip-label">5s</span>
-          </button>
-        </div>
-        <div class="studio-speed-row">
-          <span>Velocidad:</span>
-          <button class="studio-speed-btn" data-speed="0.5">0.5x</button>
-          <button class="studio-speed-btn" data-speed="0.75">0.75x</button>
-          <button class="studio-speed-btn active" data-speed="1">1.0x</button>
-        </div>
-        <button id="btn-tap-sync" class="btn-tap-sync">TAP SYNC<br><span>(o barra espaciadora)</span></button>
-      </div>
-
-      <!-- Lado Derecho: panel de estudio -->
-      <div class="studio-panel">
-        <div class="studio-dropzone" id="studio-dropzone">
-          <p>Arrastra un archivo <b>.txt</b> o <b>.lrc</b> aquí</p>
-          <button id="btn-studio-browse" class="menu-opt-btn">Buscar archivo</button>
-          <input type="file" id="input-studio-file" accept=".txt,.lrc" hidden>
-        </div>
-
-        <div class="studio-batch-row">
-          <span>Ajuste en lote:</span>
-          <button class="studio-mini-btn" data-batch="-1000">-1s</button>
-          <button class="studio-mini-btn" data-batch="-100">-100ms</button>
-          <button class="studio-mini-btn" data-batch="100">+100ms</button>
-          <button class="studio-mini-btn" data-batch="1000">+1s</button>
-          <button id="btn-studio-distribute" class="studio-mini-btn" title="Reparte el tiempo entre la primera y última fila marcada">Distribuir</button>
-        </div>
-
-        <div class="studio-batch-row">
-          <button id="btn-studio-add-line" class="studio-mini-btn">+ Agregar Línea</button>
-          <button id="btn-studio-reset-all" class="studio-mini-btn studio-mini-danger">Eliminar y Resetear Todo</button>
-        </div>
-
-        <ul class="studio-line-list" id="studio-line-list">
-          <li class="empty-msg">Importa un archivo o edita la letra normal primero.</li>
-        </ul>
-
-        <!-- Panel de Calibración Karaoke: desglosa la línea activa en palabras editables -->
-        <div class="studio-karaoke-panel hidden" id="studio-karaoke-panel">
-          <p class="studio-karaoke-hint">El Tap-Sync general está desactivado aquí, pero puedes tocar cada palabra justo cuando se canta para marcar su tiempo exacto — usa los botones ±ms solo para ajustar fino después.</p>
-          <div class="studio-karaoke-line-progress-wrap">
-            <div class="studio-karaoke-line-progress-container"><div class="studio-karaoke-line-progress-bar" id="studio-karaoke-line-progress"></div></div>
-            <div class="studio-karaoke-line-progress-label">Progreso de la línea actual</div>
-          </div>
-          <div class="studio-karaoke-context" id="studio-karaoke-prev-line"></div>
-          <div class="studio-karaoke-words" id="studio-karaoke-words">
-            <p class="empty-msg">Esperando a que suene una línea con tiempo asignado...</p>
-          </div>
-          <div class="studio-karaoke-context" id="studio-karaoke-next-line"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODO ESTUDIO Y2K STREAM — PANEL INDEPENDIENTE DEL MODO CINE -->
-  <div class="stream-studio-mode" id="stream-studio-mode" aria-hidden="true">
-    <div class="stream-studio-shell">
-      <header class="stream-studio-header">
-        <div class="stream-studio-brand">
-          <span class="stream-studio-kicker">GLASSTRACK // Y2K STREAM LAB</span>
-          <h2>Modo Estudio Y2K Stream &amp; Kinetic Visualizer</h2>
-        </div>
-        <div class="stream-studio-header-actions">
-          <span class="stream-studio-hotkey">P / I</span>
-          <span class="stream-studio-status" id="stream-studio-status">OFFLINE</span>
-          <button id="btn-stream-studio-close" class="icon-btn" title="Cerrar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
+        <div class="concludor-header-actions">
+          <span class="concludor-status" id="concludor-status" aria-live="polite"><i></i> LISTO PARA MEZCLAR</span>
+          <button id="btn-concludor-add" class="concludor-add-main" type="button" title="Agregar canciones a la mezcla"><span aria-hidden="true">＋</span> Agregar música</button>
+          <button id="btn-concludor-finish" class="concludor-save-btn" type="button">Guardar sesión</button>
+          <button id="btn-concludor-close" class="concludor-close-btn" type="button" title="Cerrar Concluidor" aria-label="Cerrar Concluidor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
       </header>
 
-      <div class="stream-studio-grid">
-        <section class="stream-studio-controls">
-          <nav class="stream-tabbar" aria-label="Controles del Modo Estudio Y2K">
-            <button class="stream-tab active" data-stream-tab="profile">Perfil</button>
-            <button class="stream-tab" data-stream-tab="type">Texto</button>
-            <button class="stream-tab" data-stream-tab="video">Vídeo</button>
-            <button class="stream-tab" data-stream-tab="vhs">VHS / CRT</button>
-          </nav>
-
-          <div class="stream-tab-panel active" data-stream-panel="profile">
-            <div class="stream-panel-block stream-profile-block">
-              <div class="stream-block-title">Perfil &amp; Nick</div>
-              <div class="stream-form-grid two-cols">
-                <label>Nick
-                  <input id="stream-profile-name" type="text" maxlength="24" placeholder="Tu nick">
-                </label>
-                <label>Insignia
-                  <select id="stream-profile-badge">
-                    <option value="STREAMER">STREAMER</option>
-                    <option value="VIP">VIP</option>
-                    <option value="PRO">PRO</option>
-                  </select>
-                </label>
+      <main class="concludor-main-grid">
+        <section class="concludor-left-column" aria-label="Configuración de mezcla">
+          <div class="concludor-hero-panel">
+            <div class="concludor-panel-kicker"><span class="concludor-live-dot"></span> SESIÓN DE MEZCLA <span id="concludor-track-count">0 pistas</span></div>
+            <div class="concludor-deck-layout">
+              <div class="concludor-current-art-wrap"><img id="concludor-now-cover" alt="Portada de la canción actual"><div class="concludor-art-glow"></div><span class="concludor-art-label">NOW PLAYING</span></div>
+              <div class="concludor-deck-info">
+                <span class="concludor-small-label" id="concludor-current-index">LISTO PARA EMPEZAR</span>
+                <h3 id="concludor-now-title">Tu próxima mezcla empieza aquí</h3>
+                <p id="concludor-now-artist">Agrega música para crear una secuencia.</p>
+                <div class="concludor-wave-panel"><div class="concludor-wave-caption"><span>SEÑAL DE AUDIO</span><span id="concludor-wave-state">EN ESPERA</span></div><div class="concludor-eq-viz" id="concludor-eq-viz" aria-label="Visualizador de audio"></div></div>
+                <div class="concludor-next-line"><span class="concludor-next-art-wrap"><img id="concludor-next-cover" alt="Portada de la siguiente canción"></span><span class="concludor-next-text"><small>DESPUÉS</small><strong id="concludor-up-next-title">Añade una segunda pista</strong><span id="concludor-up-next-artist">Tu mezcla aparecerá aquí</span></span><span class="concludor-next-arrow" aria-hidden="true">↗</span></div>
               </div>
-              <label>Marco
-                <select id="stream-profile-frame">
-                  <option value="glass">Glass</option>
-                  <option value="scanline">Scanline</option>
-                  <option value="arcade">Arcade</option>
-                  <option value="chrome">Chrome</option>
-                </select>
-              </label>
+            </div>
+            <div class="concludor-playback-row">
+              <div class="concludor-playback-note"><span class="concludor-mini-signal"></span><span id="concludor-playback-hint">Prepara tu lista y elige cómo conectar las canciones.</span></div>
+              <div class="concludor-playback-controls"><button id="btn-concludor-next" class="concludor-secondary-action" type="button" title="Pasar a la siguiente pista" disabled>Transición siguiente <span aria-hidden="true">↗</span></button><button id="btn-concludor-play" class="concludor-primary-action" type="button">▶ Iniciar mezcla</button></div>
             </div>
           </div>
 
-          <div class="stream-tab-panel" data-stream-panel="type">
-            <div class="stream-panel-block">
-              <div class="stream-block-title">Tipografía &amp; Colores</div>
-              <div class="stream-form-grid two-cols">
-                <label>Fuente
-                  <select id="stream-style-font">
-                    <option value="impact">Impact</option>
-                    <option value="arcade">Arcade</option>
-                    <option value="neon">Neon</option>
-                  </select>
-                </label>
-                <label>Color
-                  <input id="stream-style-color" type="color" value="#ffffff">
-                </label>
-                <label>Contorno
-                  <input id="stream-style-stroke" type="range" min="0" max="5" step="0.5" value="2">
-                </label>
-                <label>Linhas por bloque
-                  <select id="stream-style-lines">
-                    <option value="2">2 líneas</option>
-                    <option value="3" selected>3 líneas</option>
-                    <option value="4">4 líneas</option>
-                  </select>
-                </label>
-                <label>Composición
-                  <select id="stream-style-layout">
-                    <option value="centered">Centrada</option>
-                    <option value="staggered" selected>Escalonada</option>
-                  </select>
-                </label>
-                <label>Neón
-                  <input id="stream-style-neon" type="checkbox" checked>
-                </label>
-              </div>
-              <label class="stream-toggle-row">
-                <span>Letras decoradas + VHS</span>
-                <input id="stream-style-decorated" type="checkbox">
-              </label>
-              <p class="stream-small-hint">El texto se muestra en bloques de 2–4 líneas con entrada rápida estilo kinetic.</p>
+          <section class="concludor-modes-section">
+            <div class="concludor-section-heading"><div><span class="concludor-section-overline">ELIGE TU FLUJO</span><h3>Estilo de mezcla</h3></div><span class="concludor-section-caption">4 formas de conectar tus pistas</span></div>
+            <div class="concludor-mode-options" role="group" aria-label="Estilo de mezcla">
+              <button class="concludor-mode-option active" type="button" data-concludor-mode="fluid" aria-pressed="true"><span class="concludor-mode-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12c2.2-6 4.5 6 7 0s4.5-6 7 0 3.5 1 4-1" stroke-linecap="round"/></svg></span><span><strong>Fluida</strong><small>Fundido automático y suave</small></span><span class="concludor-choice-check">✓</span></button>
+              <button class="concludor-mode-option" type="button" data-concludor-mode="rhythm" aria-pressed="false"><span class="concludor-mode-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10h2l2-5 4 14 3-10 2 5 2-4h3" stroke-linejoin="round" stroke-linecap="round"/></svg></span><span><strong>Ritmo</strong><small>Fundidos más largos y envolventes</small></span><span class="concludor-choice-check">✓</span></button>
+              <button class="concludor-mode-option" type="button" data-concludor-mode="manual" aria-pressed="false"><span class="concludor-mode-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h10M4 17h6M18 7l2 2-2 2M14 15l-2 2 2 2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>Manual</strong><small>Tú decides cuándo hacer la transición</small></span><span class="concludor-choice-check">✓</span></button>
+              <button class="concludor-mode-option" type="button" data-concludor-mode="smart" aria-pressed="false"><span class="concludor-mode-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m19 16 .9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9L19 16Z"/></svg></span><span><strong>Inteligente</strong><small>Ajusta el fundido a cada fragmento</small></span><span class="concludor-choice-check">✓</span></button>
             </div>
-          </div>
+            <p id="concludor-mode-description" class="concludor-mode-description">Las canciones se conectan automáticamente con un fundido configurable.</p>
+          </section>
 
-          <div class="stream-tab-panel" data-stream-panel="video">
-            <div class="stream-panel-block">
-              <div class="stream-block-title">Fondo y Ambiente</div>
-              <div class="stream-form-grid two-cols">
-                <label>Fade (s)
-                  <input id="stream-crossfade" type="number" min="0" max="5" step="0.1" value="1">
-                </label>
-                <label>Duración total (s)
-                  <input id="stream-total-duration" type="number" min="1" max="86400" step="1" value="120">
-                </label>
-              </div>
-              <p class="stream-small-hint">Admite MP4/WebM/GIF locales y URLs externas de vídeo o GIF.</p>
-            </div>
-
-            <div class="stream-panel-block stream-sequencer-block">
-              <div class="stream-block-title stream-block-title-row">
-                <span>Timeline / 4 vídeos</span>
-                <button id="btn-stream-reset" class="stream-mini-btn">Restablecer</button>
-              </div>
-              <div class="stream-slot-list" id="stream-slot-list"></div>
-            </div>
-
-            <div class="stream-panel-actions">
-              <button id="btn-stream-play" class="menu-opt-btn primary-opt">▶ Iniciar</button>
-              <button id="btn-stream-pause" class="menu-opt-btn">⏸ Pausar</button>
-              <button id="btn-stream-restart" class="menu-opt-btn">↺ Reiniciar</button>
-            </div>
-          </div>
-
-          <div class="stream-tab-panel" data-stream-panel="vhs">
-            <div class="stream-panel-block">
-              <div class="stream-block-title">Filtros VHS / CRT</div>
-              <label class="stream-toggle-row">
-                <span>Líneas CRT</span>
-                <input id="stream-vhs-scanlines" type="checkbox" checked>
-              </label>
-              <label class="stream-toggle-row">
-                <span>Ruido VHS</span>
-                <input id="stream-vhs-noise" type="checkbox" checked>
-              </label>
-              <label class="stream-toggle-row">
-                <span>Parpadeo CRT</span>
-                <input id="stream-vhs-flicker" type="checkbox" checked>
-              </label>
-              <label class="stream-toggle-row">
-                <span>Aberración RGB</span>
-                <input id="stream-vhs-rgb" type="checkbox" checked>
-              </label>
-              <p class="stream-small-hint">Estos efectos solo afectan al nuevo preview Y2K Stream.</p>
-            </div>
-          </div>
+          <section class="concludor-mix-settings">
+            <div class="concludor-section-heading"><div><span class="concludor-section-overline">CONTROL DE TRANSICIÓN</span><h3>Fundido cruzado</h3></div><output id="concludor-crossfade-value" for="concludor-crossfade">3.0 s</output></div>
+            <div class="concludor-crossfade-control"><span>Rápido</span><input id="concludor-crossfade" type="range" min="0.5" max="8" step="0.5" value="3" aria-label="Duración del fundido cruzado"><span>Suave</span></div>
+            <div class="concludor-settings-foot"><span><span class="concludor-setting-light"></span> Se aplica a la secuencia actual</span><span>0.5–8 segundos</span></div>
+          </section>
         </section>
 
-        <section class="stream-studio-preview-column">
-          <div class="stream-preview-topbar">
-            <span>LIVE PREVIEW</span>
-            <span id="stream-preview-clock">00:00 / 02:00</span>
-          </div>
-
-          <div class="stream-live-preview" id="stream-live-preview">
-            <div class="stream-media-stack" id="stream-media-stack">
-              <video class="stream-media-layer" id="stream-media-a" playsinline muted></video>
-              <video class="stream-media-layer" id="stream-media-b" playsinline muted></video>
-              <img class="stream-media-layer stream-gif-layer" id="stream-gif-a" alt="">
-              <img class="stream-media-layer stream-gif-layer" id="stream-gif-b" alt="">
-            </div>
-
-            <div class="stream-vhs-noise" id="stream-vhs-noise-layer"></div>
-            <div class="stream-vhs-scanlines" id="stream-vhs-scanlines-layer"></div>
-            <div class="stream-vhs-flicker" id="stream-vhs-flicker-layer"></div>
-            <div class="stream-vhs-rgb" id="stream-vhs-rgb-layer"></div>
-
-            <div class="stream-preview-overlay">
-              <div class="stream-live-row">
-                <div class="stream-live-badge">● LIVE</div>
-                <span class="stream-preview-chip">Y2K STREAM</span>
-              </div>
-
-              <div class="stream-profile-preview" id="stream-profile-preview">
-                <span id="stream-preview-nick">GLASSTRACK</span>
-                <b id="stream-preview-badge">STREAMER</b>
-              </div>
-
-              <div class="stream-kinetic-area">
-                <div class="stream-lyric-preview" id="stream-lyric-preview" aria-live="polite">
-                  <span class="stream-kinetic-line">Modo</span>
-                  <span class="stream-kinetic-line">Stream Y2K</span>
-                  <span class="stream-kinetic-line">Visualizer</span>
-                </div>
-              </div>
-
-              <div class="stream-now-playing">
-                <span id="stream-preview-title">Sin canción cargada</span>
-                <small id="stream-preview-artist">—</small>
-              </div>
-
-              <div class="stream-timeline-marker">
-                <div class="stream-marker-fill" id="stream-marker-fill"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="stream-preview-footer">
-            <span id="stream-current-slot">Video 1</span>
-            <span id="stream-current-media">Sin fuente</span>
-          </div>
-        </section>
-      </div>
+        <aside class="concludor-queue-panel" aria-label="Lista de canciones de la mezcla">
+          <div class="concludor-queue-head"><div><span class="concludor-section-overline">TU SESIÓN</span><h3>Secuencia de pistas</h3><p>Ordena, recorta y prepara cada entrada.</p></div><button id="btn-concludor-local" class="concludor-local-add" type="button" title="Importar archivos de audio desde el dispositivo" aria-label="Importar audio local">＋<span>Local</span></button></div>
+          <div class="concludor-queue-columns"><span>PISTA / ARTISTA</span><span>DUR.</span><span>ACCIONES</span></div>
+          <div class="concludor-carousel-wrapper"><div class="concludor-cable" id="concludor-cable" aria-hidden="true"></div><div class="concludor-carousel" id="concludor-carousel"><div class="concludor-empty-state"><span class="concludor-empty-icon">♫</span><strong>Tu mezcla está vacía</strong><p>Agrega música desde tu biblioteca o importa pistas locales.</p><button type="button" class="concludor-empty-add" data-concludor-open-add>＋ Agregar canciones</button></div></div></div>
+          <div class="concludor-queue-foot"><span id="concludor-total-duration">Duración total: 0:00</span><button id="btn-concludor-clear" class="concludor-clear-btn" type="button" disabled>Vaciar secuencia</button></div>
+          <section class="concludor-focus-panel"><div class="concludor-focus-heading"><span class="concludor-focus-icon">♫</span><div><strong>Enfoque de sonido</strong><small>Realza un elemento de la pista</small></div></div><div class="concludor-src-group"><button id="btn-concludor-voice" class="concludor-src-btn" type="button" title="Resaltar voz">Voz</button><button id="btn-concludor-music" class="concludor-src-btn active" type="button" title="Resaltar música">Música</button></div><p>Este control usa el procesador Voz / Música de Glasstrack.</p></section>
+        </aside>
+      </main>
+      <footer class="concludor-footer"><span><b>GLASSTRACK</b><span class="concludor-footer-divider">/</span> CONCLUIDOR MIX</span><span>Diseña tus transiciones. Mantén tu ritmo.</span><span id="concludor-footer-mode">MODO FLUIDO</span></footer>
     </div>
-  </div>
+  </section>
+
+  <!-- MODO ESTUDIO DE LETRAS -->
+  <!-- AYUDA DEL MODO ESTUDIO DE LETRAS -->
+  
+
+  
+
+  <!-- MODO ESTUDIO Y2K STREAM — PANEL INDEPENDIENTE DEL MODO CINE -->
+  
 
   <!-- MODO PERSPECTIVA MOBILE 3D — INDEPENDIENTE DEL MODO CINE -->
   <div class="mobile-3d-mode" id="mobile-3d-mode" aria-hidden="true">
@@ -2052,7 +2880,7 @@
 
         <header class="mobile-3d-topbar">
           <span class="mobile-3d-brand">GLASSTRACK</span>
-          <button id="mobile-3d-close" class="mobile-3d-close" type="button" title="Cerrar">×</button>
+          <button id="mobile-3d-close" class="mobile-3d-close" type="button" title="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </header>
 
         <div class="mobile-3d-art-wrap">
@@ -2101,7 +2929,7 @@
         <img src="img/tu_logo.png" alt="GLASSTRACK Logo" style="max-height: 60px; width: auto; display: block; margin: 0 auto 10px;">
           <h2>💎 GLASSTRACK PRO</h2>
           <p class="app-info-meta">Desarrollado y Diseñado por: <b>Keylefs RT</b></p>
-          <p class="app-info-meta">Versión: 230.31 (Glassmorphism &amp; DSP Engine)</p>
+          <p class="app-info-meta">Versión: B30 (Glassmorphism &amp; DSP Engine)</p>
         </div>
 
         <div class="app-info-section">
@@ -2190,13 +3018,7 @@
     </div>
   </div>
 
-  <!-- BARRA FLOTANTE DEL EDITOR VISUAL -->
-  <div class="visual-editor-toolbar hidden" id="visual-editor-toolbar">
-    <div class="ve-toolbar-title">Modo Edición en Vivo</div>
-    <p class="ve-toolbar-hint">Toca cualquier tarjeta resaltada para personalizarla.</p>
-    <button id="btn-reset-visual-editor" class="menu-opt-btn danger">Restablecer Interfaz por Defecto</button>
-    <button id="btn-exit-visual-editor" class="menu-opt-btn primary-opt">Salir del Editor</button>
-  </div>
+  
 
   <!-- MODAL DE EDICIÓN DE TARJETA -->
   <div class="modal-overlay hidden" id="modal-card-editor">
@@ -2305,7 +3127,211 @@
     </div>
   </section>
 
-  <script src="script.js?v=rhythm20260919-mobilev5"></script>
+<!-- =========================================================
+     GLASSTRACK PRO — MODO VISUAL
+     Reproductor visual inspirado en el layout del video/imagen de referencia.
+     No es editor: reutiliza la reproducción real de Glasstrack.
+     ========================================================= -->
+<section id="visual-mode" class="visual-mode" aria-hidden="true" aria-label="Modo Visual">
+  <div id="visual-mode-bg-cover" class="visual-mode-bg-cover" aria-hidden="true"></div>
+  <video id="visual-mode-bg-video" class="visual-mode-bg-video" muted loop playsinline aria-hidden="true"></video>
+  <div class="visual-mode-bg-vignette" aria-hidden="true"></div>
+  <div class="visual-mode-bg-grid" aria-hidden="true"></div>
+
+  <button id="visual-mode-close" class="visual-mode-close" type="button" aria-label="Cerrar Modo Visual" title="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+
+  <div class="visual-mode-status" aria-hidden="true">
+    <span class="visual-mode-dot"></span>
+    <span>GLASSTRACK</span>
+    <span class="visual-mode-status-line"></span>
+    <span id="visual-mode-status-time">00:00</span>
+  </div>
+
+  <img id="visual-mode-sticker" class="visual-mode-sticker" alt="" draggable="false" hidden aria-hidden="true">
+
+  <!-- MODO YUKI — presentación alternativa. Se muestra solo cuando se activa en Ajustes. -->
+  <section id="visual-mode-yuki" class="visual-mode-yuki" aria-hidden="true">
+    <div class="visual-yuki-geometry" aria-hidden="true">
+      <span class="visual-yuki-geo geo-1"></span>
+      <span class="visual-yuki-geo geo-2"></span>
+      <span class="visual-yuki-geo geo-3"></span>
+      <span class="visual-yuki-geo geo-4"></span>
+    </div>
+
+    <div class="visual-yuki-particles" aria-hidden="true"></div>
+
+    <div class="visual-yuki-topbar" aria-hidden="true">
+      <span>GLASSTRACK / YUKI</span>
+      <span class="visual-yuki-topbar-line"></span>
+      <span id="visual-yuki-top-time">00:00</span>
+    </div>
+
+    <main class="visual-yuki-layout">
+      <section class="visual-yuki-art" aria-label="Portada Yuki">
+        <div class="visual-yuki-halo" aria-hidden="true"></div>
+        <div class="visual-yuki-ring" aria-hidden="true">
+          <span class="ring-orbit orbit-outer"></span>
+          <span class="ring-orbit orbit-mid"></span>
+          <span class="ring-orbit orbit-inner"></span>
+          <span class="ring-arc arc-a"></span>
+          <span class="ring-arc arc-b"></span>
+          <span class="ring-arc arc-c"></span>
+          <span class="ring-arc arc-d"></span>
+          <span class="ring-ray ray-a"></span>
+          <span class="ring-ray ray-b"></span>
+          <span class="ring-ray ray-c"></span>
+          <span class="ring-ray ray-d"></span>
+          <i class="ring-star star-a">✦</i>
+          <i class="ring-star star-b">✧</i>
+          <i class="ring-star star-c">✣</i>
+          <i class="ring-star star-d">✦</i>
+          <i class="ring-star star-e">◇</i>
+          <i class="ring-star star-f">·</i>
+          <i class="ring-star star-g">✦</i>
+          <i class="ring-star star-h">◇</i>
+          <span class="ring-node node-1"></span>
+          <span class="ring-node node-2"></span>
+          <span class="ring-node node-3"></span>
+          <span class="ring-node node-4"></span>
+          <span class="ring-node node-5"></span>
+          <span class="ring-node node-6"></span>
+        </div>
+        <div class="visual-yuki-cover-frame">
+          <img class="visual-yuki-cover" src="" alt="Portada actual" draggable="false">
+          <span class="yuki-corner yc-tl" aria-hidden="true"></span>
+          <span class="yuki-corner yc-tr" aria-hidden="true"></span>
+          <span class="yuki-corner yc-bl" aria-hidden="true"></span>
+          <span class="yuki-corner yc-br" aria-hidden="true"></span>
+        </div>
+      </section>
+
+      <section class="visual-yuki-info" aria-label="Información de reproducción Yuki">
+        <div class="visual-yuki-kicker">NOW PLAYING / VISUAL HUD</div>
+        <h1 class="visual-yuki-title">Sin canción cargada</h1>
+        <p class="visual-yuki-artist">—</p>
+        <div class="visual-yuki-time-row">
+          <span class="visual-yuki-current">0:00</span>
+          <span>—</span>
+          <span class="visual-yuki-duration">0:00</span>
+        </div>
+
+        <div class="visual-yuki-progress-wrap">
+          <div class="visual-yuki-progress-shell">
+            <div class="visual-yuki-progress-track" aria-label="Barra de progreso Yuki">
+              <div class="visual-yuki-progress-fill"></div>
+            </div>
+            <div class="visual-yuki-progress-decor" aria-hidden="true">
+              <span>◇</span><span>✦</span>
+            </div>
+          </div>
+          <canvas class="visual-yuki-spectrum" aria-hidden="true"></canvas>
+        </div>
+
+        <div class="visual-yuki-controls" aria-label="Controles Yuki">
+          <button type="button" class="visual-yuki-prev" aria-label="Anterior">◀◀</button>
+          <button type="button" class="visual-yuki-play" aria-label="Reproducir o pausar">Ⅱ</button>
+          <button type="button" class="visual-yuki-next" aria-label="Siguiente">▶▶</button>
+        </div>
+
+        <div class="visual-yuki-volume">
+          <span>VOL</span>
+          <div class="visual-yuki-volume-track"><span class="visual-yuki-volume-fill"></span></div>
+          <span class="visual-yuki-volume-value">100%</span>
+        </div>
+      </section>
+    </main>
+
+    <div class="visual-yuki-brand" aria-label="Marca y sticker Yuki">
+      <div class="visual-yuki-brand-copy">
+        <span>Glasstrack</span>
+        <span class="visual-yuki-brand-rule"></span>
+      </div>
+      <img class="visual-yuki-sticker" alt="" draggable="false" hidden aria-hidden="true">
+    </div>
+
+    <div class="visual-yuki-bottom-wave" aria-hidden="true">
+      <canvas class="visual-yuki-bottom-waves" aria-hidden="true"></canvas>
+    </div>
+  </section>
+
+  <main class="visual-mode-stage">
+    <section class="visual-mode-cover-side" aria-label="Portada">
+      <div class="visual-mode-cover-halo" aria-hidden="true"></div>
+      <div class="visual-mode-star-ring" aria-hidden="true">
+        <span>✧</span><span>✦</span><span>✣</span><span>◇</span><span>·</span><span>✧</span>
+        <span>✦</span><span>✧</span><span>◇</span><span>✣</span><span>✦</span><span>✣</span>
+      </div>
+      <div class="visual-mode-cover-orbit orbit-one" aria-hidden="true"></div>
+      <div class="visual-mode-cover-orbit orbit-two" aria-hidden="true"></div>
+      <div class="visual-mode-cover-mark mark-a" aria-hidden="true">✦</div>
+      <div class="visual-mode-cover-mark mark-b" aria-hidden="true">◇</div>
+      <div class="visual-mode-cover-mark mark-c" aria-hidden="true">·</div>
+      <div class="visual-mode-cover-frame">
+        <img id="visual-mode-cover" src="" alt="Portada actual" draggable="false">
+        <span class="visual-mode-cover-corner corner-tl" aria-hidden="true"></span>
+        <span class="visual-mode-cover-corner corner-tr" aria-hidden="true"></span>
+        <span class="visual-mode-cover-corner corner-bl" aria-hidden="true"></span>
+        <span class="visual-mode-cover-corner corner-br" aria-hidden="true"></span>
+        <div class="visual-mode-device-hud" aria-hidden="true">
+          <span>▮▮▮</span><span>⌁</span><span>▰</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="visual-mode-info" aria-label="Reproducción">
+      <div class="visual-mode-kicker">NOW PLAYING</div>
+      <h1 id="visual-mode-title">Sin canción cargada</h1>
+      <p id="visual-mode-artist">—</p>
+      <div id="visual-mode-lyric" class="visual-mode-lyric" aria-live="polite" aria-hidden="true"></div>
+
+      <div class="visual-mode-time-row">
+        <span id="visual-mode-current">0:00</span>
+        <span class="visual-mode-time-dash">—</span>
+        <span id="visual-mode-duration">0:00</span>
+      </div>
+
+      <div class="visual-mode-progress-wrap">
+        <div class="visual-mode-progress-track" aria-label="Barra de progreso de la canción">
+          <div id="visual-mode-progress" class="visual-mode-progress-fill"></div>
+        </div>
+        <canvas id="visual-mode-wave" class="visual-mode-wave visual-mode-inverted-spectrum" aria-label="Espectro invertido de audio" aria-hidden="true"></canvas>
+      </div>
+
+      <div class="visual-mode-controls" aria-label="Controles de reproducción">
+        <button id="visual-mode-prev" type="button" aria-label="Anterior" title="Anterior">◀◀</button>
+        <button id="visual-mode-play" class="visual-mode-play" type="button" aria-label="Reproducir o pausar" title="Reproducir o pausar">Ⅱ</button>
+        <button id="visual-mode-next" type="button" aria-label="Siguiente" title="Siguiente">▶▶</button>
+      </div>
+
+      <div class="visual-mode-volume">
+        <span>VOL</span>
+        <input id="visual-mode-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volumen">
+        <span id="visual-mode-volume-value">100%</span>
+      </div>
+
+      <div class="visual-mode-brand" aria-label="Marca de Glasstrack">
+        <span>Glasstrack</span>
+        <span class="visual-mode-brand-rule"></span>
+      </div>
+    </section>
+  </main>
+
+  <div class="visual-mode-particles" id="visual-mode-particles" aria-hidden="true"></div>
+
+  <div class="visual-mode-bottom-wave" aria-hidden="true">
+    <canvas id="visual-mode-bottom-waves" class="visual-mode-bottom-waves" aria-hidden="true"></canvas>
+  </div>
+</section>
+
+  <script src="script.js?v=glasstrack-b55-concludor-mix-studio-20261013"></script>
+<!-- =========================================================
+     GLASSTRACK PRO — VISUAL OVERLAY STUDIO
+     Editor independiente: no modifica el reproductor normal.
+     ========================================================= -->
+
+
+
+
 <!-- =========================================================
      GLASSTRACK PRO — STAGE MANAGER
      BLOQUE 1: HTML
@@ -2406,9 +3432,7 @@
       class="stage-hud-button stage-close-button"
       type="button"
       title="Cerrar Modo Escenario"
-      aria-label="Cerrar Modo Escenario">
-      ×
-    </button>
+      aria-label="Cerrar Modo Escenario"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 
     <div
       id="stage-hud-status"
@@ -2442,9 +3466,7 @@
         id="stage-settings-close"
         class="stage-settings-close"
         type="button"
-        aria-label="Cerrar configuración">
-        ×
-      </button>
+        aria-label="Cerrar configuración"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
 
     <div class="stage-settings-scroll">
