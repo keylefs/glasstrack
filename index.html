@@ -7,12 +7,12 @@
     <meta name="description" content="Glasstrack Pro es un reproductor de música web de alta fidelidad con interfaz Glassmorphism y procesamiento de audio en tiempo real.">
 
     <!-- LÍNEA DE GOOGLE SEARCH CONSOLE -->
-    <meta name="google-site-verification" content="BAIEt6WRPSJ32gvB0vFxQWg00UuSXd8JOrtUGdQHrUw" />
-    
+    <meta name="google-site-verification" content="Z2w38Nsr0ZhtrY-jkmMbbKlORip9ctbcyNdByLNFln8" />
+
     <!-- Icono (favicon) para la pestaña -->
     <link rel="icon" type="image/png" href="img/favicon.png">
 
-    <link rel="stylesheet" href="styles.css?v=glasstrack-b55-concludor-mix-studio-20261013">
+    <link rel="stylesheet" href="styles.css?v=glasstrack-b68-respaldo-completo-20261014">
     <!-- Fuentes de Google Fonts actualizadas -->
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Nunito:wght@400;600;700&family=Raleway:wght@400;600;700&family=Rubik:wght@400;500;700&family=Bebas+Neue&family=Playfair+Display:wght@400;600;700&family=Press+Start+2P&family=Montserrat:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Pacifico&family=Permanent+Marker&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -42,50 +42,16 @@
     <button id="btn-focus-mode" class="global-icon-btn" title="Modo Enfoque (Ocultar interfaz)">
       <svg id="focus-eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
-    <!-- Modos y Experiencias: botón visible en móvil; en PC el acceso se hace desde Opciones Secundarias -->
+    <!-- Menú único de tres puntos en móvil; en PC los modos se conservan en Opciones secundarias. -->
     <button id="btn-top-experiences" class="global-icon-btn top-experiences-trigger" type="button" title="Modo Vista" aria-label="Modo Vista" aria-haspopup="menu" aria-expanded="false" aria-controls="top-experiences-menu">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/>
-        <circle cx="12" cy="12" r="2.5"/>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <circle cx="12" cy="5" r="2"/>
+        <circle cx="12" cy="12" r="2"/>
+        <circle cx="12" cy="19" r="2"/>
       </svg>
     </button>
 
-    <div id="top-experiences-menu" class="top-experiences-menu hidden" role="menu" aria-label="Modos y Experiencias">
-      <div class="top-experiences-menu-header">
-        <span class="top-experiences-kicker">GLASSTRACK PRO</span>
-        <strong>Modos y Experiencias</strong>
-      </div>
-      <button id="top-mode-stage" class="top-experience-item top-experience-item-locked" type="button" role="menuitem" aria-disabled="true" disabled title="Modo Escenario bloqueado">
-        <span class="top-experience-icon" aria-hidden="true">🔒</span>
-        <span class="top-experience-copy">
-          <strong>Modo Escenario / Personaje</strong>
-          <small>Modo bloqueado temporalmente</small>
-        </span>
-        <span class="top-experience-lock">BLOQUEADO</span>
-      </button>
-      <button id="top-mode-rhythm" class="top-experience-item" type="button" role="menuitem">
-        <span class="top-experience-icon" aria-hidden="true">♫</span>
-        <span class="top-experience-copy">
-          <strong>Modo Ritmo</strong>
-          <small>Juego de ritmo y editor de charts</small>
-        </span>
-      </button>
-      <button id="top-mode-visual" class="top-experience-item visual-mode-menu-item" type="button" role="menuitem" aria-label="Abrir Modo Visual">
-        <span class="top-experience-icon" aria-hidden="true">✦</span>
-        <span class="top-experience-copy">
-          <strong>Modo Visual</strong>
-          <small>Reproductor estilo edit: portada, fondo, HUD y visualizador</small>
-        </span>
-      </button>
-      <button id="top-mode-jk" class="top-experience-item top-experience-item-locked" type="button" role="menuitem" aria-disabled="true" disabled title="Modo JK bloqueado">
-        <span class="top-experience-icon" aria-hidden="true">🔒</span>
-        <span class="top-experience-copy">
-          <strong>Modo JK</strong>
-          <small>Bloqueado temporalmente</small>
-        </span>
-        <span class="top-experience-lock">BLOQUEADO</span>
-      </button>
-    </div>
+
     <!-- Modo Vehículo -->
     <button id="btn-vehicle-mode" class="global-icon-btn" title="Modo Vehículo">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17h14M5 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm14 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 17l1.5-6h11L19 17M6.5 11l1-3h9l1 3"/></svg>
@@ -114,27 +80,61 @@
       </svg>
     </button>
 
-    <button id="btn-mobile-secondary-menu" class="global-icon-btn mobile-secondary-menu-btn" type="button" title="Opciones secundarias" aria-label="Opciones secundarias">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <circle cx="12" cy="5" r="2"/>
-        <circle cx="12" cy="12" r="2"/>
-        <circle cx="12" cy="19" r="2"/>
-      </svg>
-    </button>
-    <div id="mobile-quick-menu" class="mobile-quick-menu" role="menu" aria-label="Opciones rápidas">
-      <button type="button" class="mobile-quick-item" data-mobile-quick="eq" role="menuitem">EQ</button>
-      <button type="button" class="mobile-quick-item" data-mobile-quick="lyrics" role="menuitem">Letras</button>
-      <button type="button" class="mobile-quick-item" data-mobile-quick="vm" role="menuitem">Voz / Música</button>
-      <button type="button" class="mobile-quick-item" data-mobile-quick="cinema" role="menuitem">Modo Cine</button>
-      <button type="button" class="mobile-quick-item" data-mobile-quick="shuffle" role="menuitem">Aleatorio</button>
-      <button type="button" class="mobile-quick-item" data-mobile-quick="loop" role="menuitem">Repetir</button>
-    </div>
+
     <!-- Modo Concluidor (mezclar varias canciones en cadena) -->
     <button id="btn-concludor-mode" class="global-icon-btn" title="Modo Concluidor">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2.5"/><circle cx="12" cy="12" r="2.5"/><circle cx="19" cy="12" r="2.5"/><line x1="7.5" y1="12" x2="9.5" y2="12"/><line x1="14.5" y1="12" x2="16.5" y2="12"/></svg>
     </button>
   </div>
   </div><!-- /#control-notification-bar -->
+
+  <!-- Menú de modos/accesos rápidos: fuera del header transformado para posicionarlo relativo al viewport. -->
+    <div id="top-experiences-menu" class="top-experiences-menu hidden" role="menu" aria-label="Modos y Experiencias">
+      <div class="top-experiences-menu-header">
+        <span class="top-experiences-kicker">GLASSTRACK PRO</span>
+        <strong>Modos y Experiencias</strong>
+      </div>
+      <button id="top-mode-stage" class="top-experience-item top-experience-item-locked" type="button" role="menuitem" aria-disabled="true" disabled title="Modo Escenario bloqueado">
+        <span class="top-experience-icon" aria-hidden="true">🔒</span>
+        <span class="top-experience-copy">
+          <strong>Modo Escenario / Personaje</strong>
+          <small>Modo bloqueado temporalmente</small>
+        </span>
+        <span class="top-experience-lock">BLOQUEADO</span>
+      </button>
+      <button id="top-mode-rhythm" class="top-experience-item top-experience-item-locked rhythm-mode-locked" type="button" role="menuitem" aria-disabled="true" disabled title="Modo Ritmo bloqueado temporalmente mientras se corrige">
+        <span class="top-experience-icon" aria-hidden="true">🔒</span>
+        <span class="top-experience-copy">
+          <strong>Modo Ritmo</strong>
+          <small>Bloqueado temporalmente mientras se corrige</small>
+        </span>
+        <span class="top-experience-lock">BLOQUEADO</span>
+      </button>
+      <button id="top-mode-visual" class="top-experience-item visual-mode-menu-item" type="button" role="menuitem" aria-label="Abrir Modo Visual">
+        <span class="top-experience-icon" aria-hidden="true">✦</span>
+        <span class="top-experience-copy">
+          <strong>Modo Visual</strong>
+          <small>Reproductor estilo edit: portada, fondo, HUD y visualizador</small>
+        </span>
+      </button>
+      <button id="top-mode-jk" class="top-experience-item top-experience-item-locked" type="button" role="menuitem" aria-disabled="true" disabled title="Modo JK bloqueado">
+        <span class="top-experience-icon" aria-hidden="true">🔒</span>
+        <span class="top-experience-copy">
+          <strong>Modo JK</strong>
+          <small>Bloqueado temporalmente</small>
+        </span>
+        <span class="top-experience-lock">BLOQUEADO</span>
+      </button>
+      <div class="mobile-quick-menu-label" aria-hidden="true">Accesos rápidos</div>
+      <div id="mobile-quick-menu" class="mobile-quick-menu" role="group" aria-label="Opciones rápidas">
+        <button type="button" class="mobile-quick-item" data-mobile-quick="eq" role="menuitem">EQ</button>
+        <button type="button" class="mobile-quick-item" data-mobile-quick="lyrics" role="menuitem">Letras</button>
+        <button type="button" class="mobile-quick-item" data-mobile-quick="vm" role="menuitem">Voz / Música</button>
+        <button type="button" class="mobile-quick-item" data-mobile-quick="cinema" role="menuitem">Modo Cine</button>
+        <button type="button" class="mobile-quick-item" data-mobile-quick="shuffle" role="menuitem">Aleatorio</button>
+        <button type="button" class="mobile-quick-item" data-mobile-quick="loop" role="menuitem">Repetir</button>
+      </div>
+    </div>
 
   <div class="app-layout" id="app-layout">
     
@@ -153,16 +153,16 @@
         <button class="preset-btn" data-preset="reset">Flat</button>
       </div>
       <div class="eq-sliders" id="eq-sliders">
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="0"><span>32</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="1"><span>64</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="2"><span>125</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="3"><span>250</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="4"><span>500</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="5"><span>1k</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="6"><span>2k</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="7"><span>4k</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="8"><span>8k</span></div>
-        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="9"><span>16k</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="0" step="0.5"><span>32</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="1" step="0.5"><span>64</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="2" step="0.5"><span>125</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="3" step="0.5"><span>250</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="4" step="0.5"><span>500</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="5" step="0.5"><span>1k</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="6" step="0.5"><span>2k</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="7" step="0.5"><span>4k</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="8" step="0.5"><span>8k</span></div>
+        <div class="eq-band"><input type="range" class="eq-band-range" min="-12" max="12" value="0" data-index="9" step="0.5"><span>16k</span></div>
       </div>
 
       <div id="mobile-eq-controls" class="mobile-eq-controls" aria-label="Ecualizador móvil">
@@ -173,31 +173,56 @@
           <button type="button" class="mobile-eq-preset" data-mobile-eq-preset="dance">Baile</button>
         </div>
 
-        <div class="mobile-eq-slider-grid">
+        <div class="mobile-eq-slider-grid" aria-label="Diez bandas del ecualizador">
           <label class="mobile-eq-band">
-            <input id="mobile-eq-230" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="3" orient="vertical">
-            <output id="mobile-eq-230-value">0 dB</output>
-            <span>230Hz</span>
+            <output id="mobile-eq-32-value">0 dB</output>
+            <input id="mobile-eq-32" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="0" aria-label="32 Hz">
+            <span class="mobile-eq-frequency">32</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
           </label>
           <label class="mobile-eq-band">
-            <input id="mobile-eq-910" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="5" orient="vertical">
-            <output id="mobile-eq-910-value">0 dB</output>
-            <span>910Hz</span>
+            <output id="mobile-eq-64-value">0 dB</output>
+            <input id="mobile-eq-64" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="1" aria-label="64 Hz">
+            <span class="mobile-eq-frequency">64</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
           </label>
           <label class="mobile-eq-band">
-            <input id="mobile-eq-60" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="1" orient="vertical">
-            <output id="mobile-eq-60-value">0 dB</output>
-            <span>60Hz</span>
+            <output id="mobile-eq-125-value">0 dB</output>
+            <input id="mobile-eq-125" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="2" aria-label="125 Hz">
+            <span class="mobile-eq-frequency">125</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
           </label>
           <label class="mobile-eq-band">
-            <input id="mobile-eq-4k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="7" orient="vertical">
+            <output id="mobile-eq-250-value">0 dB</output>
+            <input id="mobile-eq-250" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="3" aria-label="250 Hz">
+            <span class="mobile-eq-frequency">250</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
+          </label>
+          <label class="mobile-eq-band">
+            <output id="mobile-eq-500-value">0 dB</output>
+            <input id="mobile-eq-500" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="4" aria-label="500 Hz">
+            <span class="mobile-eq-frequency">500</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
+          </label>
+          <label class="mobile-eq-band">
+            <output id="mobile-eq-1k-value">0 dB</output>
+            <input id="mobile-eq-1k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="5" aria-label="1 kHz">
+            <span class="mobile-eq-frequency">1k</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
+          </label>
+          <label class="mobile-eq-band">
+            <output id="mobile-eq-2k-value">0 dB</output>
+            <input id="mobile-eq-2k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="6" aria-label="2 kHz">
+            <span class="mobile-eq-frequency">2k</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
+          </label>
+          <label class="mobile-eq-band">
             <output id="mobile-eq-4k-value">0 dB</output>
-            <span>4kHz</span>
+            <input id="mobile-eq-4k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="7" aria-label="4 kHz">
+            <span class="mobile-eq-frequency">4k</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
           </label>
           <label class="mobile-eq-band">
-            <input id="mobile-eq-14k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="9" orient="vertical">
-            <output id="mobile-eq-14k-value">0 dB</output>
-            <span>14kHz</span>
+            <output id="mobile-eq-8k-value">0 dB</output>
+            <input id="mobile-eq-8k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="8" aria-label="8 kHz">
+            <span class="mobile-eq-frequency">8k</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
+          </label>
+          <label class="mobile-eq-band">
+            <output id="mobile-eq-16k-value">0 dB</output>
+            <input id="mobile-eq-16k" type="range" min="-12" max="12" step="0.5" value="0" data-eq-index="9" aria-label="16 kHz">
+            <span class="mobile-eq-frequency">16k</span><span class="mobile-eq-track" aria-hidden="true"></span><span class="mobile-eq-fill" aria-hidden="true"></span>
           </label>
         </div>
 
@@ -348,7 +373,16 @@
     <!-- REPRODUCTOR PRINCIPAL -->
     <div class="player-card" id="player-card">
       <div class="player-bg-fluid" id="player-bg-fluid"></div>
-      
+
+      <!-- X accesible cuando el reproductor se expande en la interfaz celular. -->
+      <button id="btn-close-mobile-player" class="mobile-player-close-btn" type="button"
+        aria-label="Cerrar reproductor" title="Cerrar reproductor">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.3" stroke-linecap="round" aria-hidden="true">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+
       <div class="top-bar">
         <button id="btn-eq-toggle" class="text-btn player-tool-btn" type="button" data-ui-tooltip="Ecualizador" aria-label="Abrir ecualizador">
           <svg class="player-tool-icon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3"/><path d="M1.5 14h5M9.5 8h5M17.5 16h5"/></svg>
@@ -406,9 +440,7 @@
         <button id="btn-fav" class="icon-btn fav-btn" title="Me gusta">
           <svg id="fav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.72-8.72 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
-        <button id="btn-quick-speed" class="icon-btn" title="Velocidad de reproducción">
-          <span id="quick-speed-label">1x</span>
-        </button>
+        <button id="btn-quick-speed" class="icon-btn playback-speed-control" title="Velocidad de reproducción" aria-label="Velocidad 1x"><span id="quick-speed-label" class="playback-speed-value">1x</span></button>
       </div>
 
       <div class="volume-container">
@@ -715,7 +747,7 @@
             </div>
             <div class="setting-card-content">
               <span class="setting-card-title">Audio Avanzado y Control</span>
-              <span class="setting-card-desc">Normalizador, velocidad/pitch, mono y crossfade</span>
+              <span class="setting-card-desc">Normalizador, velocidad, mono y crossfade</span>
             </div>
             <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
@@ -726,7 +758,7 @@
             </div>
             <div class="setting-card-content">
               <span class="setting-card-title">Gestión de Datos y Biblioteca</span>
-              <span class="setting-card-desc">Copia de seguridad JSON, caché e IndexedDB</span>
+              <span class="setting-card-desc">Biblioteca Segura, recuperación automática y exportación</span>
             </div>
             <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
@@ -926,6 +958,17 @@
               </div>
               <label class="switch">
                 <input type="checkbox" id="toggle-mobile-layout">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-title">Adaptación automática de interfaz</span>
+                <span class="setting-desc">Detecta controles que no caben y reduce o reorganiza sus espacios en la Interfaz Celular. Desactivada por defecto.</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-mobile-auto-fit">
                 <span class="slider"></span>
               </label>
             </div>
@@ -1259,13 +1302,24 @@
             </div>
 
             <div class="setting-item vertical">
-              <span class="setting-title">Velocidad y Tono (Pitch)</span>
-              <div class="range-with-value">
-                <input type="range" id="input-audio-speed" min="0.5" max="2.0" step="0.05" value="1.0">
+              <span class="setting-title">Velocidad de reproducción</span>
+              <div class="range-with-value audio-speed-control-row">
+                <input type="range" id="input-audio-speed" min="0.5" max="2.0" step="0.05" value="1.0" aria-label="Velocidad de reproducción">
                 <span id="audio-speed-val" class="setting-value-badge">1.00x</span>
+                <span id="audio-speed-runner-live" class="runner-live-indicator" role="img" aria-label="Persona corriendo al ritmo de la velocidad seleccionada">
+                  <video class="runner-live-video" muted loop playsinline preload="none" aria-hidden="true"></video>
+                  <span class="runner-live-tint" aria-hidden="true"></span>
+                  <svg class="runner-live-fallback runner-silhouette" viewBox="0 0 100 100" aria-hidden="true">
+                    <circle cx="57" cy="14" r="7" fill="currentColor"/>
+                    <path d="M53 25 L44 48 L61 51" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <g class="runner-arm-a"><path d="M51 30 L34 36 L26 27" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+                    <g class="runner-arm-b"><path d="M53 30 L69 22 L78 30" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+                    <g class="runner-leg-a"><path d="M45 48 L27 64 L15 62" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+                    <g class="runner-leg-b"><path d="M60 51 L77 61 L88 52" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+                  </svg>
+                </span>
               </div>
             </div>
-
             <div class="setting-item">
               <div class="setting-info">
                 <span class="setting-title">Modo Canal Único (Mono)</span>
@@ -1347,12 +1401,85 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver
           </button>
           <div class="sub-content">
-            <div class="setting-item vertical">
-              <span class="setting-title">Copia de Seguridad de la Biblioteca</span>
-              <span class="setting-desc">Exporta o restaura tus playlists, favoritos y configuraciones.</span>
+            <section class="safe-library-panel" aria-labelledby="safe-library-title">
+              <div class="safe-library-heading">
+                <div class="safe-library-emblem" aria-hidden="true">
+                  <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 19 6v5c0 4.7-3 7.7-7 10-4-2.3-7-5.3-7-10V6l7-3Z"/><path d="m8.7 12.2 2.1 2.1 4.5-4.7"/></svg>
+                </div>
+                <div class="safe-library-title-wrap">
+                  <span class="setting-title" id="safe-library-title">Biblioteca Segura</span>
+                  <span class="setting-desc">Copia independiente de la biblioteca principal. No se borra al vaciar la lista ni al restablecer el diseño.</span>
+                </div>
+                <span class="safe-library-state" id="safe-library-state">Preparando…</span>
+              </div>
+
+              <div class="safe-library-stats" aria-live="polite">
+                <div class="safe-library-stat"><strong id="safe-library-count">—</strong><span>Copias protegidas</span></div>
+                <div class="safe-library-stat"><strong id="safe-library-current-count">—</strong><span>En biblioteca principal</span></div>
+                <div class="safe-library-stat"><strong id="safe-library-size">Calculando…</strong><span>Tamaño respaldado estimado</span></div>
+                <div class="safe-library-stat"><strong id="safe-library-last-run">Aún no disponible</strong><span>Última verificación correcta</span></div>
+              </div>
+
+              <div class="safe-library-options">
+                <div class="safe-library-option">
+                  <div class="setting-info"><span class="setting-title">Protección automática por canción</span><span class="setting-desc">Protege las canciones nuevas y los cambios de sus datos sin esperar al siguiente punto temporal.</span></div>
+                  <label class="switch"><input type="checkbox" id="toggle-safe-backup" checked><span class="slider"></span></label>
+                </div>
+                <div class="safe-library-option safe-library-option-timed">
+                  <div class="setting-info"><span class="setting-title">Respaldo temporal automático</span><span class="setting-desc">Guarda periódicamente ajustes, fondos, vídeos locales, pistas y la lista de canciones del punto de guardado. No borra la copia al desactivarlo.</span></div>
+                  <div class="safe-library-timer-controls">
+                    <select id="select-safe-backup-interval" class="safe-library-interval" aria-label="Intervalo del respaldo temporal">
+                      <option value="1">Cada 1 minuto</option>
+                      <option value="2" selected>Cada 2 minutos</option>
+                      <option value="5">Cada 5 minutos</option>
+                      <option value="10">Cada 10 minutos</option>
+                      <option value="15">Cada 15 minutos</option>
+                    </select>
+                    <label class="switch"><input type="checkbox" id="toggle-safe-temporary-backup" checked><span class="slider"></span></label>
+                  </div>
+                </div>
+                <div class="safe-library-option">
+                  <div class="setting-info"><span class="setting-title">Recuperación automática de biblioteca</span><span class="setting-desc">Si la biblioteca queda vacía, espera dos minutos y comprueba el respaldo antes de restaurar.</span></div>
+                  <label class="switch"><input type="checkbox" id="toggle-safe-restore" checked><span class="slider"></span></label>
+                </div>
+              </div>
+
+              <div class="safe-library-actions">
+                <button type="button" id="btn-safe-backup-now" class="action-btn safe-library-primary">Respaldar ahora · Crear punto</button>
+                <button type="button" id="btn-safe-restore-now" class="action-btn">Restaurar biblioteca</button>
+                <button type="button" id="btn-safe-restore-checkpoint" class="action-btn">Restaurar punto guardado</button>
+                <button type="button" id="btn-safe-export" class="action-btn">Exportar respaldo completo (.zip)</button>
+              </div>
+              <button type="button" id="btn-safe-delete-backup" class="action-btn-danger safe-library-delete">Eliminar copias seguras de esta cuenta</button>
+              <div class="safe-library-checkpoint-row">
+                <label for="select-safe-checkpoint">Puntos de guardado disponibles</label>
+                <select id="select-safe-checkpoint" class="safe-library-interval" aria-label="Elegir punto de guardado"><option value="">Buscando puntos guardados…</option></select>
+              </div>
+              <p class="safe-library-message" id="safe-library-message" role="status" aria-live="polite">Las canciones y los ajustes se verificarán antes de aparecer como protegidos.</p>
+              <p class="safe-library-footnote">Los respaldos temporales conservan la configuración y los recursos locales disponibles. Las canciones de la Biblioteca Segura se mantienen por separado. Los enlaces externos guardan referencias, no descargan audio. Exporta el ZIP completo y guárdalo fuera de Glasstrack para protegerte si Chrome elimina todos los datos del sitio.</p>
+            </section>
+
+            <section class="safe-import-panel" aria-labelledby="safe-import-title">
+              <div class="safe-import-heading">
+                <span class="safe-import-icon" aria-hidden="true">⇧</span>
+                <div><span class="setting-title" id="safe-import-title">Importar todos los datos</span><span class="setting-desc">Restaura música, pistas, temas, ajustes, fondos y recursos incluidos en una copia completa de Glasstrack.</span></div>
+              </div>
+              <div id="safe-import-dropzone" class="safe-import-dropzone" tabindex="0" role="button" aria-label="Arrastra una copia ZIP completa o selecciona un archivo">
+                <span class="safe-import-drop-icon" aria-hidden="true">ZIP</span>
+                <strong>Arrastra aquí tu copia completa (.zip)</strong>
+                <span class="safe-import-drop-hint">o selecciona el archivo desde tu computadora</span>
+                <button type="button" id="btn-safe-select-import" class="action-btn">Seleccionar archivo ZIP</button>
+                <input type="file" id="input-import-full-zip" accept=".zip,application/zip,application/x-zip-compressed" hidden>
+              </div>
+              <p class="safe-library-message" id="safe-import-message" role="status" aria-live="polite">La importación completa reemplazará los datos y ajustes de esta sesión, pero no la cuenta ni sus credenciales. Antes se creará un punto de seguridad.</p>
+            </section>
+
+            <div class="setting-item vertical safe-external-backup">
+              <span class="setting-title">Copia externa y compatibilidad</span>
+              <span class="setting-desc">JSON conserva metadatos y ajustes; ZIP/JAR incluye también los archivos de audio locales cuando estén disponibles.</span>
               <div class="btn-group-row">
-                <button id="btn-export-json" class="action-btn">Exportar (.json)</button>
-                <button id="btn-export-zip" class="action-btn">Exportar (.zip)</button>
+                <button id="btn-export-json" class="action-btn">Exportar metadatos (.json)</button>
+                <button id="btn-export-zip" class="action-btn">Exportar biblioteca (.zip compatible)</button>
                 <button id="btn-export-jar" class="action-btn">Exportar (.jar)</button>
                 <label class="action-btn custom-file-label">
                   Importar (.json/.zip/.jar)
@@ -1952,17 +2079,17 @@
             <div class="setting-item">
               <div class="setting-info">
                 <span class="setting-title">Activar Modo Ritmo</span>
-                <span class="setting-desc">Permite abrir el minijuego con la tecla X y desde este panel.</span>
+                <span class="setting-desc">Bloqueado temporalmente mientras se corrigen errores del modo.</span>
               </div>
               <label class="switch">
-                <input type="checkbox" id="toggle-rhythm-mode-detail">
+                <input type="checkbox" id="toggle-rhythm-mode-detail" disabled aria-disabled="true">
                 <span class="slider"></span>
               </label>
             </div>
-            <button id="btn-open-rhythm-game" class="menu-opt-btn primary-opt">🎵 Abrir Juego de Ritmo</button>
+            <button id="btn-open-rhythm-game" class="menu-opt-btn primary-opt" type="button" disabled aria-disabled="true" title="Modo Ritmo bloqueado temporalmente">🔒 Modo Ritmo bloqueado</button>
             
-            <div class="rhythm-settings-hint">
-              <strong>Atajo:</strong> X abre/cierra el modo.
+            <div class="rhythm-settings-hint rhythm-lock-notice" role="status">
+              <strong>Bloqueado temporalmente.</strong> Se volverá a habilitar cuando termine la corrección del modo.
             </div>
           </div>
         </div>
@@ -1976,7 +2103,7 @@
             <button id="btn-open-karaoke" class="menu-opt-btn primary-opt">Abrir Modo Karaoke</button>
             <button id="btn-configure-karaoke" class="menu-opt-btn">Calibrar letras (Estudio existente)</button>
             <button id="btn-karaoke-settings-open" class="menu-opt-btn">Ajustes propios del Karaoke</button>
-            <p class="setting-desc">El Karaoke usa la reproducción, las letras calibradas y el mezclador Voz/Música existentes, pero mantiene una interfaz independiente del Modo Cine.</p>
+            <p class="setting-desc">El Karaoke comparte la reproducción y las letras calibradas. Los controles de Voz/Música y Pistas permanecen en la interfaz principal para evitar accesos que no funcionan correctamente dentro de Karaoke.</p>
           </div>
         </div>
 
@@ -2324,7 +2451,7 @@
           <button id="cinema-fav" class="icon-btn cinema-utility-btn cinema-fav" type="button" title="Me gusta" aria-label="Me gusta" aria-pressed="false">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.72-8.72 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           </button>
-          <button id="cinema-speed" class="icon-btn cinema-utility-btn cinema-speed" type="button" title="Cambiar velocidad" aria-label="Velocidad 1x"><span id="cinema-speed-label">1x</span></button>
+          <button id="cinema-speed" class="icon-btn cinema-utility-btn cinema-speed playback-speed-control" type="button" title="Cambiar velocidad" aria-label="Velocidad 1x"><span id="cinema-speed-label" class="playback-speed-value">1x</span></button>
         </div>
         <div class="cinema-volume-row">
           <label class="cinema-volume-control" title="Volumen" aria-label="Volumen del reproductor">
@@ -2363,7 +2490,7 @@
             <button type="button" data-karaoke-layout="simple" class="active" aria-pressed="true" title="Modo Simple"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16M4 10h12M4 15h16M4 20h9"/></svg><span>Simple</span></button>
             <button type="button" data-karaoke-layout="cover" aria-pressed="false" title="Modo Carátula"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><path d="M14 5h7M14 9h7M3 15h18M3 19h18"/></svg><span>Carátula</span></button>
           </div>
-          <button id="btn-karaoke-settings" class="icon-btn" type="button" title="Ajustes de Karaoke" aria-label="Ajustes de Karaoke"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.1-.03a1.7 1.7 0 0 0-1.82.42l-.06.07h-3.4l-.02-.1a1.7 1.7 0 0 0-1.15-1.34l-.1-.03-2.4 1.39-1.7-2.94.08-.07a1.7 1.7 0 0 0 .42-1.82l-.04-.1L4.3 13.4V10l.1-.02a1.7 1.7 0 0 0 1.34-1.15l.03-.1-1.39-2.4 2.94-1.7.07.08a1.7 1.7 0 0 0 1.82.42l.1-.04L10.6 2.7H14l.02.1a1.7 1.7 0 0 0 1.15 1.34l.1.03 2.4-1.39 1.7 2.94-.08.07a1.7 1.7 0 0 0-.42 1.82l.04.1 2.36 1.37v3.4l-.1.02a1.7 1.7 0 0 0-1.34 1.15z"/></svg></button>
+          <button id="btn-karaoke-settings" class="icon-btn" type="button" title="Ajustes de Karaoke" aria-label="Ajustes de Karaoke"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h9m4 0h3"/><circle cx="15" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="2" fill="currentColor" stroke="none"/></svg></button>
           <button id="btn-close-karaoke" class="icon-btn" type="button" data-ui-tooltip="Cerrar Karaoke" aria-label="Cerrar Modo Karaoke"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
         </div>
       </header>
@@ -2389,9 +2516,7 @@
           <button id="karaoke-play" class="btn-play" type="button" title="Reproducir" aria-label="Reproducir"><svg id="karaoke-play-icon" width="23" height="23" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
           <button id="karaoke-next" class="icon-btn" type="button" title="Siguiente" aria-label="Siguiente canción"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
           <div class="karaoke-volume"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9zM16 9a5 5 0 0 1 0 6M18.5 6.5a9 9 0 0 1 0 11"/></svg><input id="karaoke-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volumen del Karaoke"></div>
-          <button id="btn-karaoke-tracks" class="karaoke-footer-tool" type="button" title="Abrir pistas existentes" aria-label="Abrir mezclador de pistas"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/><circle cx="8" cy="5" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="11" cy="19" r="2" fill="currentColor"/></svg><span>Pistas</span></button>
-          <button id="btn-karaoke-vm" class="karaoke-footer-tool" type="button" title="Voz y Música"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 10.5v1.2a6.5 6.5 0 0 0 13 0v-1.2M12 18.2v3.3M8.5 21.5h7"/></svg></button>
-          <button id="btn-karaoke-follow" class="karaoke-footer-tool karaoke-follow-toggle" type="button" title="Seguir letra activado" aria-label="Seguir letra" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M5 10l7-7 7 7"/></svg><span>Seguir letra</span></button>
+          <button id="karaoke-speed" class="karaoke-footer-tool karaoke-speed-control playback-speed-control" type="button" title="Cambiar velocidad" aria-label="Velocidad 1x"><span id="karaoke-speed-label" class="playback-speed-value">1x</span></button><button id="btn-karaoke-follow" class="karaoke-footer-tool karaoke-follow-toggle" type="button" title="Seguir letra activado" aria-label="Seguir letra" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v18M5 10l7-7 7 7"/></svg><span>Seguir letra</span></button>
         </div>
       </footer>
     </div>
@@ -2826,10 +2951,12 @@
                 <div class="concludor-next-line"><span class="concludor-next-art-wrap"><img id="concludor-next-cover" alt="Portada de la siguiente canción"></span><span class="concludor-next-text"><small>DESPUÉS</small><strong id="concludor-up-next-title">Añade una segunda pista</strong><span id="concludor-up-next-artist">Tu mezcla aparecerá aquí</span></span><span class="concludor-next-arrow" aria-hidden="true">↗</span></div>
               </div>
             </div>
-            <div class="concludor-playback-row">
-              <div class="concludor-playback-note"><span class="concludor-mini-signal"></span><span id="concludor-playback-hint">Prepara tu lista y elige cómo conectar las canciones.</span></div>
-              <div class="concludor-playback-controls"><button id="btn-concludor-next" class="concludor-secondary-action" type="button" title="Pasar a la siguiente pista" disabled>Transición siguiente <span aria-hidden="true">↗</span></button><button id="btn-concludor-play" class="concludor-primary-action" type="button">▶ Iniciar mezcla</button></div>
-            </div>
+          </div>
+
+          <!-- Dock independiente: siempre accesible al desplazar la configuración. -->
+          <div class="concludor-playback-row concludor-playback-dock">
+            <div class="concludor-playback-note"><span class="concludor-mini-signal"></span><span id="concludor-playback-hint">Prepara tu lista y elige cómo conectar las canciones.</span></div>
+            <div class="concludor-playback-controls"><button id="btn-concludor-next" class="concludor-secondary-action" type="button" title="Pasar a la siguiente pista" disabled>Transición siguiente <span aria-hidden="true">↗</span></button><button id="btn-concludor-play" class="concludor-primary-action" type="button">▶ Iniciar mezcla</button></div>
           </div>
 
           <section class="concludor-modes-section">
@@ -3323,7 +3450,7 @@
   </div>
 </section>
 
-  <script src="script.js?v=glasstrack-b55-concludor-mix-studio-20261013"></script>
+  <script src="script.js?v=glasstrack-b68-respaldo-completo-20261014"></script>
 <!-- =========================================================
      GLASSTRACK PRO — VISUAL OVERLAY STUDIO
      Editor independiente: no modifica el reproductor normal.

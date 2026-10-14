@@ -1,4 +1,5 @@
 // ==========================================
+// Glasstrack Pro B68 — Biblioteca Segura, puntos de guardado e importación completa
 // 1. BASE DE DATOS INDEXEDDB Y ESTADO GLOBAL
 // ==========================================
 let db;
@@ -99,8 +100,16 @@ dbRequest.onsuccess = (e) => {
   requestPersistentStorage().then(granted => {
     if (!granted) console.info('El navegador no confirmó almacenamiento persistente; conserva una copia de seguridad de la biblioteca.');
   }).catch(() => {});
-  loadStoredSongs();
-  loadStoredBackground();
+  const finishInitialLoading = () => {
+    loadStoredSongs();
+    loadStoredBackground();
+    refreshSafeBackupStatus().catch(() => {});
+  };
+  openSafeBackupDatabase().then(finishInitialLoading).catch(error => {
+    console.warn('Biblioteca Segura no disponible; se conserva la biblioteca principal:', error);
+    finishInitialLoading();
+    setSafeLibraryMessage('No se pudo abrir la base independiente de seguridad. La biblioteca principal sigue disponible; revisa el espacio del navegador.', 'error');
+  });
 };
 
 dbRequest.onerror = (e) => {
@@ -247,6 +256,9 @@ let playlists = (() => {
 let currentIndex = 0;
 let selectedSongForMenu = null;
 let currentPlaylistView = null;
+// Cola de reproducción activa. Navegar por otras pestañas no cambia la cola actual;
+// elegir una canción fuera de la playlist sí devuelve la reproducción a la biblioteca.
+let activePlaybackPlaylist = null;
 let isShuffle = (localStorage.getItem('glasstrack_shuffle') ?? 'true') === 'true';
 let loopMode = 0; // 0 = desactivado, 1 = repetir lista, 2 = repetir canción
 let isLoop = false;
@@ -489,7 +501,13 @@ const streamGifA = document.getElementById('stream-gif-a');
 const streamGifB = document.getElementById('stream-gif-b');
 
 const inputAudioSpeed = document.getElementById('input-audio-speed');
+const liveRunnerIndicator = document.getElementById('audio-speed-runner-live');
+const liveRunnerVideo = liveRunnerIndicator ? liveRunnerIndicator.querySelector('.runner-live-video') : null;
+const liveRunnerFallback = liveRunnerIndicator ? liveRunnerIndicator.querySelector('.runner-live-fallback') : null;
+let runnerPreviewVideo = null;
 const audioSpeedVal = document.getElementById('audio-speed-val');
+const karaokeSpeedBtn = document.getElementById('karaoke-speed');
+const karaokeSpeedLabel = document.getElementById('karaoke-speed-label');
 const toggleMonoAudio = document.getElementById('toggle-mono-audio');
 const toggleNormalizeVolume = document.getElementById('toggle-normalize-volume');
 const toggleFadePlayback = document.getElementById('toggle-fade-playback');
@@ -1485,34 +1503,37 @@ function setVolumeLimiter(enabled) {
   limiterNode.ratio.value = enabled ? 12 : 1;
 }
 
-// Aplica Velocidad/Tono, Modo Mono, EQ, Bass Boost, 8D, Balance, Voz/Música y Limitador
+// Mantiene el comportamiento simple del reproductor: la afinación acompaña a la velocidad.
+// No se expone un control de Pitch separado en la interfaz.
+function applyLinkedPlaybackRate(audio) {
+  if (!audio) return;
+  try { audio.preservesPitch = false; } catch (_) {}
+  try { audio.mozPreservesPitch = false; } catch (_) {}
+  try { audio.webkitPreservesPitch = false; } catch (_) {}
+}
+
 function applyAudioEngineSettings() {
   const speed = inputAudioSpeed ? parseFloat(inputAudioSpeed.value) : 1;
-[audio1, audio2].forEach(a => {
+  [audio1, audio2].filter(Boolean).forEach(a => {
     a.playbackRate = speed || 1;
-    // Al poner esto en false, el tono cambia junto con la velocidad (efecto "tocadiscos"),
-    // que es justo lo que pide el ajuste "Velocidad y Tono (Pitch)" combinados en un solo control.
-    a.preservesPitch = false;
-    a.mozPreservesPitch = false;
-    a.webkitPreservesPitch = false;
+    applyLinkedPlaybackRate(a);
   });
   allExternalTrackRecords().forEach(rec => {
     const a = rec.audio;
     if (!a) return;
     a.playbackRate = speed || 1;
-    a.preservesPitch = false;
-    a.mozPreservesPitch = false;
-    a.webkitPreservesPitch = false;
+    applyLinkedPlaybackRate(a);
   });
   if (toggleMonoAudio) setMonoMode(toggleMonoAudio.checked);
   if (bassBoostFilter && toggleBassBoost) bassBoostFilter.gain.value = toggleBassBoost.checked ? 6 : 0;
   if (toggle8dAudio) set8dAudio(toggle8dAudio.checked);
   if (toggleVolumeLimiter) setVolumeLimiter(toggleVolumeLimiter.checked);
   saveAudioSettings();
+  syncPlaybackSpeedIndicators();
 }
 
 // Guarda y restaura EQ, Mono/8D/Bass Boost/Normalización/Limitador, balance, velocidad y
-// preset de modo — antes ninguno de estos ajustes sobrevivía a recargar la página.
+// preset de modo.
 function saveAudioSettings() {
   const preset = document.body.classList.contains('preset-game') ? 'game'
     : document.body.classList.contains('preset-night') ? 'night'
@@ -1569,14 +1590,56 @@ function formatPlaybackSpeed(value) {
   const val = Number(value) || 1;
   return `${Number.isInteger(val) ? val : String(Number(val.toFixed(2))).replace(/0+$/, '').replace(/\.$/, '')}x`;
 }
-function syncCinemaSpeedLabel() {
-  const speed = inputAudioSpeed ? Number(inputAudioSpeed.value) || 1 : 1;
-  if (cinemaSpeedLabel) cinemaSpeedLabel.textContent = formatPlaybackSpeed(speed);
+function getActualPlaybackRate() {
+  const actual = Number(activeAudio?.playbackRate);
+  if (Number.isFinite(actual) && actual > 0) return actual;
+  const configured = Number(inputAudioSpeed?.value);
+  return Number.isFinite(configured) && configured > 0 ? configured : 1;
+}
+function syncPlaybackSpeedIndicators() {
+  const speed = getActualPlaybackRate();
+  const label = formatPlaybackSpeed(speed);
+  document.documentElement.style.setProperty('--playback-speed', String(speed));
+  document.documentElement.style.setProperty('--runner-cycle-duration', `${Math.max(.14, Math.min(.72, .36 / speed)).toFixed(3)}s`);
+  [document.getElementById('quick-speed-label'), cinemaSpeedLabel, karaokeSpeedLabel].filter(Boolean).forEach(el => {
+    el.textContent = label;
+  });
+  // El indicador fijo de Ajustes sigue el valor configurado, incluso si el Estudio usa una velocidad temporal.
+  const configuredRate = Math.max(.5, Math.min(2, Number(inputAudioSpeed?.value) || 1));
+  if (liveRunnerVideo && Math.abs((Number(liveRunnerVideo.playbackRate) || 1) - configuredRate) > 0.001) {
+    try { liveRunnerVideo.playbackRate = configuredRate; } catch (_) {}
+  }
+  // La ventana emergente sigue el valor propio del control sobre el que está abierta.
+  if (runnerPreviewVideo && runnerPreviewActiveTarget && runnerPreviewPopover?.classList.contains('is-visible')) {
+    const previewRate = getRunnerPreviewRate(runnerPreviewActiveTarget);
+    if (Math.abs((Number(runnerPreviewVideo.playbackRate) || 1) - previewRate) > 0.001) {
+      try { runnerPreviewVideo.playbackRate = previewRate; } catch (_) {}
+    }
+    runnerPreviewPopover.style.setProperty('--runner-cycle-duration', `${Math.max(.14, Math.min(.72, .36 / previewRate)).toFixed(3)}s`);
+  }
+  if (btnQuickSpeed) {
+    btnQuickSpeed.title = `Velocidad real ${label}. Pulsar para cambiar`;
+    btnQuickSpeed.setAttribute('aria-label', `Velocidad de reproducción ${label}`);
+  }
   if (cinemaSpeedBtn) {
-    cinemaSpeedBtn.title = `Velocidad ${formatPlaybackSpeed(speed)}. Pulsar para cambiar`;
-    cinemaSpeedBtn.setAttribute('aria-label', `Velocidad ${formatPlaybackSpeed(speed)}`);
+    cinemaSpeedBtn.title = `Velocidad real ${label}. Pulsar para cambiar`;
+    cinemaSpeedBtn.setAttribute('aria-label', `Velocidad ${label}`);
+  }
+  if (karaokeSpeedBtn) {
+    karaokeSpeedBtn.title = `Velocidad real ${label}. Pulsar para cambiar`;
+    karaokeSpeedBtn.setAttribute('aria-label', `Velocidad ${label}`);
   }
 }
+function syncCinemaSpeedLabel() { syncPlaybackSpeedIndicators(); }
+
+[audio1, audio2].filter(Boolean).forEach(audioEl => {
+  ['ratechange', 'play', 'playing', 'pause', 'loadedmetadata'].forEach(eventName => {
+    audioEl.addEventListener(eventName, () => {
+      if (audioEl === activeAudio) syncPlaybackSpeedIndicators();
+    });
+  });
+});
+
 
 if (inputAudioSpeed) {
   inputAudioSpeed.addEventListener('input', (e) => {
@@ -1616,7 +1679,304 @@ if (cinemaSpeedBtn) {
     if (btnQuickSpeed) btnQuickSpeed.click();
   });
 }
+if (karaokeSpeedBtn) {
+  karaokeSpeedBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (btnQuickSpeed) btnQuickSpeed.click();
+  });
+}
 syncCinemaSpeedLabel();
+
+// Ventanita de video para velocidad: se crea una sola vez y se carga solo tras 3 s de intención.
+// Coloca el archivo en assets/corriendo.mp4; no se recrean nodos ni se inicia video si falta.
+const RUNNER_VIDEO_SRC = 'assets/corriendo.mp4';
+const RUNNER_PREVIEW_DWELL_MS = 3000;
+const runnerPreviewPopover = document.createElement('div');
+runnerPreviewPopover.id = 'runner-video-popover';
+runnerPreviewPopover.className = 'runner-video-popover';
+runnerPreviewPopover.setAttribute('role', 'tooltip');
+runnerPreviewPopover.setAttribute('aria-hidden', 'true');
+runnerPreviewPopover.innerHTML = '<div class="runner-video-frame"><video class="runner-video-content" muted loop playsinline preload="none" aria-label="Persona corriendo según la velocidad de reproducción"></video><div class="runner-video-tint" aria-hidden="true"></div><svg class="runner-svg-fallback runner-silhouette" viewBox="0 0 100 100" aria-hidden="true"><circle cx="57" cy="14" r="7" fill="currentColor"/><path d="M53 25 L44 48 L61 51" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g class="runner-arm-a"><path d="M51 30 L34 36 L26 27" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g><g class="runner-arm-b"><path d="M53 30 L69 22 L78 30" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g><g class="runner-leg-a"><path d="M45 48 L27 64 L15 62" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g><g class="runner-leg-b"><path d="M60 51 L77 61 L88 52" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g></svg></div>';
+document.body.appendChild(runnerPreviewPopover);
+runnerPreviewVideo = runnerPreviewPopover.querySelector('video');
+let runnerPreviewTimer = null;
+let runnerPreviewHideTimer = null;
+let runnerPreviewPendingTarget = null;
+let runnerPreviewActiveTarget = null;
+let runnerPreviewDwellComplete = false;
+let runnerPreviewLoadStarted = false;
+let runnerPreviewLoadFailed = false;
+let runnerPreviewPointerType = 'mouse';
+let runnerPreviewPointerDownAt = 0;
+let runnerPreviewPointerInPopover = false;
+
+function runnerPreviewIsVisible() {
+  return runnerPreviewPopover.classList.contains('is-visible');
+}
+function getRunnerPreviewAnchor(target) {
+  const rect = target.getBoundingClientRect();
+  if (target instanceof HTMLInputElement && target.type === 'range') {
+    const min = Number(target.min || 0);
+    const max = Number(target.max || 1);
+    const value = Number(target.value || min);
+    const ratio = max > min ? Math.max(0, Math.min(1, (value - min) / (max - min))) : 0.5;
+    return { x: rect.left + ratio * rect.width, top: rect.top, bottom: rect.bottom };
+  }
+  return { x: rect.left + rect.width / 2, top: rect.top, bottom: rect.bottom };
+}
+function getRunnerPreviewRate(target) {
+  if (!target) return getActualPlaybackRate();
+  if (target === inputAudioSpeed) return Math.max(.5, Math.min(2, Number(target.value) || 1));
+  if (target.id === 'calibrate-speed') return Math.max(.5, Math.min(2, Number(target.value) || 1));
+  if (target.matches?.('.studio-speed-btn')) return Math.max(.5, Math.min(2, Number(target.dataset.speed) || 1));
+  if (target.matches?.('.playback-speed-control')) return getActualPlaybackRate();
+  if (target instanceof HTMLInputElement && target.type === 'range') {
+    const rate = Number(target.value);
+    if (Number.isFinite(rate) && rate > 0) return Math.max(.1, Math.min(3, rate));
+  }
+  return getActualPlaybackRate();
+}
+function getRunnerSilhouetteTint() {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim()
+    || getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim()
+    || '#8a99ad';
+  let rgb = null;
+  const hex = raw.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    let code = hex[1];
+    if (code.length === 3) code = code.split('').map(ch => ch + ch).join('');
+    rgb = [0, 2, 4].map(i => parseInt(code.slice(i, i + 2), 16));
+  } else {
+    const match = raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (match) rgb = [Number(match[1]), Number(match[2]), Number(match[3])];
+  }
+  if (!rgb || rgb.some(v => !Number.isFinite(v))) return '#697789';
+  const luminance = .2126 * rgb[0] + .7152 * rgb[1] + .0722 * rgb[2];
+  // Un acento casi blanco desaparecería sobre el fondo blanco del video: oscurecer conservando el matiz.
+  if (luminance > 188) {
+    const factor = 188 / luminance;
+    rgb = rgb.map(v => Math.round(v * factor));
+  }
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+function positionRunnerPreview(target) {
+  if (!target || !target.isConnected) return;
+  const anchor = getRunnerPreviewAnchor(target);
+  const size = window.innerWidth <= 780 ? Math.min(60, Math.max(54, window.innerWidth - 16)) : 70;
+  const left = Math.max(8, Math.min(window.innerWidth - size - 8, anchor.x - size / 2));
+  let top = anchor.top - size - 8;
+  if (top < 8) top = Math.min(window.innerHeight - size - 8, anchor.bottom + 8);
+  runnerPreviewPopover.style.width = `${size}px`;
+  runnerPreviewPopover.style.height = `${size}px`;
+  runnerPreviewPopover.style.left = `${left}px`;
+  runnerPreviewPopover.style.top = `${Math.max(8, top)}px`;
+}
+function stopRunnerPreviewVideo() {
+  try { runnerPreviewVideo.pause(); } catch (_) {}
+  // Reproducir desde el inicio cuando se vuelva a abrir la ventana.
+  try { if (Number.isFinite(runnerPreviewVideo.duration) && runnerPreviewVideo.duration > 0) runnerPreviewVideo.currentTime = 0; } catch (_) {}
+}
+function hideRunnerPreview(immediate = false) {
+  if (runnerPreviewHideTimer) clearTimeout(runnerPreviewHideTimer);
+  runnerPreviewHideTimer = null;
+  const close = () => {
+    runnerPreviewPopover.classList.remove('is-visible');
+    runnerPreviewPopover.setAttribute('aria-hidden', 'true');
+    stopRunnerPreviewVideo();
+    runnerPreviewActiveTarget = null;
+    runnerPreviewDwellComplete = false;
+  };
+  if (immediate) close();
+  else runnerPreviewHideTimer = setTimeout(close, runnerPreviewPointerType === 'touch' ? 1700 : 220);
+}
+function showRunnerPreview(target) {
+  if (!target || !target.isConnected || !runnerPreviewDwellComplete) return;
+  runnerPreviewActiveTarget = target;
+  positionRunnerPreview(target);
+  runnerPreviewPopover.style.setProperty('--runner-tint-color', getRunnerSilhouetteTint());
+  const speed = getRunnerPreviewRate(target);
+  try { runnerPreviewVideo.playbackRate = speed; } catch (_) {}
+  runnerPreviewPopover.style.setProperty('--runner-cycle-duration', `${Math.max(.14, Math.min(.72, .36 / speed)).toFixed(3)}s`);
+  runnerPreviewPopover.classList.add('is-visible');
+  runnerPreviewPopover.classList.toggle('video-ready', !runnerPreviewLoadFailed && runnerPreviewVideo.readyState >= 2);
+  runnerPreviewPopover.setAttribute('aria-hidden', 'false');
+  if (!runnerPreviewLoadFailed && runnerPreviewVideo.readyState >= 2) {
+    const playPromise = runnerPreviewVideo.play();
+    if (playPromise && typeof playPromise.catch === 'function') playPromise.catch(() => {});
+  } else {
+    try { runnerPreviewVideo.pause(); } catch (_) {}
+  }
+}
+function loadRunnerPreviewVideo() {
+  if (runnerPreviewLoadFailed) {
+    if (runnerPreviewDwellComplete && runnerPreviewPendingTarget) showRunnerPreview(runnerPreviewPendingTarget);
+    return;
+  }
+  if (runnerPreviewVideo.readyState >= 2) {
+    if (runnerPreviewDwellComplete && runnerPreviewPendingTarget) showRunnerPreview(runnerPreviewPendingTarget);
+    return;
+  }
+  if (runnerPreviewLoadStarted) return;
+  runnerPreviewLoadStarted = true;
+  runnerPreviewVideo.addEventListener('loadeddata', () => {
+    runnerPreviewLoadFailed = false;
+    if (runnerPreviewDwellComplete && runnerPreviewPendingTarget) showRunnerPreview(runnerPreviewPendingTarget);
+  }, { once: true });
+  runnerPreviewVideo.addEventListener('error', () => {
+    // El clip del usuario todavía puede faltar; se muestra el monigote animado de respaldo.
+    runnerPreviewLoadFailed = true;
+    runnerPreviewPopover.classList.remove('video-ready');
+    if (runnerPreviewDwellComplete && runnerPreviewPendingTarget) showRunnerPreview(runnerPreviewPendingTarget);
+  }, { once: true });
+  runnerPreviewVideo.src = RUNNER_VIDEO_SRC;
+  try { runnerPreviewVideo.load(); } catch (_) { runnerPreviewLoadFailed = true; }
+}
+function cancelRunnerPreviewDwell(target) {
+  if (target && runnerPreviewPendingTarget !== target) return;
+  if (runnerPreviewTimer) clearTimeout(runnerPreviewTimer);
+  runnerPreviewTimer = null;
+  if (!runnerPreviewDwellComplete) runnerPreviewPendingTarget = null;
+  runnerPreviewDwellComplete = false;
+}
+function startRunnerPreviewDwell(target) {
+  if (!target || !target.isConnected) return;
+  if (runnerPreviewHideTimer) clearTimeout(runnerPreviewHideTimer);
+  runnerPreviewHideTimer = null;
+  if (runnerPreviewPendingTarget === target && (runnerPreviewTimer || runnerPreviewDwellComplete)) return;
+  cancelRunnerPreviewDwell();
+  hideRunnerPreview(true);
+  runnerPreviewPendingTarget = target;
+  runnerPreviewDwellComplete = false;
+  runnerPreviewTimer = setTimeout(() => {
+    runnerPreviewTimer = null;
+    if (!runnerPreviewPendingTarget || !runnerPreviewPendingTarget.isConnected) return;
+    runnerPreviewDwellComplete = true;
+    runnerPreviewActiveTarget = runnerPreviewPendingTarget;
+    positionRunnerPreview(runnerPreviewPendingTarget);
+    // Mostrar ya el cuadro pequeño con la silueta de respaldo; el video real sustituye el dibujo si está disponible.
+    showRunnerPreview(runnerPreviewPendingTarget);
+    loadRunnerPreviewVideo();
+  }, RUNNER_PREVIEW_DWELL_MS);
+}
+function onRunnerPreviewLeave(target) {
+  if (runnerPreviewPendingTarget === target && runnerPreviewTimer) cancelRunnerPreviewDwell(target);
+  if (runnerPreviewActiveTarget === target || runnerPreviewPendingTarget === target) {
+    if (runnerPreviewPointerType === 'touch') {
+      // Da tiempo a ver el recuadro tras levantar el dedo después de la pulsación larga.
+      hideRunnerPreview(false);
+    } else if (!runnerPreviewPointerInPopover) {
+      hideRunnerPreview(false);
+    }
+  }
+}
+const runnerPreviewTargets = [
+  ...document.querySelectorAll('.playback-speed-control'),
+  inputAudioSpeed,
+  document.getElementById('calibrate-speed'),
+  ...document.querySelectorAll('.studio-speed-btn')
+].filter((el, index, arr) => el && arr.indexOf(el) === index);
+runnerPreviewTargets.forEach(target => {
+  target.addEventListener('pointerenter', event => {
+    runnerPreviewPointerType = event.pointerType || 'mouse';
+    startRunnerPreviewDwell(target);
+  });
+  target.addEventListener('pointerleave', event => {
+    runnerPreviewPointerType = event.pointerType || runnerPreviewPointerType;
+    onRunnerPreviewLeave(target);
+  });
+  target.addEventListener('pointerdown', event => {
+    runnerPreviewPointerType = event.pointerType || 'mouse';
+    runnerPreviewPointerDownAt = performance.now();
+    if (!runnerPreviewTimer && !runnerPreviewDwellComplete) startRunnerPreviewDwell(target);
+  });
+  target.addEventListener('pointerup', event => {
+    runnerPreviewPointerType = event.pointerType || runnerPreviewPointerType;
+    const heldMs = performance.now() - runnerPreviewPointerDownAt;
+    if (runnerPreviewPointerType === 'touch' && heldMs < RUNNER_PREVIEW_DWELL_MS && runnerPreviewTimer) {
+      cancelRunnerPreviewDwell(target);
+    } else if (runnerPreviewPointerType === 'touch' && runnerPreviewDwellComplete && runnerPreviewActiveTarget === target) {
+      hideRunnerPreview(false);
+    }
+  });
+  target.addEventListener('pointercancel', () => cancelRunnerPreviewDwell(target));
+  target.addEventListener('focus', () => startRunnerPreviewDwell(target));
+  target.addEventListener('blur', () => onRunnerPreviewLeave(target));
+  if (target instanceof HTMLInputElement && target.type === 'range') {
+    target.addEventListener('input', () => {
+      if (runnerPreviewActiveTarget !== target || !runnerPreviewIsVisible()) return;
+      positionRunnerPreview(target);
+      const rate = getRunnerPreviewRate(target);
+      if (!runnerPreviewLoadFailed && runnerPreviewVideo.readyState >= 2) {
+        try { runnerPreviewVideo.playbackRate = rate; } catch (_) {}
+      }
+      runnerPreviewPopover.style.setProperty('--runner-cycle-duration', `${Math.max(.14, Math.min(.72, .36 / rate)).toFixed(3)}s`);
+    });
+  }
+});
+runnerPreviewPopover.addEventListener('pointerenter', () => {
+  runnerPreviewPointerInPopover = true;
+  if (runnerPreviewHideTimer) clearTimeout(runnerPreviewHideTimer);
+  runnerPreviewHideTimer = null;
+});
+runnerPreviewPopover.addEventListener('pointerleave', () => {
+  runnerPreviewPointerInPopover = false;
+  hideRunnerPreview(false);
+});
+window.addEventListener('resize', () => {
+  if (runnerPreviewIsVisible() && runnerPreviewActiveTarget) positionRunnerPreview(runnerPreviewActiveTarget);
+}, { passive: true });
+// Actualiza el tinte si cambia el color de interfaz mientras la ventanita está abierta.
+const runnerPreviewThemeObserver = new MutationObserver(() => {
+  if (runnerPreviewIsVisible()) runnerPreviewPopover.style.setProperty('--runner-tint-color', getRunnerSilhouetteTint());
+});
+runnerPreviewThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+
+// Indicador permanente junto a «Velocidad de reproducción» en Audio avanzado.
+// El video solo se solicita al abrir/interactuar con Ajustes; si el archivo falta, se conserva la silueta animada CSS.
+let liveRunnerLoadStarted = false;
+function loadLiveRunnerVideo() {
+  if (!liveRunnerVideo || liveRunnerLoadStarted) return;
+  liveRunnerLoadStarted = true;
+  liveRunnerVideo.addEventListener('loadeddata', () => {
+    liveRunnerIndicator?.classList.add('video-ready');
+    try { liveRunnerVideo.playbackRate = Math.max(.5, Math.min(2, Number(inputAudioSpeed?.value) || 1)); } catch (_) {}
+    const play = liveRunnerVideo.play();
+    if (play && typeof play.catch === 'function') play.catch(() => {});
+  }, { once: true });
+  liveRunnerVideo.addEventListener('error', () => {
+    liveRunnerIndicator?.classList.remove('video-ready');
+    try { liveRunnerVideo.pause(); } catch (_) {}
+  }, { once: true });
+  liveRunnerVideo.src = RUNNER_VIDEO_SRC;
+  try { liveRunnerVideo.load(); } catch (_) { liveRunnerIndicator?.classList.remove('video-ready'); }
+}
+function syncLiveRunnerVisibility() {
+  if (!liveRunnerVideo || !liveRunnerIndicator) return;
+  const subPanel = document.getElementById('sub-audio');
+  const settingsVisible = !!subPanel && getComputedStyle(subPanel).display !== 'none' && subPanel.getClientRects().length > 0;
+  if (settingsVisible) {
+    loadLiveRunnerVideo();
+    if (liveRunnerIndicator.classList.contains('video-ready')) {
+      const play = liveRunnerVideo.play();
+      if (play && typeof play.catch === 'function') play.catch(() => {});
+    }
+  } else {
+    try { liveRunnerVideo.pause(); } catch (_) {}
+  }
+  liveRunnerIndicator.style.setProperty('--runner-tint-color', getRunnerSilhouetteTint());
+}
+inputAudioSpeed?.addEventListener('pointerenter', loadLiveRunnerVideo, { passive: true });
+inputAudioSpeed?.addEventListener('focus', loadLiveRunnerVideo);
+const audioSubPanel = document.getElementById('sub-audio');
+const settingsModalForRunner = document.getElementById('modal-settings');
+if (audioSubPanel && typeof MutationObserver !== 'undefined') {
+  const liveRunnerObserver = new MutationObserver(syncLiveRunnerVisibility);
+  liveRunnerObserver.observe(audioSubPanel, { attributes: true, attributeFilter: ['class', 'style'] });
+  if (settingsModalForRunner) liveRunnerObserver.observe(settingsModalForRunner, { attributes: true, attributeFilter: ['class', 'style'] });
+}
+window.addEventListener('resize', syncLiveRunnerVisibility, { passive: true });
+syncLiveRunnerVisibility();
 
 if (toggleMonoAudio) {
   toggleMonoAudio.addEventListener('change', () => {
@@ -2639,6 +2999,587 @@ function updateTimerUI() {
 
 
 // ==========================================
+// BIBLIOTECA SEGURA — BASE INDEPENDIENTE
+// ==========================================
+const SAFE_BACKUP_DB_NAME = 'GlasstrackSafeLibraryDB';
+const SAFE_BACKUP_DB_VERSION = 2;
+const SAFE_BACKUP_AUTO_KEY = 'glasstrack_safe_backup_auto_v1';
+const SAFE_RESTORE_AUTO_KEY = 'glasstrack_safe_restore_auto_v1';
+const SAFE_TEMPORARY_BACKUP_KEY = 'glasstrack_safe_temporary_backup_v2';
+const SAFE_TEMPORARY_INTERVAL_KEY = 'glasstrack_safe_temporary_interval_minutes_v2';
+const SAFE_TEMPORARY_LAST_KEY = 'glasstrack_safe_temporary_last_run_v2';
+const SAFE_BACKUP_SNAPSHOT_STORE = 'snapshots';
+let safeTemporaryBackupTimer = null;
+let safeTemporaryStartupTimer = null;
+let safeTemporaryBackupRunning = null;
+let safeTemporaryLastRunAt = 0;
+let b68VisibilityHandlerReady = false;
+let safeBackupDb = null;
+let safeBackupOpenPromise = null;
+let safeBackupQueue = Promise.resolve();
+let safeRestoreTimer = null;
+let safeRestoreGeneration = 0;
+let safeBackupFailureNotified = false;
+
+function isSafeBackupEnabled() {
+  try { return localStorage.getItem(SAFE_BACKUP_AUTO_KEY) !== 'false'; } catch (_) { return true; }
+}
+function isSafeAutoRestoreEnabled() {
+  try { return localStorage.getItem(SAFE_RESTORE_AUTO_KEY) !== 'false'; } catch (_) { return true; }
+}
+function makeSafeBackupId() {
+  try { if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID(); } catch (_) {}
+  return `safe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+}
+function safeBackupKey(profileId, safeBackupId) {
+  return `${String(profileId || GLASSTRACK_GUEST_ID)}::${String(safeBackupId)}`;
+}
+function openSafeBackupDatabase() {
+  if (safeBackupDb) return Promise.resolve(safeBackupDb);
+  if (safeBackupOpenPromise) return safeBackupOpenPromise;
+  safeBackupOpenPromise = new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('IndexedDB no está disponible en este navegador.')); return; }
+    let request;
+    try { request = indexedDB.open(SAFE_BACKUP_DB_NAME, SAFE_BACKUP_DB_VERSION); }
+    catch (error) { reject(error); return; }
+    request.onupgradeneeded = event => {
+      const database = event.target.result;
+      let store;
+      if (!database.objectStoreNames.contains('protectedSongs')) {
+        store = database.createObjectStore('protectedSongs', { keyPath: 'key' });
+      } else {
+        store = event.target.transaction.objectStore('protectedSongs');
+      }
+      if (!store.indexNames.contains('profileId')) store.createIndex('profileId', 'profileId', { unique: false });
+      if (!store.indexNames.contains('safeBackupId')) store.createIndex('safeBackupId', 'safeBackupId', { unique: false });
+      let snapshotsStore;
+      if (!database.objectStoreNames.contains(SAFE_BACKUP_SNAPSHOT_STORE)) {
+        snapshotsStore = database.createObjectStore(SAFE_BACKUP_SNAPSHOT_STORE, { keyPath: 'id' });
+      } else {
+        snapshotsStore = event.target.transaction.objectStore(SAFE_BACKUP_SNAPSHOT_STORE);
+      }
+      if (!snapshotsStore.indexNames.contains('profileId')) snapshotsStore.createIndex('profileId', 'profileId', { unique: false });
+    };
+    request.onsuccess = event => {
+      safeBackupDb = event.target.result;
+      safeBackupDb.onversionchange = () => { try { safeBackupDb.close(); } catch (_) {} safeBackupDb = null; safeBackupOpenPromise = null; };
+      resolve(safeBackupDb);
+    };
+    request.onerror = () => reject(request.error || new Error('No se pudo abrir la Biblioteca Segura.'));
+    request.onblocked = () => console.warn('La base de seguridad está bloqueada por otra pestaña de Glasstrack.');
+  }).catch(error => {
+    safeBackupOpenPromise = null;
+    throw error;
+  });
+  return safeBackupOpenPromise;
+}
+function fastSafeHash(value) {
+  const text = String(value || '');
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  return `${(hash >>> 0).toString(16)}:${text.length}`;
+}
+function safeFingerprint(song) {
+  const blob = song?.fileBlob;
+  // No serializar la carátula/las letras completas dentro de otro JSON: puede ser
+  // contenido grande en base64. Se calcula una huella y se libera en esta iteración.
+  const cover = typeof song?.cover === 'string' ? song.cover : '';
+  const lyrics = typeof song?.lyrics === 'string' ? song.lyrics : '';
+  let metadataHash = '';
+  try { metadataHash = fastSafeHash(JSON.stringify(song?.metadata || {})); } catch (_) { metadataHash = 'metadata-unserializable'; }
+  const data = JSON.stringify({
+    id: song?.safeBackupId || '', title: song?.title || '', artist: song?.artist || '', album: song?.album || '',
+    duration: song?.duration || song?.length || '', coverHash: fastSafeHash(cover), lyricsHash: fastSafeHash(lyrics), metadataHash,
+    isFav: !!song?.isFav, isHidden: !!song?.isHidden, sourceType: song?.sourceType || '',
+    youtubeId: song?.youtubeId || '', directUrl: song?.directUrl || '',
+    fileName: blob?.name || '', fileType: blob?.type || '', fileSize: blob?.size || 0,
+    fileLastModified: blob?.lastModified || 0, track: song?.track || '', year: song?.year || '',
+    genre: song?.genre || '', artistSort: song?.artistSort || ''
+  });
+  return fastSafeHash(data);
+}
+function approximateSongSize(song) {
+  let total = Number(song?.fileBlob?.size || 0);
+  if (typeof song?.cover === 'string' && song.cover.startsWith('data:')) total += Math.ceil(song.cover.length * 0.75);
+  if (typeof song?.lyrics === 'string') total += song.lyrics.length * 2;
+  total += 1024;
+  return total;
+}
+function cloneSongForSafeBackup(song, profileId) {
+  const snapshot = { ...song };
+  delete snapshot.url; // Las URL de blob son temporales y se reconstruyen al cargar la biblioteca.
+  snapshot.accountId = profileId || snapshot.accountId || GLASSTRACK_GUEST_ID;
+  if (!snapshot.safeBackupId) snapshot.safeBackupId = makeSafeBackupId();
+  return snapshot;
+}
+function writeSafeBackupRecord(song, profileId) {
+  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
+    const snapshot = cloneSongForSafeBackup(song, profileId);
+    const key = safeBackupKey(snapshot.accountId, snapshot.safeBackupId);
+    const fingerprint = safeFingerprint(snapshot);
+    let tx;
+    let savedRecord = null;
+    try {
+      tx = database.transaction(['protectedSongs'], 'readwrite');
+      const store = tx.objectStore('protectedSongs');
+      const existingRequest = store.get(key);
+      existingRequest.onsuccess = () => {
+        const old = existingRequest.result;
+        if (old && old.fingerprint === fingerprint) {
+          savedRecord = old;
+          return;
+        }
+        savedRecord = {
+          key,
+          profileId: snapshot.accountId,
+          safeBackupId: snapshot.safeBackupId,
+          song: snapshot,
+          fingerprint,
+          sizeBytes: approximateSongSize(snapshot),
+          backedUpAt: new Date().toISOString(),
+          restoreExcluded: old ? !!old.restoreExcluded : false,
+          intentionalDeleteAt: old ? (old.intentionalDeleteAt || null) : null
+        };
+        store.put(savedRecord);
+      };
+      existingRequest.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = () => resolve({ record: savedRecord, unchanged: !!(savedRecord && savedRecord.backedUpAt && savedRecord.fingerprint === fingerprint) });
+      tx.onerror = () => reject(tx.error || new Error('No se pudo verificar la copia segura.'));
+      tx.onabort = () => reject(tx.error || new Error('La copia segura se canceló. Comprueba el espacio disponible.'));
+    } catch (error) { reject(error); }
+  }));
+}
+function queueSafeSongBackup(song, options = {}) {
+  if (!song) return Promise.resolve(false);
+  if (!options.force && !isSafeBackupEnabled()) return Promise.resolve(false);
+  const profileId = song.accountId || activeProfileId || GLASSTRACK_GUEST_ID;
+  if (!song.safeBackupId) song.safeBackupId = makeSafeBackupId();
+  const snapshot = cloneSongForSafeBackup(song, profileId);
+  const operation = safeBackupQueue.catch(() => {}).then(() => writeSafeBackupRecord(snapshot, profileId));
+  safeBackupQueue = operation.catch(() => {});
+  return operation.then(result => result);
+}
+function getSafeBackupRecords(profileId = activeProfileId) {
+  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction(['protectedSongs'], 'readonly');
+      const request = tx.objectStore('protectedSongs').index('profileId').getAll(String(profileId || GLASSTRACK_GUEST_ID));
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error || new Error('No se pudieron leer las canciones protegidas.'));
+      tx.onerror = () => reject(tx.error || new Error('Error leyendo la Biblioteca Segura.'));
+    } catch (error) { reject(error); }
+  }));
+}
+
+function b68EstimateStoredBytes(value, seen = new WeakSet()) {
+  if (value == null) return 0;
+  if (typeof value === 'string') return value.length * 2;
+  if (typeof value === 'number' || typeof value === 'boolean') return 8;
+  if (typeof Blob !== 'undefined' && value instanceof Blob) return Number(value.size) || 0;
+  if (value instanceof ArrayBuffer) return value.byteLength;
+  if (ArrayBuffer.isView(value)) return value.byteLength;
+  if (value instanceof Date) return 8;
+  if (typeof value !== 'object') return 0;
+  if (seen.has(value)) return 0;
+  seen.add(value);
+  let total = 0;
+  if (Array.isArray(value)) {
+    for (const child of value) total += b68EstimateStoredBytes(child, seen);
+  } else {
+    for (const [key, child] of Object.entries(value)) total += key.length * 2 + b68EstimateStoredBytes(child, seen);
+  }
+  return total;
+}
+
+function getSafeBackupStats(profileId = activeProfileId) {
+  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
+    let count = 0, bytes = 0, latest = 0;
+    const targetProfile = String(profileId || GLASSTRACK_GUEST_ID);
+    try {
+      const stores = ['protectedSongs'];
+      if (database.objectStoreNames.contains(SAFE_BACKUP_SNAPSHOT_STORE)) stores.push(SAFE_BACKUP_SNAPSHOT_STORE);
+      const tx = database.transaction(stores, 'readonly');
+      const request = tx.objectStore('protectedSongs').index('profileId').openCursor(IDBKeyRange.only(targetProfile));
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return;
+        const record = cursor.value;
+        count++;
+        bytes += Number(record.sizeBytes || approximateSongSize(record.song));
+        latest = Math.max(latest, Date.parse(record.backedUpAt || '') || 0);
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error || new Error('No se pudieron contar las canciones protegidas.'));
+      if (stores.includes(SAFE_BACKUP_SNAPSHOT_STORE)) {
+        const snapshotsReq = tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).index('profileId').getAll(targetProfile);
+        snapshotsReq.onsuccess = () => {
+          (Array.isArray(snapshotsReq.result) ? snapshotsReq.result : []).forEach(snapshot => {
+            bytes += b68EstimateStoredBytes(snapshot);
+            latest = Math.max(latest, Date.parse(snapshot.createdAt || '') || 0);
+          });
+        };
+        snapshotsReq.onerror = () => console.warn('No se pudo calcular el tamaño de todos los puntos de guardado.');
+      }
+      tx.oncomplete = () => resolve({ count, bytes, latest });
+      tx.onerror = () => reject(tx.error || new Error('Error consultando el resumen de la Biblioteca Segura.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la consulta de la Biblioteca Segura.'));
+    } catch (error) { reject(error); }
+  }));
+}
+
+function getPrimarySongsForProfile(profileId = activeProfileId) {
+  return new Promise((resolve, reject) => {
+    if (!db) { reject(new Error('La biblioteca principal todavía no está lista.')); return; }
+    try {
+      const tx = db.transaction(['songs'], 'readonly');
+      const request = tx.objectStore('songs').getAll();
+      request.onsuccess = () => {
+        const all = Array.isArray(request.result) ? request.result : [];
+        resolve(all.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) === (profileId || GLASSTRACK_GUEST_ID)));
+      };
+      request.onerror = () => reject(request.error || new Error('No se pudieron leer las canciones de la biblioteca.'));
+      tx.onerror = () => reject(tx.error || new Error('Error leyendo la biblioteca principal.'));
+    } catch (error) { reject(error); }
+  });
+}
+async function seedSafeBackupFromSongs(songs, profileId = activeProfileId, force = false) {
+  if ((!force && !isSafeBackupEnabled()) || !Array.isArray(songs) || songs.length === 0) return { protected: 0, skipped: 0 };
+  let protectedCount = 0;
+  for (const song of songs) {
+    try {
+      await queueSafeSongBackup(song, { force: true });
+      protectedCount++;
+    } catch (error) {
+      console.warn('Falló el respaldo de una canción:', song?.title, error);
+      throw error;
+    }
+  }
+  return { protected: protectedCount, skipped: 0 };
+}
+function handleSafeBackupFailure(error, message) {
+  console.error(message || 'Error de Biblioteca Segura:', error);
+  setSafeLibraryMessage(`${message || 'No se pudo completar la copia segura'} ${error?.message || 'Comprueba el espacio disponible y los permisos del navegador.'}`, 'error');
+  if (!safeBackupFailureNotified) {
+    safeBackupFailureNotified = true;
+    showToast('Una o más canciones no pudieron verificarse en la Biblioteca Segura. Revisa el panel de Gestión de Datos y Biblioteca.', 'error', 6000);
+    setTimeout(() => { safeBackupFailureNotified = false; }, 10000);
+  }
+}
+function setSafeLibraryMessage(message, kind = 'info') {
+  const element = document.getElementById('safe-library-message');
+  if (!element) return;
+  element.textContent = String(message || '');
+  element.classList.remove('is-error', 'is-success', 'is-warning');
+  if (kind === 'error') element.classList.add('is-error');
+  else if (kind === 'success') element.classList.add('is-success');
+  else if (kind === 'warning') element.classList.add('is-warning');
+}
+function formatSafeBytes(bytes) {
+  const size = Math.max(0, Number(bytes) || 0);
+  if (size < 1024) return `${Math.round(size)} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+async function refreshSafeBackupStatus() {
+  const countEl = document.getElementById('safe-library-count');
+  if (!countEl) return;
+  const backupToggle = document.getElementById('toggle-safe-backup');
+  const restoreToggle = document.getElementById('toggle-safe-restore');
+  if (backupToggle) backupToggle.checked = isSafeBackupEnabled();
+  if (restoreToggle) restoreToggle.checked = isSafeAutoRestoreEnabled();
+  try {
+    const { count, bytes, latest } = await getSafeBackupStats(activeProfileId);
+    countEl.textContent = String(count);
+    const sizeEl = document.getElementById('safe-library-size');
+    if (sizeEl) sizeEl.textContent = formatSafeBytes(bytes);
+    const latestEl = document.getElementById('safe-library-last-run');
+    if (latestEl) latestEl.textContent = latest ? new Date(latest).toLocaleString() : 'Aún no disponible';
+    const stateEl = document.getElementById('safe-library-state');
+    if (stateEl) {
+      stateEl.textContent = !isSafeBackupEnabled() ? 'Automática pausada' : 'Copia activa';
+      stateEl.classList.toggle('is-paused', !isSafeBackupEnabled());
+    }
+    if (count && !isSafeBackupEnabled()) setSafeLibraryMessage(`Se conservan ${count} canción(es) protegida(s). La copia automática está pausada; el respaldo existente no se ha borrado.`, 'warning');
+    else if (count) setSafeLibraryMessage(`Biblioteca Segura disponible: ${count} canción(es) protegida(s). Las copias se mantienen separadas de la biblioteca principal.`, 'success');
+    else if (!isSafeBackupEnabled()) setSafeLibraryMessage('La copia automática está pausada. Actívala para proteger las canciones nuevas; no se ha eliminado ningún respaldo existente.', 'warning');
+    else setSafeLibraryMessage('La Biblioteca Segura aún no contiene canciones. Al activar la copia automática, Glasstrack protegerá la biblioteca actual.', 'info');
+    return { count, bytes, latest };
+  } catch (error) {
+    const stateEl = document.getElementById('safe-library-state');
+    if (stateEl) { stateEl.textContent = 'No disponible'; stateEl.classList.add('is-paused'); }
+    countEl.textContent = '—';
+    const sizeEl = document.getElementById('safe-library-size'); if (sizeEl) sizeEl.textContent = 'No disponible';
+    const latestEl = document.getElementById('safe-library-last-run'); if (latestEl) latestEl.textContent = 'No disponible';
+    throw error;
+  }
+}
+async function backupCurrentLibrary(force = true) {
+  const profileId = activeProfileId;
+  const primarySongs = await getPrimarySongsForProfile(profileId);
+  if (primarySongs.length === 0) {
+    await refreshSafeBackupStatus().catch(() => {});
+    setSafeLibraryMessage('La biblioteca principal está vacía. No se ha sobrescrito ni borrado la copia segura.', 'warning');
+    showToast('Biblioteca vacía: el respaldo anterior se conserva intacto.', 'warning', 3500);
+    return { protected: 0, empty: true };
+  }
+  const button = document.getElementById('btn-safe-backup-now');
+  if (button) { button.disabled = true; button.textContent = 'Verificando…'; }
+  try {
+    await seedSafeBackupFromSongs(primarySongs, profileId, force);
+    const status = await refreshSafeBackupStatus();
+    setSafeLibraryMessage(`Copia verificada correctamente. Se comprobaron ${primarySongs.length} canción(es); las copias anteriores que no están en la biblioteca principal se conservaron.`, 'success');
+    showToast(`Biblioteca Segura actualizada: ${primarySongs.length} canción(es) revisada(s).`, 'success', 3000);
+    return status;
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Respaldar ahora'; }
+  }
+}
+function cancelSafeAutoRestore() {
+  safeRestoreGeneration++;
+  if (safeRestoreTimer) clearTimeout(safeRestoreTimer);
+  safeRestoreTimer = null;
+}
+async function scheduleSafeAutoRestore(profileId = activeProfileId) {
+  cancelSafeAutoRestore();
+  if (!isSafeAutoRestoreEnabled()) return;
+  let records;
+  try { records = await getSafeBackupRecords(profileId); }
+  catch (error) { console.warn('No se pudo comprobar el respaldo antes de programar la recuperación:', error); return; }
+  const eligible = records.filter(record => !record.restoreExcluded);
+  if (!eligible.length) {
+    if (records.length) setSafeLibraryMessage('Hay copias seguras guardadas, pero están marcadas como eliminadas intencionalmente. No se restaurarán solas; puedes recuperarlas manualmente.', 'warning');
+    return;
+  }
+  const generation = safeRestoreGeneration;
+  setSafeLibraryMessage(`Biblioteca principal vacía. Esperando hasta dos minutos y comprobando ${eligible.length} respaldo(s) válido(s) antes de recuperar.`, 'warning');
+  safeRestoreTimer = setTimeout(async () => {
+    if (generation !== safeRestoreGeneration || profileId !== activeProfileId || !isSafeAutoRestoreEnabled()) return;
+    safeRestoreTimer = null;
+    try {
+      const currentSongs = await getPrimarySongsForProfile(profileId);
+      if (currentSongs.length > 0) {
+        setSafeLibraryMessage('La biblioteca ya contiene canciones. Se canceló la recuperación automática para evitar duplicados.', 'success');
+        return;
+      }
+      await restoreSafeLibrary({ profileId, automatic: true });
+    } catch (error) {
+      handleSafeBackupFailure(error, 'La recuperación automática no se pudo completar.');
+    }
+  }, 120000);
+}
+function markSafeSongIntentionallyDeleted(song) {
+  if (!song) return Promise.resolve();
+  const profileId = song.accountId || activeProfileId;
+  const mark = () => openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
+    const key = safeBackupKey(profileId, song.safeBackupId);
+    try {
+      const tx = database.transaction(['protectedSongs'], 'readwrite');
+      const store = tx.objectStore('protectedSongs');
+      const request = store.get(key);
+      request.onsuccess = () => {
+        const record = request.result;
+        if (record) {
+          record.restoreExcluded = true;
+          record.intentionalDeleteAt = new Date().toISOString();
+          store.put(record);
+        }
+      };
+      request.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo actualizar el estado del respaldo.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la actualización del respaldo.'));
+    } catch (error) { reject(error); }
+  }));
+  return queueSafeSongBackup(song, { force: true }).catch(() => {}).then(mark).then(() => refreshSafeBackupStatus());
+}
+async function setSafeRecordRestoreBlocked(record, blocked) {
+  const database = await openSafeBackupDatabase();
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction(['protectedSongs'], 'readwrite');
+      const store = tx.objectStore('protectedSongs');
+      const request = store.get(record.key);
+      request.onsuccess = () => {
+        if (!request.result) return;
+        const updated = request.result;
+        updated.restoreExcluded = !!blocked;
+        updated.intentionalDeleteAt = blocked ? new Date().toISOString() : null;
+        store.put(updated);
+      };
+      request.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo actualizar el estado de restauración.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló el cambio de estado del respaldo.'));
+    } catch (error) { reject(error); }
+  });
+}
+function areSameSongForRestore(existing, protectedSong) {
+  if (existing?.safeBackupId && protectedSong?.safeBackupId && existing.safeBackupId === protectedSong.safeBackupId) return true;
+  const normalize = value => String(value || '').trim().toLocaleLowerCase();
+  if (normalize(existing?.title) !== normalize(protectedSong?.title) || normalize(existing?.artist) !== normalize(protectedSong?.artist)) return false;
+  if (existing?.youtubeId || protectedSong?.youtubeId) return normalize(existing.youtubeId) === normalize(protectedSong.youtubeId);
+  if (existing?.directUrl || protectedSong?.directUrl) return normalize(existing.directUrl) === normalize(protectedSong.directUrl);
+  const existingFile = existing?.fileBlob, protectedFile = protectedSong?.fileBlob;
+  if (existingFile || protectedFile) return !!existingFile && !!protectedFile && existingFile.size === protectedFile.size && normalize(existingFile.name) === normalize(protectedFile.name);
+  return true;
+}
+async function restoreSafeLibrary(options = {}) {
+  const profileId = options.profileId || activeProfileId;
+  const automatic = !!options.automatic;
+  const currentSongs = await getPrimarySongsForProfile(profileId);
+  if (automatic && currentSongs.length > 0) {
+    setSafeLibraryMessage('La biblioteca ya contiene canciones. Se canceló la recuperación para evitar duplicados.', 'success');
+    return { restored: 0, skipped: 0 };
+  }
+  const allRecords = await getSafeBackupRecords(profileId);
+  const records = automatic ? allRecords.filter(record => !record.restoreExcluded) : allRecords;
+  if (!records.length) {
+    const note = allRecords.length
+      ? 'No hay canciones aptas para recuperación automática: las copias disponibles corresponden a canciones que eliminaste intencionalmente. Puedes recuperarlas manualmente.'
+      : 'No hay canciones protegidas para esta cuenta. No se modificó la biblioteca principal.';
+    setSafeLibraryMessage(note, 'warning');
+    if (!automatic) showToast('No hay canciones respaldadas para recuperar en esta cuenta.', 'warning', 3000);
+    return { restored: 0, skipped: 0 };
+  }
+  const existing = currentSongs.slice();
+  const toRestore = [];
+  let skipped = 0;
+  for (const record of records) {
+    const protectedSong = record.song;
+    if (!protectedSong) { skipped++; continue; }
+    if (existing.some(song => areSameSongForRestore(song, protectedSong))) { skipped++; continue; }
+    const song = { ...protectedSong, accountId: profileId, safeBackupId: protectedSong.safeBackupId || record.safeBackupId };
+    delete song.id;
+    delete song.url;
+    toRestore.push({ record, song });
+    existing.push(song);
+  }
+  if (!toRestore.length) {
+    setSafeLibraryMessage(`La biblioteca ya contiene todas las canciones respaldadas (${skipped} omitida(s) para evitar duplicados).`, 'success');
+    showToast('No faltan canciones por restaurar; se evitaron duplicados.', 'info', 3000);
+    return { restored: 0, skipped };
+  }
+  const button = document.getElementById('btn-safe-restore-now');
+  if (button && !automatic) { button.disabled = true; button.textContent = 'Restaurando…'; }
+  try {
+    await new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction(['songs'], 'readwrite');
+        const store = tx.objectStore('songs');
+        toRestore.forEach(({ song }) => store.add(song));
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('No se pudieron guardar las canciones restauradas.'));
+        tx.onabort = () => reject(tx.error || new Error('La restauración se canceló. Comprueba el almacenamiento disponible.'));
+      } catch (error) { reject(error); }
+    });
+    for (const { record } of toRestore) await setSafeRecordRestoreBlocked(record, false);
+    try {
+      localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
+      localStorage.setItem(`glasstrack_library_had_songs_v1_${profileId}`, 'true');
+    } catch (_) {}
+    if (profileId === activeProfileId) loadStoredSongs();
+    const message = `Recuperación completada: ${toRestore.length} canción(es) restaurada(s); ${skipped} omitida(s) para evitar duplicados.`;
+    setSafeLibraryMessage(message, 'success');
+    showToast(message, 'success', 5000);
+    await refreshSafeBackupStatus().catch(() => {});
+    return { restored: toRestore.length, skipped };
+  } finally {
+    if (button && !automatic) { button.disabled = false; button.textContent = 'Restaurar biblioteca'; }
+  }
+}
+async function deleteCurrentProfileSafeBackup() {
+  const profileId = activeProfileId;
+  const records = await getSafeBackupRecords(profileId);
+  if (!records.length) { setSafeLibraryMessage('Esta cuenta no tiene copias seguras que eliminar.', 'info'); return; }
+  const confirmation = confirm(`Vas a eliminar las ${records.length} canción(es) protegida(s) de la Biblioteca Segura de esta cuenta. La biblioteca principal no se eliminará. Para evitar que estas copias vuelvan a crearse de inmediato, también se pausará la copia automática hasta que la actives otra vez. ¿Continuar?`);
+  if (!confirmation) return;
+  cancelSafeAutoRestore();
+  localStorage.setItem(SAFE_BACKUP_AUTO_KEY, 'false');
+  const backupToggle = document.getElementById('toggle-safe-backup');
+  if (backupToggle) backupToggle.checked = false;
+  const database = await openSafeBackupDatabase();
+  await new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction(['protectedSongs'], 'readwrite');
+      const store = tx.objectStore('protectedSongs');
+      const index = store.index('profileId');
+      const request = index.openCursor(IDBKeyRange.only(String(profileId || GLASSTRACK_GUEST_ID)));
+      request.onsuccess = () => { const cursor = request.result; if (cursor) { cursor.delete(); cursor.continue(); } };
+      request.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudieron eliminar las copias seleccionadas.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la eliminación de las copias.'));
+    } catch (error) { reject(error); }
+  });
+  await refreshSafeBackupStatus();
+  setSafeLibraryMessage('Se eliminaron las copias seguras de esta cuenta. La biblioteca principal permanece intacta y la copia automática está pausada hasta que la reactives.', 'success');
+  showToast('Copias seguras eliminadas para esta cuenta.', 'success', 3000);
+}
+async function exportSafeBackupArchive() {
+  if (!window.JSZip) throw new Error('Motor ZIP no disponible. Recarga Glasstrack e inténtalo de nuevo.');
+  const records = await getSafeBackupRecords(activeProfileId);
+  if (!records.length) throw new Error('La Biblioteca Segura de esta cuenta está vacía.');
+  const zip = new JSZip();
+  const payload = {
+    format: 'glasstrack-backup', version: 2, exportedAt: new Date().toISOString(),
+    songs: records.map(record => serializeSongForBackup(record.song)), files: [],
+    safeBackupExport: true, profileId: activeProfileId
+  };
+  const songsFolder = zip.folder('songs');
+  records.forEach((record, index) => {
+    const song = record.song || {};
+    if (!song.fileBlob || !songsFolder) return;
+    const originalName = song.fileBlob.name || `${song.title || 'cancion'}.bin`;
+    const safeName = String(originalName).replace(/[^a-z0-9._-]+/gi, '_').slice(-100) || 'audio.bin';
+    const path = `songs/${String(index + 1).padStart(5, '0')}-${safeName}`;
+    payload.files.push({ index, name: path.split('/').pop(), path, type: song.fileBlob.type || 'application/octet-stream' });
+    songsFolder.file(path.split('/').pop(), song.fileBlob);
+  });
+  zip.file('glasstrack-backup.json', JSON.stringify(payload, null, 2));
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+  downloadFileBlob(blob, `glasstrack-biblioteca-segura-${new Date().toISOString().slice(0,10)}.zip`);
+  setSafeLibraryMessage(`Se exportaron ${records.length} canción(es) protegida(s) a un ZIP externo. Guarda ese archivo fuera del navegador.`, 'success');
+  showToast(`Copia externa exportada: ${records.length} canción(es).`, 'success', 3500);
+}
+function initializeSafeBackupControls() {
+  const backupToggle = document.getElementById('toggle-safe-backup');
+  const restoreToggle = document.getElementById('toggle-safe-restore');
+  if (backupToggle) {
+    backupToggle.checked = isSafeBackupEnabled();
+    backupToggle.addEventListener('change', async () => {
+      localStorage.setItem(SAFE_BACKUP_AUTO_KEY, backupToggle.checked ? 'true' : 'false');
+      if (backupToggle.checked) {
+        setSafeLibraryMessage('Copia automática activada. Verificando la biblioteca actual…', 'info');
+        try { await backupCurrentLibrary(true); }
+        catch (error) { handleSafeBackupFailure(error, 'No se pudo activar y verificar la copia automática.'); }
+      } else {
+        setSafeLibraryMessage('Copia automática pausada. Los respaldos existentes se conservarán y no se actualizarán hasta reactivarla.', 'warning');
+        await refreshSafeBackupStatus().catch(() => {});
+      }
+    });
+  }
+  if (restoreToggle) {
+    restoreToggle.checked = isSafeAutoRestoreEnabled();
+    restoreToggle.addEventListener('change', () => {
+      localStorage.setItem(SAFE_RESTORE_AUTO_KEY, restoreToggle.checked ? 'true' : 'false');
+      if (!restoreToggle.checked) cancelSafeAutoRestore();
+      else if (!songList.length) scheduleSafeAutoRestore(activeProfileId);
+      setSafeLibraryMessage(restoreToggle.checked ? 'Recuperación automática activada. Solo actuará si la biblioteca permanece vacía durante dos minutos y hay copias aptas.' : 'Recuperación automática pausada. Las copias seguras siguen guardadas.', restoreToggle.checked ? 'success' : 'warning');
+    });
+  }
+  document.getElementById('btn-safe-backup-now')?.addEventListener('click', () => backupCurrentLibrary(true).catch(error => handleSafeBackupFailure(error, 'No se pudo completar el respaldo manual.')));
+  document.getElementById('btn-safe-restore-now')?.addEventListener('click', async () => {
+    if (songList.length && !confirm('La biblioteca actual contiene canciones. Glasstrack añadirá únicamente las canciones respaldadas que falten, sin reemplazar las actuales. ¿Continuar?')) return;
+    try { await restoreSafeLibrary({ profileId: activeProfileId, automatic: false }); }
+    catch (error) { handleSafeBackupFailure(error, 'No se pudo restaurar la biblioteca desde la copia segura.'); }
+  });
+  document.getElementById('btn-safe-export')?.addEventListener('click', () => exportSafeBackupArchive().catch(error => { setSafeLibraryMessage(error.message || 'No se pudo exportar la copia segura.', 'error'); showToast(error.message || 'No se pudo exportar la copia segura.', 'error', 4500); }));
+  document.getElementById('btn-safe-delete-backup')?.addEventListener('click', () => deleteCurrentProfileSafeBackup().catch(error => handleSafeBackupFailure(error, 'No se pudieron eliminar las copias seguras de esta cuenta.')));
+}
+initializeSafeBackupControls();
+
+// ==========================================
 // COPIA DE SEGURIDAD JSON / ZIP / JAR
 // ==========================================
 function downloadFileBlob(blob, filename) {
@@ -2660,10 +3601,11 @@ function serializeSongForBackup(song) {
 }
 
 async function collectBackupPayload(includeFiles = false) {
-  const songs = Array.isArray(songList) ? songList : [];
+  let songs = Array.isArray(songList) ? songList : [];
+  try { if (db) songs = await getPrimarySongsForProfile(activeProfileId); } catch (error) { console.warn('Se utilizará la biblioteca visible para la exportación:', error); }
   const payload = {
     format: 'glasstrack-backup',
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     songs: songs.map(serializeSongForBackup),
     playlists,
@@ -2679,15 +3621,17 @@ async function collectBackupPayload(includeFiles = false) {
     glasstrackMediaKeys: localStorage.getItem('glasstrackMediaKeys')
   };
   if (includeFiles) {
-    payload.files = songs.map((song, index) => ({
-      index,
-      name: song.fileBlob?.name || `${String(song.title || 'song').replace(/[^a-z0-9._-]+/gi, '_')}.bin`,
-      type: song.fileBlob?.type || 'application/octet-stream'
-    }));
+    payload.files = [];
+    songs.forEach((song, index) => {
+      if (!song.fileBlob) return;
+      const originalName = song.fileBlob.name || `${String(song.title || 'song').replace(/[^a-z0-9._-]+/gi, '_')}.bin`;
+      const safeName = String(originalName).replace(/[^a-z0-9._-]+/gi, '_').slice(-100) || 'audio.bin';
+      const path = `songs/${String(index + 1).padStart(5, '0')}-${safeName}`;
+      payload.files.push({ index, name: path.split('/').pop(), path, type: song.fileBlob.type || 'application/octet-stream' });
+    });
   }
   return payload;
 }
-
 async function exportLibraryJson() {
   const payload = await collectBackupPayload(false);
   downloadFileBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), 'glasstrack-backup.json');
@@ -2703,9 +3647,10 @@ async function exportLibraryArchive(extension) {
   const payload = await collectBackupPayload(true);
   zip.file('glasstrack-backup.json', JSON.stringify(payload, null, 2));
   const songsFolder = zip.folder('songs');
-  for (let i = 0; i < songList.length; i++) {
-    const blob = songList[i]?.fileBlob;
-    if (blob && songsFolder) songsFolder.file(payload.files[i].name, blob);
+  const allSongs = await getPrimarySongsForProfile(activeProfileId).catch(() => songList);
+  for (const fileInfo of (payload.files || [])) {
+    const blob = allSongs[fileInfo.index]?.fileBlob;
+    if (blob && songsFolder) songsFolder.file(fileInfo.name, blob);
   }
   const out = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
   const filename = `glasstrack-backup.${extension}`;
@@ -2736,7 +3681,8 @@ async function importLibraryJsonPayload(payload, zip = null) {
     let fileBlob = null;
     const fileInfo = Array.isArray(payload.files) ? payload.files.find(f => f.index === i) : null;
     if (zip && fileInfo) {
-      const archiveFile = zip.file(`songs/${fileInfo.name}`);
+      const archivePath = fileInfo.path || `songs/${fileInfo.name}`;
+      const archiveFile = zip.file(archivePath);
       if (archiveFile) {
         const bytes = await archiveFile.async('uint8array');
         fileBlob = new Blob([bytes], { type: fileInfo.type || 'application/octet-stream' });
@@ -2748,8 +3694,9 @@ async function importLibraryJsonPayload(payload, zip = null) {
     const song = {
       ...source,
       accountId: activeProfileId,
+      safeBackupId: source.safeBackupId || makeSafeBackupId(),
       fileBlob,
-      url: fileBlob ? URL.createObjectURL(fileBlob) : ''
+      url: fileBlob ? URL.createObjectURL(fileBlob) : (source.directUrl || '')
     };
     delete song.id;
 
@@ -2760,10 +3707,15 @@ async function importLibraryJsonPayload(payload, zip = null) {
       req.onsuccess = e => {
         if (source.id !== undefined) idMap.set(String(source.id), e.target.result);
         song.id = e.target.result;
-        resolve();
       };
-      req.onerror = () => reject(req.error || new Error('No se pudo importar una canción.'));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo importar una canción.'));
+      tx.onabort = () => reject(tx.error || new Error('La importación se canceló.'));
     });
+    try {
+      await queueSafeSongBackup(song, { force: true });
+      await setSafeRecordRestoreBlocked({ key: safeBackupKey(activeProfileId, song.safeBackupId) }, false);
+    } catch (backupError) { handleSafeBackupFailure(backupError, `La canción importada "${song.title || 'sin título'}" aún no está protegida.`); }
     importedCount++;
   }
 
@@ -2780,12 +3732,13 @@ async function importLibraryJsonPayload(payload, zip = null) {
   });
   await new Promise(resolve => setTimeout(resolve, 50));
   loadStoredSongs();
+  await refreshSafeBackupStatus().catch(() => {});
   showToast(`Importación completada: ${importedCount} canción(es).`, 'info', 2200);
 }
 
-if (document.getElementById('btn-export-json')) document.getElementById('btn-export-json').addEventListener('click', exportLibraryJson);
-if (document.getElementById('btn-export-zip')) document.getElementById('btn-export-zip').addEventListener('click', () => exportLibraryArchive('zip'));
-if (document.getElementById('btn-export-jar')) document.getElementById('btn-export-jar').addEventListener('click', () => exportLibraryArchive('jar'));
+if (document.getElementById('btn-export-json')) document.getElementById('btn-export-json').addEventListener('click', () => exportLibraryJson().catch(error => showToast(`No se pudo exportar el JSON: ${error.message || 'error desconocido'}`, 'error', 4000)));
+if (document.getElementById('btn-export-zip')) document.getElementById('btn-export-zip').addEventListener('click', () => exportLibraryArchive('zip').catch(error => showToast(`No se pudo exportar el ZIP: ${error.message || 'error desconocido'}`, 'error', 4000)));
+if (document.getElementById('btn-export-jar')) document.getElementById('btn-export-jar').addEventListener('click', () => exportLibraryArchive('jar').catch(error => showToast(`No se pudo exportar el JAR: ${error.message || 'error desconocido'}`, 'error', 4000)));
 if (document.getElementById('input-import-json')) {
   document.getElementById('input-import-json').addEventListener('change', async e => {
     const file = e.target.files?.[0];
@@ -2813,6 +3766,1138 @@ if (document.getElementById('input-import-json')) {
   });
 }
 
+// =====================================================================
+// B68 — RESPALDO TEMPORAL, PUNTOS DE GUARDADO Y COPIA COMPLETA PORTABLE
+// =====================================================================
+const B68_PROFILE_STATE_KEYS = ['playlistsDB', 'listeningStats', 'totalPlayedSeconds', 'concludorChain'];
+const B68_SENSITIVE_STORAGE_RE = /password|passwd|credential|auth|token|session|login|account|e-?mail/i;
+
+function isSafeTemporaryBackupEnabled() {
+  try { return localStorage.getItem(SAFE_TEMPORARY_BACKUP_KEY) !== 'false'; } catch (_) { return true; }
+}
+function getSafeTemporaryIntervalMinutes() {
+  let value = 2;
+  try { value = parseInt(localStorage.getItem(SAFE_TEMPORARY_INTERVAL_KEY) || '2', 10); } catch (_) {}
+  return [1, 2, 5, 10, 15].includes(value) ? value : 2;
+}
+function b68CanExportStorageKey(key) {
+  if (!key) return false;
+  if ([GLASSTRACK_ACCOUNTS_KEY, GLASSTRACK_ACTIVE_PROFILE_KEY, GLASSTRACK_SESSION_KEY].includes(key)) return false;
+  if (key.startsWith(GLASSTRACK_PROFILE_PREFIX)) return false;
+  if (key === 'glasstrack_b68_pending_control_restore' || key.startsWith(SAFE_TEMPORARY_LAST_KEY + '_')) return false;
+  if (key === 'glasstrack_library_had_songs_v1' || key.startsWith('glasstrack_library_had_songs_v1_')) return false;
+  if (B68_PROFILE_STATE_KEYS.includes(key)) return false;
+  if (B68_SENSITIVE_STORAGE_RE.test(key)) return false;
+  return true;
+}
+function b68CanExportProfileSettingKey(key) {
+  const value = String(key || '');
+  if (!value || B68_SENSITIVE_STORAGE_RE.test(value)) return false;
+  if (/(account|password|credential|token|login|email|session|secret)/i.test(value)) return false;
+  return true;
+}
+function collectB68PortableSettings() {
+  const local = {};
+  const profileStorage = {};
+  const exportedKeys = [];
+  const activePrefix = `${GLASSTRACK_PROFILE_PREFIX}${String(activeProfileId || GLASSTRACK_GUEST_ID)}.`;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(activePrefix)) {
+        const suffix = key.slice(activePrefix.length);
+        if (b68CanExportProfileSettingKey(suffix)) {
+          const value = localStorage.getItem(key);
+          if (value !== null) profileStorage[suffix] = value;
+        }
+        continue;
+      }
+      if (!b68CanExportStorageKey(key)) continue;
+      const value = localStorage.getItem(key);
+      if (value === null) continue;
+      local[key] = value;
+      exportedKeys.push(key);
+    }
+  } catch (error) { console.warn('No se pudieron leer todos los ajustes para el respaldo:', error); }
+  const profileState = {};
+  B68_PROFILE_STATE_KEYS.forEach(key => {
+    try {
+      const fallback = key === 'playlistsDB' || key === 'listeningStats' ? '{}' : key === 'totalPlayedSeconds' ? '0' : '';
+      const value = readProfileValue(key, activeProfileId, fallback);
+      profileState[key] = value == null ? fallback : String(value);
+    } catch (_) { profileState[key] = key === 'totalPlayedSeconds' ? '0' : ''; }
+  });
+  const controls = {};
+  // Captura los controles de Ajustes y los interruptores/deslizadores de otros paneles
+  // (ecualizador, karaoke, voz/música y modos), sin guardar campos de búsqueda o acceso.
+  const controlSelector = '#modal-settings input[id], #modal-settings select[id], #modal-settings textarea[id], input[id], select[id], textarea[id]';
+  const seenControls = new Set();
+  document.querySelectorAll(controlSelector).forEach(el => {
+    const id = String(el.id || '');
+    const type = String(el.type || el.tagName || '').toLowerCase();
+    if (!id || seenControls.has(id)) return;
+    seenControls.add(id);
+    if (['file', 'password', 'submit', 'button', 'reset', 'hidden'].includes(type)) return;
+    if (/(account|password|credential|token|login|email|import-full-zip)/i.test(id)) return;
+    if (id === 'select-safe-checkpoint') return;
+    const insideSettings = !!el.closest('#modal-settings');
+    if (!insideSettings && !['checkbox', 'radio', 'range', 'color', 'number'].includes(type) && !['select', 'select-one', 'select-multiple'].includes(type)) return;
+    controls[id] = { type, value: el.value == null ? '' : String(el.value), checked: 'checked' in el ? !!el.checked : undefined };
+  });
+  return {
+    format: 'glasstrack-settings-state', version: 1, complete: true,
+    capturedAt: new Date().toISOString(), localStorage: local, profileStorage, exportedKeys,
+    profileState, controls
+  };
+}
+function b68RestorePortableSettings(settings, idMap = new Map()) {
+  if (!settings || settings.format !== 'glasstrack-settings-state') throw new Error('El archivo no contiene una configuración de Glasstrack válida.');
+  const stored = settings.localStorage && typeof settings.localStorage === 'object' ? settings.localStorage : {};
+  const allowedImportedKeys = new Set(Object.keys(stored).filter(b68CanExportStorageKey));
+  if (settings.complete && Array.isArray(settings.exportedKeys)) {
+    const keysToRemove = [];
+    const activePrefix = `${GLASSTRACK_PROFILE_PREFIX}${String(activeProfileId || GLASSTRACK_GUEST_ID)}.`;
+    const importedProfileStorage = settings.profileStorage && typeof settings.profileStorage === 'object' ? settings.profileStorage : {};
+    const allowedProfileKeys = new Set(Object.keys(importedProfileStorage).filter(b68CanExportProfileSettingKey));
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(activePrefix)) {
+          const suffix = key.slice(activePrefix.length);
+          if (b68CanExportProfileSettingKey(suffix) && !allowedProfileKeys.has(suffix)) keysToRemove.push(key);
+          continue;
+        }
+        if (b68CanExportStorageKey(key) && !allowedImportedKeys.has(key)) keysToRemove.push(key);
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch (error) { console.warn('No se pudieron limpiar algunos ajustes antes de la restauración:', error); }
+  }
+  Object.entries(stored).forEach(([key, value]) => {
+    if (!b68CanExportStorageKey(key) || value === undefined || value === null) return;
+    try { localStorage.setItem(key, String(value)); } catch (error) { console.warn('No se pudo restaurar el ajuste', key, error); }
+  });
+  const profileStorage = settings.profileStorage && typeof settings.profileStorage === 'object' ? settings.profileStorage : {};
+  Object.entries(profileStorage).forEach(([suffix, value]) => {
+    if (!b68CanExportProfileSettingKey(suffix) || value === undefined || value === null) return;
+    try { localStorage.setItem(`${GLASSTRACK_PROFILE_PREFIX}${String(activeProfileId || GLASSTRACK_GUEST_ID)}.${suffix}`, String(value)); }
+    catch (error) { console.warn('No se pudo restaurar una preferencia del perfil:', suffix, error); }
+  });
+  const profileState = settings.profileState && typeof settings.profileState === 'object' ? settings.profileState : {};
+  B68_PROFILE_STATE_KEYS.forEach(key => {
+    if (!Object.prototype.hasOwnProperty.call(profileState, key)) return;
+    let value = String(profileState[key] ?? '');
+    if (key === 'playlistsDB') {
+      try { value = JSON.stringify(remapPlaylistEntries(JSON.parse(value || '{}'), idMap)); }
+      catch (_) { value = '{}'; }
+    }
+    try { writeProfileValue(key, value, activeProfileId); } catch (error) { console.warn('No se pudo restaurar el estado del perfil:', key, error); }
+  });
+  try { loadProfileScopedState(activeProfileId); } catch (_) {}
+  if (settings.controls && typeof settings.controls === 'object') {
+    try { localStorage.setItem('glasstrack_b68_pending_control_restore', JSON.stringify(settings.controls)); } catch (_) {}
+  }
+}
+function b68ReadPrimaryStore(storeName) {
+  return new Promise((resolve, reject) => {
+    if (!db || !db.objectStoreNames.contains(storeName)) { resolve([]); return; }
+    try {
+      const tx = db.transaction([storeName], 'readonly');
+      const request = tx.objectStore(storeName).getAll();
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error || new Error(`No se pudo leer el almacén ${storeName}.`));
+      tx.onerror = () => reject(tx.error || new Error(`Error leyendo ${storeName}.`));
+    } catch (error) { reject(error); }
+  });
+}
+async function b68GetExternalMixRecords(profileId = activeProfileId) {
+  try { if (typeof flushExternalMixSave === 'function') await flushExternalMixSave(); } catch (_) {}
+  const externalDb = await openExternalMixDb();
+  return new Promise((resolve, reject) => {
+    let tx;
+    try {
+      tx = externalDb.transaction([EXTERNAL_MIX_STORE], 'readonly');
+      const request = tx.objectStore(EXTERNAL_MIX_STORE).getAll();
+      request.onsuccess = () => {
+        const prefix = `${String(profileId || GLASSTRACK_GUEST_ID)}::`;
+        resolve((Array.isArray(request.result) ? request.result : []).filter(record =>
+          String(record.profileId || '') === String(profileId || GLASSTRACK_GUEST_ID) || String(record.key || '').startsWith(prefix)
+        ));
+      };
+      request.onerror = () => reject(request.error || new Error('No se pudieron leer las pistas externas.'));
+      tx.onerror = () => reject(tx.error || new Error('Error leyendo las pistas externas.'));
+    } catch (error) { reject(error); }
+  });
+}
+function b68GetAllSongs() {
+  return new Promise((resolve, reject) => {
+    if (!db || !db.objectStoreNames.contains('songs')) { reject(new Error('La biblioteca principal no está disponible.')); return; }
+    try {
+      const tx = db.transaction(['songs'], 'readonly');
+      const request = tx.objectStore('songs').getAll();
+      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+      request.onerror = () => reject(request.error || new Error('No se pudo leer el inventario de música.'));
+      tx.onerror = () => reject(tx.error || new Error('Error leyendo el inventario de música.'));
+    } catch (error) { reject(error); }
+  });
+}
+function b68GetSnapshot(snapshotId) {
+  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readonly');
+      const request = tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).get(String(snapshotId));
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error('No se pudo leer el punto de guardado.'));
+      tx.onerror = () => reject(tx.error || new Error('Error leyendo el punto de guardado.'));
+    } catch (error) { reject(error); }
+  }));
+}
+function b68ListSnapshots(profileId = activeProfileId) {
+  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readonly');
+      const store = tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE);
+      const request = store.index('profileId').getAll(String(profileId || GLASSTRACK_GUEST_ID));
+      request.onsuccess = () => resolve((Array.isArray(request.result) ? request.result : [])
+        .filter(snapshot => ['automatic', 'manual'].includes(snapshot.reason))
+        .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0)));
+      request.onerror = () => reject(request.error || new Error('No se pudieron leer los puntos de guardado.'));
+      tx.onerror = () => reject(tx.error || new Error('Error leyendo los puntos de guardado.'));
+    } catch (error) { reject(error); }
+  }));
+}
+async function b68RefreshSnapshotSelect() {
+  const select = document.getElementById('select-safe-checkpoint');
+  if (!select) return [];
+  const oldValue = select.value;
+  try {
+    const snapshots = await b68ListSnapshots(activeProfileId);
+    select.replaceChildren();
+    if (!snapshots.length) {
+      const option = document.createElement('option'); option.value = ''; option.textContent = 'Aún no hay puntos de guardado'; select.appendChild(option);
+      return snapshots;
+    }
+    snapshots.forEach(snapshot => {
+      const option = document.createElement('option');
+      option.value = snapshot.id;
+      const stamp = new Date(snapshot.createdAt || Date.now()).toLocaleString();
+      const label = snapshot.reason === 'manual' ? 'Manual' : 'Temporal';
+      const count = Array.isArray(snapshot.librarySongRefs) ? snapshot.librarySongRefs.length : 0;
+      option.textContent = `${label} · ${stamp} · ${count} canción(es)`;
+      select.appendChild(option);
+    });
+    if (snapshots.some(snapshot => snapshot.id === oldValue)) select.value = oldValue;
+    return snapshots;
+  } catch (error) {
+    select.replaceChildren(); const option = document.createElement('option'); option.value = ''; option.textContent = 'No se pudieron leer los puntos'; select.appendChild(option);
+    console.warn('No se pudo actualizar la lista de puntos de guardado:', error);
+    return [];
+  }
+}
+async function b68EnsureSongIdentities(songs, profileId = activeProfileId) {
+  const changed = [];
+  for (const song of songs) {
+    if (!song.safeBackupId) { song.safeBackupId = makeSafeBackupId(); song.accountId = profileId; changed.push(song); }
+  }
+  if (changed.length && db) {
+    await new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction(['songs'], 'readwrite');
+        changed.forEach(song => tx.objectStore('songs').put(song));
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('No se pudieron guardar los identificadores de seguridad.'));
+        tx.onabort = () => reject(tx.error || new Error('Se canceló el guardado de los identificadores.'));
+      } catch (error) { reject(error); }
+    });
+  }
+}
+async function b68CapturePrimaryStores(primarySongs, librarySongRefs) {
+  const [settingsRows, streamRows, allCharts] = await Promise.all([
+    b68ReadPrimaryStore('settings'), b68ReadPrimaryStore('streamMedia'), b68ReadPrimaryStore('charts')
+  ]);
+  const songIds = new Set((primarySongs || []).map(song => String(song.id)));
+  if (!songIds.size) (librarySongRefs || []).forEach(ref => { if (ref.sourceId != null) songIds.add(String(ref.sourceId)); });
+  return {
+    settings: settingsRows,
+    streamMedia: streamRows,
+    charts: allCharts.filter(record => record && songIds.has(String(record.songId)))
+  };
+}
+async function b68SaveSnapshotRecord(snapshot) {
+  const database = await openSafeBackupDatabase();
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readwrite');
+      tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).put(snapshot);
+      tx.oncomplete = () => resolve(snapshot);
+      tx.onerror = () => reject(tx.error || new Error('No se pudo guardar el punto de guardado.'));
+      tx.onabort = () => reject(tx.error || new Error('El punto de guardado se canceló; comprueba el espacio del navegador.'));
+    } catch (error) { reject(error); }
+  });
+}
+function b68CloneSongsForCheckpoint(songs, includeAudio = false) {
+  return (Array.isArray(songs) ? songs : []).map(source => {
+    const song = { ...(source || {}) };
+    if (!song.directUrl && typeof song.url === 'string' && !song.url.startsWith('blob:')) song.directUrl = song.url;
+    delete song.url;
+    delete song.accountId;
+    // Routine checkpoints reference the independent song store to avoid copying
+    // large audio files every minute. The short-lived import rollback captures audio
+    // too, so a failed import can restore the exact pre-import files.
+    if (!includeAudio) delete song.fileBlob;
+    song.safeBackupId = song.safeBackupId || makeSafeBackupId();
+    return song;
+  });
+}
+
+async function b68DeleteSnapshot(snapshotId) {
+  const database = await openSafeBackupDatabase();
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readwrite');
+      tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).delete(String(snapshotId));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo eliminar el punto temporal de importación.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la limpieza del punto temporal.'));
+    } catch (error) { reject(error); }
+  });
+}
+
+async function createTemporaryCheckpoint(options = {}) {
+  if (safeTemporaryBackupRunning) {
+    const runningPromise = safeTemporaryBackupRunning;
+    const inFlight = await runningPromise;
+    const requestedReason = ['manual', 'rollback'].includes(options.reason) ? options.reason : 'automatic';
+    if (['manual', 'rollback'].includes(requestedReason) && inFlight?.reason !== requestedReason) {
+      // Manual and rollback points must never silently reuse an automatic point.
+      // Clear only the same settled operation before scheduling the requested point.
+      if (safeTemporaryBackupRunning === runningPromise) safeTemporaryBackupRunning = null;
+      return createTemporaryCheckpoint(options);
+    }
+    return inFlight;
+  }
+  const profileId = options.profileId || activeProfileId || GLASSTRACK_GUEST_ID;
+  const reason = ['manual', 'rollback'].includes(options.reason) ? options.reason : 'automatic';
+  const quiet = !!options.quiet;
+  safeTemporaryBackupRunning = (async () => {
+    const button = document.getElementById('btn-safe-backup-now');
+    if (button && reason === 'manual') { button.disabled = true; button.textContent = 'Guardando punto…'; }
+    try {
+      setSafeLibraryMessage(reason === 'manual' ? 'Creando un punto de guardado completo…' : 'Preparando el respaldo temporal…', 'info');
+      const primarySongs = await getPrimarySongsForProfile(profileId);
+      if (primarySongs.length) {
+        await b68EnsureSongIdentities(primarySongs, profileId);
+        if (isSafeBackupEnabled()) await seedSafeBackupFromSongs(primarySongs, profileId, true);
+        else {
+          // Un punto manual/temporal también protege la biblioteca aunque la copia por canción esté pausada.
+          for (const song of primarySongs) await queueSafeSongBackup(song, { force: true });
+        }
+      }
+      await safeBackupQueue.catch(() => {});
+      try { if (typeof flushExternalMixSave === 'function') await flushExternalMixSave(); } catch (_) {}
+      let priorSnapshots = [];
+      try { priorSnapshots = await b68ListSnapshots(profileId); } catch (_) {}
+      let existingRefs = [];
+      let snapshotLibrarySongs = b68CloneSongsForCheckpoint(primarySongs, reason === 'rollback');
+      if (primarySongs.length) {
+        existingRefs = primarySongs.map(song => ({ safeBackupId: song.safeBackupId, sourceId: song.id, title: song.title || '', artist: song.artist || '' }));
+      } else {
+        const previous = priorSnapshots.find(snapshot => Array.isArray(snapshot.librarySongRefs) && snapshot.librarySongRefs.length > 0);
+        if (previous) {
+          existingRefs = previous.librarySongRefs.map(ref => ({ ...ref }));
+          const priorSafeRows = await getSafeBackupRecords(profileId).catch(() => []);
+          const priorBySafeId = new Map(priorSafeRows.map(record => [String(record.safeBackupId), record]));
+          if (Array.isArray(previous.librarySongs) && previous.librarySongs.length) {
+            snapshotLibrarySongs = previous.librarySongs.map(song => {
+              const copy = { ...song };
+              const safeSong = priorBySafeId.get(String(song.safeBackupId))?.song;
+              if (reason === 'rollback' && !copy.fileBlob && safeSong?.fileBlob) copy.fileBlob = safeSong.fileBlob;
+              return copy;
+            });
+          } else {
+            // Upgrade old checkpoints from the independent song copy where possible.
+            snapshotLibrarySongs = existingRefs.map(ref => priorBySafeId.get(String(ref.safeBackupId))?.song).filter(Boolean).map(song => b68CloneSongsForCheckpoint([song], reason === 'rollback')[0]);
+          }
+        }
+      }
+      if (existingRefs.length && snapshotLibrarySongs.length !== existingRefs.length) {
+        throw new Error(`No se pudo verificar un punto completo: hay ${existingRefs.length} canciones referenciadas, pero solo ${snapshotLibrarySongs.length} tienen una copia utilizable. Se conserva el punto anterior para evitar sustituirlo por un respaldo incompleto.`);
+      }
+      const effectiveChartSongs = primarySongs.length ? primarySongs : existingRefs.map(ref => ({ id: ref.sourceId }));
+      const primaryStores = await b68CapturePrimaryStores(effectiveChartSongs, existingRefs);
+      const externalMixes = await b68GetExternalMixRecords(profileId);
+      const now = new Date();
+      const lastKey = `${SAFE_TEMPORARY_LAST_KEY}_${profileId}`;
+      try { localStorage.setItem(lastKey, now.toISOString()); } catch (_) {}
+      const settings = collectB68PortableSettings();
+      const safeRecordsAtCapture = await getSafeBackupRecords(profileId).catch(() => []);
+      const snapshot = {
+        id: `${profileId}::${reason === 'manual' ? 'manual' : reason === 'rollback' ? 'rollback' : 'automatic'}`,
+        profileId: String(profileId), reason, createdAt: now.toISOString(),
+        settings, primaryStores, externalMixes,
+        librarySongRefs: existingRefs,
+        librarySongs: snapshotLibrarySongs,
+        libraryCountAtCapture: existingRefs.length,
+        capturedEmptyLibrary: primarySongs.length === 0,
+        safeBackupIds: safeRecordsAtCapture.map(record => record.safeBackupId)
+      };
+      await b68SaveSnapshotRecord(snapshot);
+      const verifiedSnapshot = await b68GetSnapshot(snapshot.id);
+      if (!verifiedSnapshot || verifiedSnapshot.createdAt !== snapshot.createdAt ||
+          (verifiedSnapshot.librarySongRefs || []).length !== existingRefs.length ||
+          (verifiedSnapshot.librarySongs || []).length !== snapshotLibrarySongs.length ||
+          b68EstimateStoredBytes(verifiedSnapshot) < b68EstimateStoredBytes(snapshot)) {
+        throw new Error('El punto de guardado no superó la verificación posterior a la escritura. Se conserva el punto anterior si todavía existe.');
+      }
+      safeTemporaryLastRunAt = now.getTime();
+      await refreshSafeBackupStatus().catch(() => {});
+      await b68RefreshSnapshotSelect();
+      if (!quiet) {
+        const stateNote = primarySongs.length ? `${primarySongs.length} canción(es) en la biblioteca` : `biblioteca vacía; se conservaron ${existingRefs.length} referencia(s) del punto anterior`;
+        setSafeLibraryMessage(`Punto ${reason === 'manual' ? 'manual' : reason === 'rollback' ? 'de seguridad' : 'temporal'} guardado y verificado: ${stateNote}. Ajustes, fondos, vídeos y pistas respaldables incluidos.`, 'success');
+        if (reason === 'manual') showToast('Punto de guardado completo creado correctamente.', 'success', 3000);
+      } else if (reason === 'automatic') {
+        setSafeLibraryMessage(`Respaldo temporal actualizado: ${new Date(snapshot.createdAt).toLocaleTimeString()}. ${existingRefs.length} canción(es) referenciadas, además de ajustes y recursos locales.`, 'success');
+      }
+      return snapshot;
+    } finally {
+      if (button && reason === 'manual') { button.disabled = false; button.textContent = 'Respaldar ahora · Crear punto'; }
+    }
+  })();
+  const ownRunningPromise = safeTemporaryBackupRunning;
+  try { return await ownRunningPromise; }
+  finally { if (safeTemporaryBackupRunning === ownRunningPromise) safeTemporaryBackupRunning = null; }
+}
+async function runSafeTemporaryBackupIfDue(force = false) {
+  if (!isSafeTemporaryBackupEnabled() || safeTemporaryBackupRunning || !db) return;
+  if (document.hidden && !force) return;
+  const intervalMs = getSafeTemporaryIntervalMinutes() * 60000;
+  let last = 0;
+  try { last = Date.parse(localStorage.getItem(`${SAFE_TEMPORARY_LAST_KEY}_${activeProfileId}`) || '') || 0; } catch (_) {}
+  if (!force && last && Date.now() - last < intervalMs) return;
+  try { await createTemporaryCheckpoint({ reason: 'automatic', quiet: true }); }
+  catch (error) {
+    console.error('Falló el respaldo temporal automático:', error);
+    setSafeLibraryMessage(`No se pudo completar el respaldo temporal: ${error.message || 'error de almacenamiento'}. El punto anterior se conserva.`, 'error');
+  }
+}
+function startSafeTemporaryBackupScheduler() {
+  if (safeTemporaryBackupTimer) clearInterval(safeTemporaryBackupTimer);
+  if (safeTemporaryStartupTimer) clearTimeout(safeTemporaryStartupTimer);
+  safeTemporaryBackupTimer = null; safeTemporaryStartupTimer = null;
+  const toggle = document.getElementById('toggle-safe-temporary-backup');
+  const intervalSelect = document.getElementById('select-safe-backup-interval');
+  if (toggle) toggle.checked = isSafeTemporaryBackupEnabled();
+  if (intervalSelect) intervalSelect.value = String(getSafeTemporaryIntervalMinutes());
+  if (!isSafeTemporaryBackupEnabled()) return;
+  const intervalMs = getSafeTemporaryIntervalMinutes() * 60000;
+  safeTemporaryStartupTimer = setTimeout(() => runSafeTemporaryBackupIfDue(false), 12000);
+  safeTemporaryBackupTimer = setInterval(() => runSafeTemporaryBackupIfDue(false), intervalMs);
+  if (!b68VisibilityHandlerReady) {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) runSafeTemporaryBackupIfDue(false);
+    });
+    b68VisibilityHandlerReady = true;
+  }
+}
+async function refreshSafeBackupStatus() {
+  const countEl = document.getElementById('safe-library-count');
+  if (!countEl) return;
+  const backupToggle = document.getElementById('toggle-safe-backup');
+  const restoreToggle = document.getElementById('toggle-safe-restore');
+  const temporaryToggle = document.getElementById('toggle-safe-temporary-backup');
+  const intervalSelect = document.getElementById('select-safe-backup-interval');
+  if (backupToggle) backupToggle.checked = isSafeBackupEnabled();
+  if (restoreToggle) restoreToggle.checked = isSafeAutoRestoreEnabled();
+  if (temporaryToggle) temporaryToggle.checked = isSafeTemporaryBackupEnabled();
+  if (intervalSelect) intervalSelect.value = String(getSafeTemporaryIntervalMinutes());
+  try {
+    const [stats, primarySongs] = await Promise.all([
+      getSafeBackupStats(activeProfileId), getPrimarySongsForProfile(activeProfileId).catch(() => [])
+    ]);
+    const { count, bytes, latest } = stats;
+    countEl.textContent = String(count);
+    const currentCountEl = document.getElementById('safe-library-current-count');
+    if (currentCountEl) currentCountEl.textContent = String(primarySongs.length);
+    const sizeEl = document.getElementById('safe-library-size'); if (sizeEl) sizeEl.textContent = formatSafeBytes(bytes);
+    const latestEl = document.getElementById('safe-library-last-run'); if (latestEl) latestEl.textContent = latest ? new Date(latest).toLocaleString() : 'Aún no disponible';
+    const stateEl = document.getElementById('safe-library-state');
+    if (stateEl) {
+      stateEl.textContent = !isSafeBackupEnabled() ? 'Copia por canción pausada' : 'Protección activa';
+      stateEl.classList.toggle('is-paused', !isSafeBackupEnabled());
+    }
+    if (count && count > primarySongs.length) {
+      setSafeLibraryMessage(`Hay ${count} copias protegidas y ${primarySongs.length} canción(es) en la biblioteca principal. Las copias adicionales se conservan para recuperación; no se cuentan como canciones actualmente visibles.`, 'success');
+    } else if (count && !isSafeBackupEnabled()) {
+      setSafeLibraryMessage(`Se conservan ${count} copia(s) protegida(s). La protección inmediata por canción está pausada; las copias existentes no se han borrado.`, 'warning');
+    } else if (count) {
+      setSafeLibraryMessage(`Biblioteca Segura disponible: ${count} copia(s) protegida(s), ${primarySongs.length} canción(es) en la biblioteca principal.`, 'success');
+    } else if (!isSafeBackupEnabled()) {
+      setSafeLibraryMessage('La protección por canción está pausada. Los puntos de guardado manuales y temporales pueden seguir activos.', 'warning');
+    } else {
+      setSafeLibraryMessage('La Biblioteca Segura aún no contiene canciones. Crea un punto de guardado para proteger la biblioteca actual.', 'info');
+    }
+    await b68RefreshSnapshotSelect();
+    return { count, bytes, latest, currentCount: primarySongs.length };
+  } catch (error) {
+    const stateEl = document.getElementById('safe-library-state');
+    if (stateEl) { stateEl.textContent = 'No disponible'; stateEl.classList.add('is-paused'); }
+    countEl.textContent = '—';
+    const currentCountEl = document.getElementById('safe-library-current-count'); if (currentCountEl) currentCountEl.textContent = '—';
+    const sizeEl = document.getElementById('safe-library-size'); if (sizeEl) sizeEl.textContent = 'No disponible';
+    const latestEl = document.getElementById('safe-library-last-run'); if (latestEl) latestEl.textContent = 'No disponible';
+    throw error;
+  }
+}
+function b68SavePortableBlob(zip, path, blob, ctx) {
+  if (!path || !blob) return null;
+  zip.file(path, blob, { binary: true, compression: 'STORE' });
+  ctx.files.push({ path, size: Number(blob.size) || 0, type: blob.type || 'application/octet-stream', name: blob.name || path.split('/').pop() });
+  return path;
+}
+function b68SafeArchiveName(name) {
+  const cleaned = String(name || 'asset.bin').split(/[\\/]/).pop().replace(/[^a-z0-9._-]+/gi, '_').replace(/^\.+/, '').slice(-100);
+  return cleaned || 'asset.bin';
+}
+function b68BlobExtension(blob, name) {
+  const fileName = String(name || blob?.name || '').split(/[\\/]/).pop();
+  const match = fileName.match(/\.([a-z0-9]{1,10})$/i);
+  if (match) return match[1].toLowerCase();
+  const type = String(blob?.type || '').toLowerCase();
+  const known = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/flac': 'flac', 'audio/ogg': 'ogg' };
+  return known[type] || 'bin';
+}
+async function b68EncodeArchiveValue(value, zip, folder, ctx, seen = new WeakSet()) {
+  if (typeof Blob !== 'undefined' && value instanceof Blob) {
+    const originalName = value.name || 'resource.' + b68BlobExtension(value, '');
+    const path = `${folder}/${String(++ctx.assetCounter).padStart(5, '0')}-${b68SafeArchiveName(originalName)}`;
+    b68SavePortableBlob(zip, path, value, ctx);
+    return { __glasstrackBlobRef: path, name: originalName, type: value.type || 'application/octet-stream', lastModified: Number(value.lastModified) || 0 };
+  }
+  if (!value || typeof value !== 'object') return value;
+  if (value instanceof Date) return { __glasstrackDate: value.toISOString() };
+  if (ArrayBuffer.isView(value)) return { __glasstrackTypedArray: value.constructor.name, values: Array.from(value) };
+  if (value instanceof ArrayBuffer) return { __glasstrackArrayBuffer: Array.from(new Uint8Array(value)) };
+  if (seen.has(value)) throw new Error('Se encontró una referencia circular inesperada en los datos de la aplicación.');
+  seen.add(value);
+  let output;
+  if (Array.isArray(value)) {
+    output = [];
+    for (const item of value) output.push(await b68EncodeArchiveValue(item, zip, folder, ctx, seen));
+  } else {
+    output = {};
+    for (const [key, item] of Object.entries(value)) {
+      if (typeof item === 'function' || key === 'url' && typeof item === 'string' && item.startsWith('blob:')) continue;
+      output[key] = await b68EncodeArchiveValue(item, zip, folder, ctx, seen);
+    }
+  }
+  seen.delete(value);
+  return output;
+}
+async function b68DecodeArchiveValue(value, zip) {
+  if (!value || typeof value !== 'object') return value;
+  if (value.__glasstrackBlobRef) {
+    const path = String(value.__glasstrackBlobRef);
+    if (path.startsWith('/') || path.split('/').includes('..') || path.includes('\\')) throw new Error('La copia contiene una ruta de archivo no válida.');
+    const file = zip.file(path);
+    if (!file) throw new Error(`Falta un archivo requerido en la copia: ${path}`);
+    const blob = await file.async('blob');
+    try {
+      if (typeof File !== 'undefined') return new File([blob], value.name || path.split('/').pop(), { type: value.type || blob.type, lastModified: Number(value.lastModified) || Date.now() });
+    } catch (_) {}
+    try { Object.defineProperty(blob, 'name', { value: value.name || path.split('/').pop(), configurable: true }); } catch (_) {}
+    return blob;
+  }
+  if (value.__glasstrackDate) return new Date(value.__glasstrackDate);
+  if (value.__glasstrackArrayBuffer && Array.isArray(value.__glasstrackArrayBuffer)) return new Uint8Array(value.__glasstrackArrayBuffer).buffer;
+  if (value.__glasstrackTypedArray && Array.isArray(value.values)) {
+    const constructors = { Uint8Array, Uint16Array, Uint32Array, Int8Array, Int16Array, Int32Array, Float32Array, Float64Array };
+    const Constructor = constructors[value.__glasstrackTypedArray];
+    if (Constructor) return new Constructor(value.values);
+  }
+  if (Array.isArray(value)) {
+    const result = [];
+    for (const item of value) result.push(await b68DecodeArchiveValue(item, zip));
+    return result;
+  }
+  const result = {};
+  for (const [key, item] of Object.entries(value)) result[key] = await b68DecodeArchiveValue(item, zip);
+  return result;
+}
+async function b68EncodePortableSong(song, zip, ctx, inLibrary) {
+  const rawId = song && song.id != null ? song.id : null;
+  const clean = { ...(song || {}) };
+  const audioBlob = clean.fileBlob instanceof Blob ? clean.fileBlob : null;
+  if (!clean.directUrl && typeof clean.url === 'string' && !clean.url.startsWith('blob:')) clean.directUrl = clean.url;
+  delete clean.fileBlob; delete clean.url; delete clean.accountId; delete clean.id;
+  let audioPath = null;
+  if (audioBlob) {
+    const key = String(clean.safeBackupId || `src:${rawId}:${audioBlob.name || ''}:${audioBlob.size}`);
+    if (ctx.songAudioPaths.has(key)) audioPath = ctx.songAudioPaths.get(key);
+    else {
+      const ext = b68BlobExtension(audioBlob, audioBlob.name || clean.title || 'audio');
+      const name = b68SafeArchiveName(audioBlob.name || `${clean.title || 'audio'}.${ext}`);
+      audioPath = `music/audio/${String(ctx.songAudioPaths.size + 1).padStart(5, '0')}-${name}`;
+      b68SavePortableBlob(zip, audioPath, audioBlob, ctx);
+      ctx.songAudioPaths.set(key, audioPath);
+    }
+  }
+  const encoded = await b68EncodeArchiveValue(clean, zip, 'music/assets', ctx);
+  return {
+    ...encoded, sourceId: rawId, audioPath, audioName: audioBlob?.name || '', audioType: audioBlob?.type || '',
+    audioLastModified: Number(audioBlob?.lastModified) || 0, inLibrary: !!inLibrary
+  };
+}
+async function b68CollectIndexedDBForArchive(zip, ctx, activeSongs) {
+  const settingRows = await b68ReadPrimaryStore('settings');
+  const streamRows = await b68ReadPrimaryStore('streamMedia');
+  const allCharts = await b68ReadPrimaryStore('charts');
+  const ids = new Set((activeSongs || []).map(song => String(song.id)));
+  const chartRows = allCharts.filter(row => row && ids.has(String(row.songId)));
+  const output = {};
+  for (const [storeName, rows] of Object.entries({ settings: settingRows, streamMedia: streamRows, charts: chartRows })) {
+    const items = [];
+    for (const row of rows) {
+      let folder = 'app-data/assets';
+      if (storeName === 'settings') folder = row?.key === 'background' ? 'backgrounds' : row?.key === 'visualModeSticker' ? 'profiles/visual-mode' : 'app-data/settings-assets';
+      if (storeName === 'streamMedia') folder = 'videos/stream-studio';
+      if (storeName === 'charts') folder = 'game/charts';
+      items.push(await b68EncodeArchiveValue(row, zip, folder, ctx));
+    }
+    output[storeName] = items;
+  }
+  return output;
+}
+async function exportCompleteGlasstrackArchive() {
+  if (!window.JSZip) throw new Error('No se pudo cargar el motor ZIP. Conéctate y vuelve a intentarlo.');
+  const profileId = activeProfileId || GLASSTRACK_GUEST_ID;
+  const zip = new JSZip();
+  const ctx = { files: [], assetCounter: 0, songAudioPaths: new Map() };
+  const primarySongs = await getPrimarySongsForProfile(profileId);
+  if (primarySongs.length) {
+    await b68EnsureSongIdentities(primarySongs, profileId);
+    await seedSafeBackupFromSongs(primarySongs, profileId, true);
+    await safeBackupQueue.catch(() => {});
+  }
+  const safeRecords = await getSafeBackupRecords(profileId);
+  const catalog = [];
+  for (const song of primarySongs) catalog.push(await b68EncodePortableSong(song, zip, ctx, true));
+  const safeLibrary = [];
+  for (const record of safeRecords) {
+    const song = record.song || {};
+    safeLibrary.push({
+      safeBackupId: record.safeBackupId || song.safeBackupId,
+      fingerprint: record.fingerprint || '', sizeBytes: Number(record.sizeBytes) || 0,
+      backedUpAt: record.backedUpAt || null, restoreExcluded: !!record.restoreExcluded,
+      intentionalDeleteAt: record.intentionalDeleteAt || null,
+      song: await b68EncodePortableSong(song, zip, ctx, false)
+    });
+  }
+  const settings = collectB68PortableSettings();
+  const indexedDBData = await b68CollectIndexedDBForArchive(zip, ctx, primarySongs);
+  const mixRows = await b68GetExternalMixRecords(profileId);
+  const stems = [];
+  for (const record of mixRows) {
+    const clean = { ...record };
+    delete clean.key; delete clean.profileId;
+    clean.sourceSongId = record.songId == null ? '' : String(record.songId);
+    delete clean.songId;
+    const songFolder = b68SafeArchiveName(`${record.songTitle || 'cancion'}-${record.songArtist || 'artista'}`).slice(0, 90) || 'cancion';
+    clean.tracks = [];
+    for (let trackIndex = 0; trackIndex < (Array.isArray(record.tracks) ? record.tracks.length : 0); trackIndex++) {
+      const track = record.tracks[trackIndex] || {};
+      const trackCopy = { ...track };
+      const blob = trackCopy.blob instanceof Blob ? trackCopy.blob : null;
+      delete trackCopy.blob;
+      if (blob) {
+        const kind = String(track.kind || '').toLowerCase();
+        const trackFolder = kind === 'voice' ? 'stems/voice' : kind === 'music' ? 'stems/instrumental' : 'stems/extras';
+        const trackName = b68SafeArchiveName(track.name || blob.name || `${kind || 'pista'}.${b68BlobExtension(blob, '')}`);
+        const path = `${trackFolder}/${songFolder}/${String(trackIndex + 1).padStart(2, '0')}-${String(++ctx.assetCounter).padStart(5, '0')}-${trackName}`;
+        b68SavePortableBlob(zip, path, blob, ctx);
+        trackCopy.blob = { __glasstrackBlobRef: path, name: track.name || blob.name || trackName, type: track.type || blob.type || 'application/octet-stream', lastModified: Number(track.lastModified || blob.lastModified) || 0 };
+      } else {
+        trackCopy.blob = null;
+      }
+      clean.tracks.push(trackCopy);
+    }
+    stems.push(await b68EncodeArchiveValue(clean, zip, 'stems/metadata', ctx));
+  }
+  zip.file('settings/application.json', JSON.stringify(settings, null, 2));
+  zip.file('music/catalog.json', JSON.stringify(catalog, null, 2));
+  zip.file('music/safe-library.json', JSON.stringify(safeLibrary, null, 2));
+  zip.file('app-data/indexeddb.json', JSON.stringify(indexedDBData, null, 2));
+  zip.file('stems/index.json', JSON.stringify(stems, null, 2));
+  const contentNames = Object.keys(zip.files).filter(name => !zip.files[name].dir).sort();
+  const manifestFileMap = new Map();
+  for (const path of contentNames) {
+    const asset = ctx.files.find(file => file.path === path);
+    manifestFileMap.set(path, { path, size: asset?.size ?? zip.files[path]._data?.uncompressedSize ?? null, ...(asset ? { type: asset.type } : {}) });
+  }
+  const manifestFiles = Array.from(manifestFileMap.values()).sort((a, b) => a.path.localeCompare(b.path));
+  const manifest = {
+    format: 'glasstrack-pro-complete-backup', version: 1, application: 'Glasstrack Pro',
+    createdAt: new Date().toISOString(), profileIncluded: false,
+    counts: { songsInLibrary: primarySongs.length, protectedCopies: safeRecords.length, externalMixes: stems.length, settingsKeys: Object.keys(settings.localStorage || {}).length, assets: ctx.files.length },
+    sections: ['settings/application.json', 'music/catalog.json', 'music/safe-library.json', 'app-data/indexeddb.json', 'stems/index.json'],
+    files: manifestFiles
+  };
+  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+  const output = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 3 } });
+  downloadFileBlob(output, `glasstrack-pro-respaldo-completo-${new Date().toISOString().slice(0, 10)}.zip`);
+  setSafeLibraryMessage(`Copia completa exportada: ${primarySongs.length} canción(es) activas, ${safeRecords.length} copias protegidas, ${stems.length} mezclas de pistas y ${ctx.files.length} archivos adjuntos.`, 'success');
+  showToast('Respaldo completo exportado. Guárdalo fuera de Glasstrack.', 'success', 4000);
+  return { songs: primarySongs.length, safeCopies: safeRecords.length, stems: stems.length, files: ctx.files.length };
+}
+function b68GetArchiveFile(zip, path) {
+  if (!path) return null;
+  const value = String(path);
+  if (value.startsWith('/') || value.split('/').includes('..') || value.includes('\\')) throw new Error('La copia contiene una ruta de archivo no válida.');
+  const file = zip.file(value);
+  if (!file) throw new Error(`Falta un archivo requerido en la copia: ${value}`);
+  return file;
+}
+async function b68DecodePortableSong(entry, zip) {
+  const clean = await b68DecodeArchiveValue(entry, zip);
+  const audioPath = clean.audioPath;
+  const audioName = clean.audioName;
+  const audioType = clean.audioType;
+  const audioLastModified = clean.audioLastModified;
+  delete clean.sourceId; delete clean.audioPath; delete clean.audioName; delete clean.audioType; delete clean.audioLastModified; delete clean.inLibrary;
+  if (audioPath) {
+    const audioFile = b68GetArchiveFile(zip, audioPath);
+    const blob = await audioFile.async('blob');
+    try { clean.fileBlob = typeof File !== 'undefined' ? new File([blob], audioName || audioPath.split('/').pop(), { type: audioType || blob.type, lastModified: Number(audioLastModified) || Date.now() }) : blob; }
+    catch (_) { clean.fileBlob = blob; try { Object.defineProperty(clean.fileBlob, 'name', { value: audioName || audioPath.split('/').pop() }); } catch (_) {} }
+  } else clean.fileBlob = null;
+  return { sourceId: entry.sourceId, song: clean, inLibrary: !!entry.inLibrary };
+}
+async function b68ReplaceCurrentProfileSongs(importedEntries, profileId) {
+  const allExisting = await b68GetAllSongs();
+  const otherIds = new Set(allExisting.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== profileId).map(song => String(song.id)));
+  const idMap = new Map();
+  await new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['songs'], 'readwrite');
+      const store = tx.objectStore('songs');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const currentRows = Array.isArray(request.result) ? request.result : [];
+        currentRows.forEach(song => { if ((song.accountId || GLASSTRACK_GUEST_ID) === profileId) store.delete(song.id); });
+        importedEntries.forEach(entry => {
+          const song = { ...entry.song, accountId: profileId, safeBackupId: entry.song.safeBackupId || makeSafeBackupId() };
+          delete song.url; delete song.id;
+          const oldId = entry.sourceId;
+          if (oldId != null && Number.isFinite(Number(oldId)) && !otherIds.has(String(oldId))) song.id = Number(oldId);
+          const addReq = store.add(song);
+          addReq.onsuccess = () => { if (oldId != null) idMap.set(String(oldId), addReq.result); song.id = addReq.result; };
+          addReq.onerror = () => { /* El error de la transacción abortará todas las operaciones. */ };
+        });
+      };
+      request.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo reemplazar la biblioteca de esta sesión.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de la biblioteca.'));
+    } catch (error) { reject(error); }
+  });
+  return idMap;
+}
+async function b68ReplaceAppStores(stores, profileId, idMap, oldCurrentIds = []) {
+  const settingsRows = Array.isArray(stores.settings) ? stores.settings : [];
+  const streamRows = Array.isArray(stores.streamMedia) ? stores.streamMedia : [];
+  const available = ['settings', 'streamMedia'].filter(name => db && db.objectStoreNames.contains(name));
+  await new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(available, 'readwrite');
+      available.forEach(name => {
+        const store = tx.objectStore(name); store.clear();
+        (name === 'settings' ? settingsRows : streamRows).forEach(row => store.put(row));
+      });
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudieron restaurar los fondos y recursos de la aplicación.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de recursos.'));
+    } catch (error) { reject(error); }
+  });
+  const chartRows = Array.isArray(stores.charts) ? stores.charts : [];
+  if (db && db.objectStoreNames.contains('charts')) {
+    const currentIds = new Set((oldCurrentIds || []).map(String));
+    const mappedCharts = chartRows.map(record => {
+      const copy = { ...record };
+      if (idMap.has(String(copy.songId))) copy.songId = idMap.get(String(copy.songId));
+      else if (!idMap.has(String(copy.songId))) return null;
+      return copy;
+    }).filter(Boolean);
+    await new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction(['charts'], 'readwrite');
+        const store = tx.objectStore('charts');
+        const getAll = store.getAll();
+        getAll.onsuccess = () => {
+          (getAll.result || []).forEach(record => { if (currentIds.has(String(record.songId))) store.delete(record.songId); });
+          mappedCharts.forEach(record => store.put(record));
+        };
+        getAll.onerror = () => { try { tx.abort(); } catch (_) {} };
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('No se pudieron restaurar los datos del Modo Ritmo.'));
+        tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de los charts.'));
+      } catch (error) { reject(error); }
+    });
+  }
+}
+async function b68ReplaceExternalMixes(records, profileId, idMap, catalogEntries = []) {
+  const externalDb = await openExternalMixDb();
+  const catalogBySource = new Map((catalogEntries || []).map(entry => [String(entry.sourceId), entry]));
+  const prepared = [];
+  let skipped = 0;
+  for (const record of records || []) {
+    const sourceId = record.sourceSongId != null ? String(record.sourceSongId) : record.songId != null ? String(record.songId) : '';
+    let targetId = sourceId && idMap.has(sourceId) ? idMap.get(sourceId) : null;
+    if (targetId == null && record.songTitle) {
+      const matched = catalogEntries.find(entry => String(entry.song?.title || '').trim().toLowerCase() === String(record.songTitle || '').trim().toLowerCase() && String(entry.song?.artist || '').trim().toLowerCase() === String(record.songArtist || '').trim().toLowerCase());
+      if (matched && matched.sourceId != null && idMap.has(String(matched.sourceId))) targetId = idMap.get(String(matched.sourceId));
+    }
+    if (targetId == null) { skipped++; continue; }
+    const copy = { ...record, profileId: String(profileId), songId: String(targetId), key: `${String(profileId)}::id:${String(targetId)}` };
+    delete copy.sourceSongId;
+    prepared.push(copy);
+  }
+  await new Promise((resolve, reject) => {
+    try {
+      const tx = externalDb.transaction([EXTERNAL_MIX_STORE], 'readwrite');
+      const store = tx.objectStore(EXTERNAL_MIX_STORE);
+      const request = store.openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (cursor) {
+          const value = cursor.value;
+          if (String(value.profileId || '') === String(profileId) || String(value.key || '').startsWith(`${String(profileId)}::`)) cursor.delete();
+          cursor.continue();
+        } else prepared.forEach(record => store.put(record));
+      };
+      request.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudieron restaurar las pistas de voz e instrumental.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de pistas.'));
+    } catch (error) { reject(error); }
+  });
+  return { restored: prepared.length, skipped };
+}
+async function b68RestoreSongsFromSnapshot(snapshot, profileId) {
+  const refs = Array.isArray(snapshot.librarySongRefs) ? snapshot.librarySongRefs : [];
+  if (!refs.length) return new Map();
+  const safeRows = await getSafeBackupRecords(profileId);
+  const bySafeId = new Map(safeRows.map(row => [String(row.safeBackupId), row]));
+  const allExisting = await b68GetAllSongs();
+  const otherIds = new Set(allExisting.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== profileId).map(song => String(song.id)));
+  const selected = [];
+  const pointSongs = Array.isArray(snapshot.librarySongs) ? snapshot.librarySongs : [];
+  const pointSongBySafeId = new Map(pointSongs.filter(song => song && song.safeBackupId).map(song => [String(song.safeBackupId), song]));
+  refs.forEach(ref => {
+    const historicalSong = pointSongBySafeId.get(String(ref.safeBackupId));
+    const currentSafeRecord = bySafeId.get(String(ref.safeBackupId));
+    if (historicalSong) {
+      const restoredSong = { ...(currentSafeRecord?.song || {}), ...historicalSong };
+      if (!Object.prototype.hasOwnProperty.call(historicalSong, 'fileBlob')) {
+        if (currentSafeRecord?.song?.fileBlob) restoredSong.fileBlob = currentSafeRecord.song.fileBlob;
+        else delete restoredSong.fileBlob;
+      }
+      selected.push({ ref, record: { ...(currentSafeRecord || {}), safeBackupId: ref.safeBackupId, song: restoredSong } });
+    } else if (currentSafeRecord?.song) selected.push({ ref, record: currentSafeRecord });
+  });
+  const idMap = new Map();
+  await new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['songs'], 'readwrite');
+      const store = tx.objectStore('songs');
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const rows = Array.isArray(request.result) ? request.result : [];
+        rows.forEach(song => { if ((song.accountId || GLASSTRACK_GUEST_ID) === profileId) store.delete(song.id); });
+        selected.forEach(({ ref, record }) => {
+          const song = { ...record.song, accountId: profileId, safeBackupId: record.safeBackupId };
+          delete song.url;
+          const originalId = ref.sourceId != null ? ref.sourceId : song.id;
+          delete song.id;
+          if (originalId != null && Number.isFinite(Number(originalId)) && !otherIds.has(String(originalId))) song.id = Number(originalId);
+          const addReq = store.add(song);
+          addReq.onsuccess = () => { if (originalId != null) idMap.set(String(originalId), addReq.result); };
+        });
+      };
+      request.onerror = () => { try { tx.abort(); } catch (_) {} };
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error || new Error('No se pudo recuperar la biblioteca desde el punto de guardado.'));
+      tx.onabort = () => reject(tx.error || new Error('Se canceló la recuperación de la biblioteca.'));
+    } catch (error) { reject(error); }
+  });
+  return idMap;
+}
+async function b68RestoreSnapshotData(snapshot, options = {}) {
+  const profileId = activeProfileId || GLASSTRACK_GUEST_ID;
+  const currentSongs = await getPrimarySongsForProfile(profileId).catch(() => []);
+  const oldCurrentIds = currentSongs.map(song => song.id);
+  const idMap = await b68RestoreSongsFromSnapshot(snapshot, profileId);
+  await b68ReplaceAppStores(snapshot.primaryStores || {}, profileId, idMap, oldCurrentIds);
+  const externalRows = (snapshot.externalMixes || []).map(record => ({ ...record, sourceSongId: record.songId }));
+  await b68ReplaceExternalMixes(externalRows, profileId, idMap,
+    (snapshot.librarySongRefs || []).map(ref => ({ sourceId: ref.sourceId, song: { title: ref.title, artist: ref.artist } })));
+  b68RestorePortableSettings(snapshot.settings, idMap);
+  try {
+    localStorage.setItem('glasstrack_library_had_songs_v1', snapshot.librarySongRefs?.length ? 'true' : 'false');
+    localStorage.setItem(`glasstrack_library_had_songs_v1_${profileId}`, snapshot.librarySongRefs?.length ? 'true' : 'false');
+  } catch (_) {}
+  return { idMap, restoredSongs: snapshot.librarySongRefs?.length || 0 };
+}
+async function restoreSelectedSafeCheckpoint() {
+  const select = document.getElementById('select-safe-checkpoint');
+  const snapshotId = select?.value;
+  if (!snapshotId) { showToast('Todavía no hay un punto de guardado disponible.', 'warning', 2800); return; }
+  const snapshot = await b68GetSnapshot(snapshotId);
+  if (!snapshot || String(snapshot.profileId) !== String(activeProfileId)) throw new Error('El punto de guardado no pertenece a la sesión activa o ya no está disponible.');
+  const dateText = new Date(snapshot.createdAt || Date.now()).toLocaleString();
+  if (!confirm(`Se restaurará el punto guardado del ${dateText}. La biblioteca, preferencias, fondos, vídeos locales y pistas de esta sesión volverán al estado guardado. La cuenta no se cambiará. ¿Continuar?`)) return;
+  const button = document.getElementById('btn-safe-restore-checkpoint');
+  if (button) { button.disabled = true; button.textContent = 'Restaurando punto…'; }
+  try {
+    await b68RestoreSnapshotData(snapshot);
+    await refreshSafeBackupStatus().catch(() => {});
+    setSafeLibraryMessage('Punto de guardado restaurado. Glasstrack se recargará para aplicar todos los interruptores, temas y controles.', 'success');
+    showToast('Punto restaurado. Recargando Glasstrack…', 'success', 1800);
+    setTimeout(() => window.location.reload(), 1300);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Restaurar punto guardado'; }
+  }
+}
+function b68SetImportMessage(message, kind = 'info') {
+  const el = document.getElementById('safe-import-message');
+  if (!el) return;
+  el.textContent = String(message || '');
+  el.classList.remove('is-success', 'is-warning', 'is-error');
+  if (kind === 'success') el.classList.add('is-success');
+  else if (kind === 'warning') el.classList.add('is-warning');
+  else if (kind === 'error') el.classList.add('is-error');
+}
+async function importCompleteGlasstrackZip(file) {
+  if (!file) return;
+  if (!/\.zip$/i.test(file.name || '') && file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') throw new Error('Selecciona una copia completa con extensión .zip.');
+  if (!window.JSZip) throw new Error('El motor ZIP no está disponible. Recarga Glasstrack e inténtalo de nuevo.');
+  b68SetImportMessage('Analizando el ZIP y verificando sus archivos…', 'info');
+  const zip = await JSZip.loadAsync(file, { checkCRC32: true });
+  const manifestFile = zip.file('manifest.json');
+  if (!manifestFile) throw new Error('Este ZIP no contiene manifest.json. Para respaldos antiguos usa la opción compatible de abajo.');
+  const manifest = JSON.parse(await manifestFile.async('string'));
+  if (manifest.format !== 'glasstrack-pro-complete-backup' || Number(manifest.version) !== 1) throw new Error('El formato del ZIP no es una copia completa compatible de Glasstrack Pro.');
+  const required = [
+    ['settings/application.json', 'settings'], ['music/catalog.json', 'catalog'],
+    ['music/safe-library.json', 'safe'], ['app-data/indexeddb.json', 'stores'], ['stems/index.json', 'stems']
+  ];
+  const parsed = {};
+  for (const [path, name] of required) {
+    const entry = zip.file(path);
+    if (!entry) throw new Error(`La copia está incompleta: falta ${path}`);
+    parsed[name] = JSON.parse(await entry.async('string'));
+  }
+  if (!parsed.settings || parsed.settings.format !== 'glasstrack-settings-state' || !Array.isArray(parsed.catalog) || !Array.isArray(parsed.safe) || !parsed.stores || !Array.isArray(parsed.stems)) {
+    throw new Error('La estructura de datos de la copia no es válida. No se modificó Glasstrack.');
+  }
+  // Decodificar y comprobar todos los adjuntos antes de tocar la biblioteca activa.
+  const catalogEntries = [];
+  for (const entry of parsed.catalog) catalogEntries.push(await b68DecodePortableSong(entry, zip));
+  const safeEntries = [];
+  for (const item of parsed.safe) {
+    const songEntry = await b68DecodePortableSong(item.song, zip);
+    safeEntries.push({ ...item, song: songEntry });
+  }
+  const appStores = await b68DecodeArchiveValue(parsed.stores, zip);
+  const stemsEntries = [];
+  for (const record of parsed.stems) stemsEntries.push(await b68DecodeArchiveValue(record, zip));
+  // Revisar que cada canción de la colección declarada pueda restaurarse sin dejar referencias a archivos ausentes.
+  for (const entry of catalogEntries) {
+    if (!entry.song || typeof entry.song !== 'object') throw new Error('La copia contiene una entrada de música inválida.');
+    if (entry.song.fileBlob && !(entry.song.fileBlob instanceof Blob)) throw new Error('Uno de los archivos de audio no pudo reconstruirse.');
+  }
+  if (!confirm(`Vas a importar una copia completa creada el ${new Date(manifest.createdAt || Date.now()).toLocaleString()}. Se reemplazará la biblioteca y la configuración de la sesión activa, incluidos fondos y pistas locales. La cuenta y sus credenciales no se importarán. Antes se guardará un punto de seguridad para poder volver atrás si algo falla. ¿Continuar?`)) return;
+  b68SetImportMessage('Creando el punto previo y aplicando la copia completa…', 'info');
+  const profileId = activeProfileId || GLASSTRACK_GUEST_ID;
+  await createTemporaryCheckpoint({ reason: 'rollback', quiet: true, profileId });
+  let importApplied = false;
+  try {
+    const currentSongsBeforeImport = await getPrimarySongsForProfile(profileId);
+    const oldCurrentIds = currentSongsBeforeImport.map(song => song.id);
+    const idMap = await b68ReplaceCurrentProfileSongs(catalogEntries, profileId);
+    // Una copia segura nunca se borra porque importe una biblioteca distinta: se agregan las referencias nuevas sin eliminar el histórico.
+    const safeMergedEntries = safeEntries.map(item => ({
+      ...item,
+      song: { ...item.song, sourceId: item.song.sourceId, audioPath: null, audioName: '', audioType: '', audioLastModified: 0 }
+    }));
+    // Insertar los respaldos codificados del ZIP directamente en la base segura, manteniendo los que ya existían.
+    const database = await openSafeBackupDatabase();
+    const portableSafeRecords = [];
+    for (const item of safeMergedEntries) {
+      const decoded = item.song;
+      const song = { ...decoded.song, accountId: profileId, safeBackupId: item.safeBackupId || decoded.song.safeBackupId || makeSafeBackupId() };
+      if (decoded.sourceId != null && idMap.has(String(decoded.sourceId))) song.id = idMap.get(String(decoded.sourceId));
+      else delete song.id;
+      const key = safeBackupKey(profileId, song.safeBackupId);
+      portableSafeRecords.push({
+        key, profileId, safeBackupId: song.safeBackupId, song,
+        fingerprint: item.fingerprint || safeFingerprint(song), sizeBytes: Number(item.sizeBytes) || approximateSongSize(song),
+        backedUpAt: item.backedUpAt || new Date().toISOString(), restoreExcluded: !!item.restoreExcluded,
+        intentionalDeleteAt: item.intentionalDeleteAt || null
+      });
+    }
+    if (portableSafeRecords.length) await new Promise((resolve, reject) => {
+      try {
+        const tx = database.transaction(['protectedSongs'], 'readwrite');
+        const store = tx.objectStore('protectedSongs');
+        portableSafeRecords.forEach(record => {
+          const getReq = store.get(record.key);
+          getReq.onsuccess = () => { if (!getReq.result) store.add(record); };
+        });
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('No se pudieron importar las copias protegidas.'));
+        tx.onabort = () => reject(tx.error || new Error('Se canceló la importación de copias protegidas.'));
+      } catch (error) { reject(error); }
+    });
+    const remappedStores = {
+      settings: Array.isArray(appStores.settings) ? appStores.settings : [],
+      streamMedia: Array.isArray(appStores.streamMedia) ? appStores.streamMedia : [],
+      charts: Array.isArray(appStores.charts) ? appStores.charts : []
+    };
+    await b68ReplaceAppStores(remappedStores, profileId, idMap, oldCurrentIds);
+    const stemsResult = await b68ReplaceExternalMixes(stemsEntries, profileId, idMap, catalogEntries);
+    const importedActiveSongs = await getPrimarySongsForProfile(profileId);
+    await seedSafeBackupFromSongs(importedActiveSongs, profileId, true);
+    for (const song of importedActiveSongs) {
+      await setSafeRecordRestoreBlocked({ key: safeBackupKey(profileId, song.safeBackupId) }, false).catch(() => {});
+    }
+    b68RestorePortableSettings(parsed.settings, idMap);
+    try {
+      localStorage.setItem('glasstrack_library_had_songs_v1', catalogEntries.length ? 'true' : 'false');
+      localStorage.setItem(`glasstrack_library_had_songs_v1_${profileId}`, catalogEntries.length ? 'true' : 'false');
+    } catch (_) {}
+    importApplied = true;
+    await b68DeleteSnapshot(`${profileId}::rollback`).catch(() => {});
+    await refreshSafeBackupStatus().catch(() => {});
+    await b68RefreshSnapshotSelect();
+    const stemNote = stemsResult.skipped ? ` ${stemsResult.skipped} mezcla(s) no pudieron asociarse a una canción importada.` : '';
+    b68SetImportMessage(`Importación completada: ${catalogEntries.length} canción(es), ${portableSafeRecords.length} registros de protección, fondos/recursos y ${stemsResult.restored} mezclas de pistas. Glasstrack se recargará para aplicar todos los ajustes.${stemNote}`, stemsResult.skipped ? 'warning' : 'success');
+    showToast('Copia completa importada. Recargando Glasstrack…', 'success', 3000);
+    setTimeout(() => window.location.reload(), 1700);
+    return { songs: catalogEntries.length, safeCopies: portableSafeRecords.length, stems: stemsResult.restored, skippedStems: stemsResult.skipped };
+  } catch (error) {
+    console.error('Error al importar la copia completa:', error);
+    if (!importApplied) {
+      try {
+        const rollback = await b68GetSnapshot(`${profileId}::rollback`);
+        if (rollback) {
+          await b68RestoreSnapshotData(rollback);
+          await refreshSafeBackupStatus().catch(() => {});
+        }
+      } catch (rollbackError) { console.error('No se pudo restaurar automáticamente el punto previo:', rollbackError); }
+    }
+    throw error;
+  }
+}
+function initializeSafeBackupControls() {
+  const backupToggle = document.getElementById('toggle-safe-backup');
+  const restoreToggle = document.getElementById('toggle-safe-restore');
+  const temporaryToggle = document.getElementById('toggle-safe-temporary-backup');
+  const intervalSelect = document.getElementById('select-safe-backup-interval');
+  if (backupToggle) {
+    backupToggle.checked = isSafeBackupEnabled();
+    backupToggle.addEventListener('change', async () => {
+      try { localStorage.setItem(SAFE_BACKUP_AUTO_KEY, backupToggle.checked ? 'true' : 'false'); } catch (_) {}
+      if (backupToggle.checked) {
+        setSafeLibraryMessage('Protección automática por canción activada. Verificando la biblioteca…', 'info');
+        try { await backupCurrentLibrary(true); } catch (error) { handleSafeBackupFailure(error, 'No se pudo activar la protección automática por canción.'); }
+      } else {
+        setSafeLibraryMessage('La protección inmediata por canción está pausada. Los respaldos y puntos existentes se conservan.', 'warning');
+        await refreshSafeBackupStatus().catch(() => {});
+      }
+    });
+  }
+  if (restoreToggle) {
+    restoreToggle.checked = isSafeAutoRestoreEnabled();
+    restoreToggle.addEventListener('change', () => {
+      try { localStorage.setItem(SAFE_RESTORE_AUTO_KEY, restoreToggle.checked ? 'true' : 'false'); } catch (_) {}
+      if (!restoreToggle.checked) cancelSafeAutoRestore();
+      else if (!songList.length) scheduleSafeAutoRestore(activeProfileId);
+      setSafeLibraryMessage(restoreToggle.checked ? 'Recuperación de biblioteca activada. Esperará dos minutos antes de actuar.' : 'Recuperación de biblioteca pausada. Los respaldos siguen guardados.', restoreToggle.checked ? 'success' : 'warning');
+    });
+  }
+  if (temporaryToggle) {
+    temporaryToggle.checked = isSafeTemporaryBackupEnabled();
+    temporaryToggle.addEventListener('change', async () => {
+      try { localStorage.setItem(SAFE_TEMPORARY_BACKUP_KEY, temporaryToggle.checked ? 'true' : 'false'); } catch (_) {}
+      startSafeTemporaryBackupScheduler();
+      if (temporaryToggle.checked) {
+        try { await createTemporaryCheckpoint({ reason: 'automatic', quiet: true }); setSafeLibraryMessage(`Respaldo temporal activado. El siguiente se repetirá cada ${getSafeTemporaryIntervalMinutes()} minuto(s).`, 'success'); }
+        catch (error) { setSafeLibraryMessage(`No se pudo crear el primer respaldo temporal: ${error.message || 'error desconocido'}.`, 'error'); }
+      } else {
+        setSafeLibraryMessage('Respaldo temporal automático pausado. Los puntos manuales y las copias ya creadas se conservan.', 'warning');
+      }
+    });
+  }
+  if (intervalSelect) {
+    intervalSelect.value = String(getSafeTemporaryIntervalMinutes());
+    intervalSelect.addEventListener('change', () => {
+      const next = parseInt(intervalSelect.value, 10);
+      if (![1, 2, 5, 10, 15].includes(next)) { intervalSelect.value = String(getSafeTemporaryIntervalMinutes()); return; }
+      try { localStorage.setItem(SAFE_TEMPORARY_INTERVAL_KEY, String(next)); } catch (_) {}
+      startSafeTemporaryBackupScheduler();
+      setSafeLibraryMessage(`Intervalo del respaldo temporal actualizado: cada ${next} minuto(s). La copia existente se mantiene.`, 'success');
+    });
+  }
+  document.getElementById('btn-safe-backup-now')?.addEventListener('click', () => createTemporaryCheckpoint({ reason: 'manual' }).catch(error => handleSafeBackupFailure(error, 'No se pudo crear el punto de guardado completo.')));
+  document.getElementById('btn-safe-restore-now')?.addEventListener('click', async () => {
+    if (songList.length && !confirm('La biblioteca actual contiene canciones. Glasstrack añadirá únicamente las canciones respaldadas que falten, sin reemplazar las actuales. ¿Continuar?')) return;
+    try { await restoreSafeLibrary({ profileId: activeProfileId, automatic: false }); }
+    catch (error) { handleSafeBackupFailure(error, 'No se pudo restaurar la biblioteca desde la copia segura.'); }
+  });
+  document.getElementById('btn-safe-restore-checkpoint')?.addEventListener('click', () => restoreSelectedSafeCheckpoint().catch(error => { setSafeLibraryMessage(error.message || 'No se pudo restaurar el punto seleccionado.', 'error'); showToast(error.message || 'No se pudo restaurar el punto seleccionado.', 'error', 4500); }));
+  document.getElementById('btn-safe-export')?.addEventListener('click', () => exportCompleteGlasstrackArchive().catch(error => { setSafeLibraryMessage(error.message || 'No se pudo exportar la copia completa.', 'error'); showToast(error.message || 'No se pudo exportar la copia completa.', 'error', 4500); }));
+  document.getElementById('btn-safe-delete-backup')?.addEventListener('click', () => deleteCurrentProfileSafeBackup().catch(error => handleSafeBackupFailure(error, 'No se pudieron eliminar las copias seguras de esta cuenta.')));
+  const importInput = document.getElementById('input-import-full-zip');
+  const dropzone = document.getElementById('safe-import-dropzone');
+  const selectImport = document.getElementById('btn-safe-select-import');
+  const importFile = async file => {
+    if (!file) return;
+    if (dropzone) dropzone.classList.add('is-busy');
+    if (selectImport) { selectImport.disabled = true; selectImport.textContent = 'Verificando ZIP…'; }
+    try { await importCompleteGlasstrackZip(file); }
+    catch (error) { console.error(error); b68SetImportMessage(error.message || 'No se pudo importar la copia completa.', 'error'); showToast(error.message || 'No se pudo importar la copia completa.', 'error', 5000); }
+    finally {
+      if (dropzone) dropzone.classList.remove('is-busy');
+      if (selectImport) { selectImport.disabled = false; selectImport.textContent = 'Seleccionar archivo ZIP'; }
+      if (importInput) importInput.value = '';
+    }
+  };
+  if (selectImport && importInput) {
+    // The hidden file input lives inside the dropzone; stop its synthetic click
+    // from bubbling back and reopening the picker recursively.
+    importInput.addEventListener('click', event => event.stopPropagation());
+    selectImport.addEventListener('click', event => { event.stopPropagation(); importInput.click(); });
+  }
+  if (dropzone && importInput) {
+    dropzone.addEventListener('click', event => {
+      if (event.target === importInput || event.target.closest('button')) return;
+      importInput.click();
+    });
+    dropzone.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); importInput.click(); } });
+    ['dragenter', 'dragover'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); event.stopPropagation(); dropzone.classList.add('is-dragover'); }));
+    ['dragleave', 'dragend'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.remove('is-dragover'); }));
+    dropzone.addEventListener('drop', event => {
+      event.preventDefault(); event.stopPropagation(); dropzone.classList.remove('is-dragover');
+      const files = Array.from(event.dataTransfer?.files || []);
+      const file = files.find(item => /\.zip$/i.test(item.name || '') || item.type === 'application/zip');
+      if (!file) { b68SetImportMessage('Arrastra un archivo .zip completo de Glasstrack Pro.', 'warning'); return; }
+      importFile(file);
+    });
+  }
+  if (importInput) importInput.addEventListener('change', () => importFile(importInput.files?.[0] || null));
+  startSafeTemporaryBackupScheduler();
+}
+
+
 // ==========================================
 // 5. INDEXEDDB Y GESTIÓN DE ARCHIVOS
 // ==========================================
@@ -2820,6 +4905,7 @@ function saveSongToDB(songObj) {
   return new Promise((resolve, reject) => {
     if (!db || !songObj) { reject(new Error('El almacenamiento de Glasstrack todavía no está listo.')); return; }
     if (!songObj.accountId) songObj.accountId = activeProfileId;
+    if (!songObj.safeBackupId) songObj.safeBackupId = makeSafeBackupId();
 
     let generatedId = null;
     let settled = false;
@@ -2833,8 +4919,15 @@ function saveSongToDB(songObj) {
         if (settled) return;
         settled = true;
         if (generatedId !== null && generatedId !== undefined) songObj.id = generatedId;
-        try { localStorage.setItem('glasstrack_library_had_songs_v1', 'true'); } catch (_) {}
-        resolve(songObj.id);
+        try {
+          localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
+          localStorage.setItem(`glasstrack_library_had_songs_v1_${songObj.accountId || activeProfileId}`, 'true');
+        } catch (_) {}
+        cancelSafeAutoRestore();
+        queueSafeSongBackup(songObj)
+        .then(() => refreshSafeBackupStatus())
+        .catch(error => handleSafeBackupFailure(error, `La canción "${songObj.title || 'sin título'}" se guardó en la biblioteca principal, pero su copia segura no pudo verificarse.`))
+        .finally(() => resolve(songObj.id));
       };
       tx.onerror = () => {
         if (settled) return;
@@ -2857,11 +4950,15 @@ function saveSongToDB(songObj) {
 function updateSongInDB(songObj) {
   if (!db || !songObj || songObj.id === undefined) return;
   if (!songObj.accountId) songObj.accountId = activeProfileId;
+  if (!songObj.safeBackupId) songObj.safeBackupId = makeSafeBackupId();
   try {
     const tx = db.transaction(['songs'], 'readwrite');
     tx.objectStore('songs').put(songObj);
     tx.onerror = () => console.warn('No se pudieron guardar los cambios de la canción:', tx.error);
     tx.onabort = () => console.warn('Se canceló la actualización de la canción:', tx.error);
+    tx.oncomplete = () => {
+      queueSafeSongBackup(songObj).then(() => refreshSafeBackupStatus()).catch(error => handleSafeBackupFailure(error, 'Los cambios se guardaron, pero no se pudo actualizar la copia segura.'));
+    };
   } catch (error) { console.warn('No se pudo iniciar la actualización de la canción:', error); }
 }
 
@@ -2878,22 +4975,39 @@ function clearCurrentTrackUI() {
 
 function loadStoredSongs() {
   if (!db) return;
-  const tx = db.transaction(["songs"], "readonly");
+  let tx;
+  try { tx = db.transaction(["songs"], "readonly"); }
+  catch (error) { console.error('No se pudo iniciar la carga de la biblioteca:', error); return; }
   const req = tx.objectStore("songs").getAll();
   req.onsuccess = () => {
     const storedSongs = Array.isArray(req.result) ? req.result : [];
-
-    // La primera cuenta existente hereda las canciones antiguas que todavía no tenían perfil.
-    // A partir de aquí nunca se borran: solo se muestran en el perfil propietario.
     const targetProfile = activeProfileId;
-    const legacyToClaim = !isGuestProfile() && storedSongs.filter(song => !song.accountId);
-    if (legacyToClaim.length > 0) {
-      const writeTx = db.transaction(["songs"], "readwrite");
-      const store = writeTx.objectStore('songs');
-      legacyToClaim.forEach(song => { song.accountId = targetProfile; store.put(song); });
-    }
+    const claimedLegacySongs = !isGuestProfile()
+      ? storedSongs.filter(song => !song.accountId)
+      : [];
+    claimedLegacySongs.forEach(song => { song.accountId = targetProfile; });
 
     const visible = storedSongs.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) === targetProfile);
+    const identityUpdates = [];
+    visible.forEach(song => {
+      if (!song.safeBackupId) {
+        song.safeBackupId = makeSafeBackupId();
+        identityUpdates.push(song);
+      }
+    });
+    claimedLegacySongs.forEach(song => {
+      if (!identityUpdates.includes(song)) identityUpdates.push(song);
+    });
+    const persistIdentityUpdates = identityUpdates.length ? new Promise((resolve, reject) => {
+      try {
+        const writeTx = db.transaction(['songs'], 'readwrite');
+        identityUpdates.forEach(song => writeTx.objectStore('songs').put(song));
+        writeTx.oncomplete = resolve;
+        writeTx.onerror = () => reject(writeTx.error || new Error('No se pudieron guardar los identificadores de seguridad.'));
+        writeTx.onabort = () => reject(writeTx.error || new Error('Se canceló la preparación de la copia segura.'));
+      } catch (error) { reject(error); }
+    }) : Promise.resolve();
+
     songList = visible.map(song => {
       let safeUrl = song.directUrl || '';
       if (song.fileBlob) {
@@ -2903,33 +5017,49 @@ function loadStoredSongs() {
       return { ...song, url: safeUrl };
     });
 
-    if (storedSongs.length > 0) {
-      try { localStorage.setItem('glasstrack_library_had_songs_v1', 'true'); } catch (_) {}
+    if (visible.length > 0) {
+      try {
+        localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
+        localStorage.setItem(`glasstrack_library_had_songs_v1_${targetProfile}`, 'true');
+      } catch (_) {}
     }
     ensureGlasstrackInitialized();
     renderPlaylist();
     if (songList.length > 0) {
-      loadSong(0, false);
+      cancelSafeAutoRestore();
+      const firstVisibleIndex = songList.findIndex(song => song && !song.isHidden);
+      if (firstVisibleIndex >= 0) loadSong(firstVisibleIndex, false);
+      else clearCurrentTrackUI();
+      // Primera activación de seguridad: protege gradualmente las canciones antiguas,
+      // sin borrar ni reemplazar la copia si la biblioteca principal está vacía.
+      persistIdentityUpdates.then(() => seedSafeBackupFromSongs(visible, targetProfile))
+        .then(() => refreshSafeBackupStatus())
+        .catch(error => handleSafeBackupFailure(error, 'No se pudo completar la copia inicial de algunas canciones.'));
     } else {
       clearCurrentTrackUI();
-      if (storedSongs.length > 0) {
-        const otherProfileCount = storedSongs.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== targetProfile).length;
-        if (otherProfileCount > 0) {
-          showToast(`Hay ${otherProfileCount} canción(es) guardada(s) en otro perfil. No se han borrado: cambia a la cuenta donde se guardaron.`, 'info', 6500);
-        }
+      const otherProfileCount = storedSongs.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== targetProfile).length;
+      if (otherProfileCount > 0) {
+        showToast(`Hay ${otherProfileCount} canción(es) guardada(s) en otro perfil. No se han borrado: cambia a la cuenta donde se guardaron.`, 'info', 6500);
       } else if (localStorage.getItem('glasstrack_library_had_songs_v1') === 'true') {
-        showToast('No se encontraron canciones en esta ubicación de almacenamiento. No se ha borrado nada por Glasstrack; abre la misma copia/ubicación donde guardaste la biblioteca o importa una copia de seguridad.', 'warning', 7500);
+        showToast('La biblioteca principal aparece vacía. Glasstrack comprobará la Biblioteca Segura antes de intentar una recuperación.', 'warning', 5000);
       }
+      scheduleSafeAutoRestore(targetProfile);
     }
   };
+  req.onerror = () => {
+    console.error('No se pudo leer la biblioteca principal:', req.error);
+    showToast('No se pudo leer la biblioteca. Glasstrack conservará intacta la Biblioteca Segura.', 'error', 5000);
+    scheduleSafeAutoRestore(activeProfileId);
+  };
 }
-
 async function switchActiveProfile(profileId, options = {}) {
   if (!profileId || profileId === activeProfileId) return;
   saveProfileScopedState(activeProfileId);
   clearCurrentTrackUI();
   songList = [];
   currentPlaylistView = null;
+  activePlaybackPlaylist = null;
+  if (typeof syncLoopButtons === 'function') syncLoopButtons();
   activeProfileId = profileId;
   accountSessionActive = profileId !== GLASSTRACK_GUEST_ID;
   localStorage.setItem(GLASSTRACK_ACTIVE_PROFILE_KEY, profileId);
@@ -3094,13 +5224,137 @@ if (fileInput) fileInput.addEventListener('change', (e) => handleFiles(e.target.
 // ==========================================
 // 6. MOTOR DE REPRODUCCIÓN
 // ==========================================
+// Cada selección invalida las cargas/fundidos anteriores. Evita que un evento
+// loadedmetadata o una promesa play() atrasada reactive una canción vieja.
+let mainPlaybackRequestToken = 0;
+let mainCrossfadeTimer = null;
+let mainPendingMetadataLoad = null;
+let latestMainPlaybackUrl = '';
+
+function invalidateMainPlaybackRequests(options = {}) {
+  mainPlaybackRequestToken += 1;
+  const hadMainCrossfade = mainCrossfadeTimer !== null;
+  if (mainCrossfadeTimer !== null) { clearInterval(mainCrossfadeTimer); mainCrossfadeTimer = null; }
+  if (mainPendingMetadataLoad) {
+    const { audio, handler } = mainPendingMetadataLoad;
+    try { audio.removeEventListener('loadedmetadata', handler); } catch (_) {}
+    mainPendingMetadataLoad = null;
+  }
+  [audio1, audio2].forEach(audio => {
+    if (!audio) return;
+    if (audio._fadeInterval) { clearInterval(audio._fadeInterval); audio._fadeInterval = null; }
+  });
+  if (options.stabilizeCurrent && activeAudio) {
+    const targetVol = Math.max(0, Math.min(1, volumeSlider ? parseFloat(volumeSlider.value) : 1));
+    activeAudio.volume = targetVol;
+    if (hadMainCrossfade) {
+      const inactiveAudio = activeAudio === audio1 ? audio2 : audio1;
+      try { inactiveAudio.pause(); } catch (_) {}
+      inactiveAudio.volume = 0;
+    }
+  }
+  return mainPlaybackRequestToken;
+}
+
+function sourceMatches(audio, url) {
+  if (!audio || !url) return false;
+  try { return new URL(audio.currentSrc || audio.src, document.baseURI).href === new URL(url, document.baseURI).href; }
+  catch (_) { return (audio.currentSrc || audio.src) === url; }
+}
+
+// Devuelve únicamente índices reproducibles. Cuando hay una playlist activa, su orden
+// es el orden de esa playlist, no el orden accidental de la biblioteca global.
+function getPlayableTrackIndices() {
+  if (activePlaybackPlaylist) {
+    const entries = playlists && Array.isArray(playlists[activePlaybackPlaylist])
+      ? playlists[activePlaybackPlaylist]
+      : null;
+    if (entries) {
+      const indices = [];
+      const seen = new Set();
+      entries.forEach(storedSong => {
+        const realSong = findSongInLibrary(storedSong);
+        if (!realSong || realSong.isHidden) return;
+        const realIndex = songList.indexOf(realSong);
+        if (realIndex < 0 || seen.has(realIndex)) return;
+        seen.add(realIndex);
+        indices.push(realIndex);
+      });
+      return indices;
+    }
+    // La playlist activa fue eliminada o dejó de existir: la biblioteca vuelve a ser la cola.
+    activePlaybackPlaylist = null;
+    if (typeof syncLoopButtons === 'function') syncLoopButtons();
+  }
+  return songList.reduce((indices, song, index) => {
+    if (song && !song.isHidden) indices.push(index);
+    return indices;
+  }, []);
+}
+
+function chooseAdjacentPlayableIndex(direction = 1, options = {}) {
+  const { useShuffle = isShuffle, allowWrap = true } = options;
+  const indices = getPlayableTrackIndices();
+  if (!indices.length) return -1;
+
+  if (useShuffle && indices.length > 1) {
+    const candidates = indices.filter(index => index !== currentIndex);
+    const pool = candidates.length ? candidates : indices;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  const position = indices.indexOf(currentIndex);
+  if (position < 0) return direction >= 0 ? indices[0] : indices[indices.length - 1];
+  const targetPosition = position + (direction >= 0 ? 1 : -1);
+  if (targetPosition >= 0 && targetPosition < indices.length) return indices[targetPosition];
+  if (!allowWrap) return -1;
+  return direction >= 0 ? indices[0] : indices[indices.length - 1];
+}
+
+function stopForNoPlayableTracks(notify = false) {
+  try { invalidateMainPlaybackRequests(); } catch (_) {}
+  [audio1, audio2].forEach(audio => {
+    if (!audio) return;
+    if (audio._fadeInterval) { clearInterval(audio._fadeInterval); audio._fadeInterval = null; }
+    try { audio.pause(); } catch (_) {}
+  });
+  if (playerCard) playerCard.classList.remove('playing');
+  if (playIcon) playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+  syncCinemaPlayControl(false);
+  syncMiniPlayer();
+  syncVehicleMode();
+  syncMobileNowPlaying();
+  if (notify && typeof showToast === 'function') showToast('No hay canciones visibles para reproducir en esta cola.', 'info');
+}
+
+function navigatePlayableTrack(direction = 1, options = {}) {
+  const { shouldPlay = true, allowWrap = true, useShuffle = isShuffle, notifyIfEmpty = false } = options;
+  const targetIndex = chooseAdjacentPlayableIndex(direction, { useShuffle, allowWrap });
+  if (targetIndex < 0) {
+    stopForNoPlayableTracks(notifyIfEmpty);
+    return false;
+  }
+  return loadSong(targetIndex, shouldPlay) !== false;
+}
+
 function loadSong(index, shouldPlay = true) {
-  if (index < 0 || index >= songList.length) return;
+  if (index < 0 || index >= songList.length) return false;
+  if (shouldPlay && songList[index] && songList[index].isHidden) {
+    console.warn('Se ignoró la reproducción de una canción oculta:', songList[index].title);
+    return false;
+  }
+  // Si Concluidor tomó los elementos de audio compartidos, invalídalo antes de
+  // cargar una selección normal para que ningún fundido suyo vuelva a arrancar.
+  if (typeof concludorAudioOwned !== 'undefined' && (concludorAudioOwned || concludorPlaying)) {
+    stopConcludorPlayback({ resetPosition: false, render: false });
+  }
+  const playbackToken = invalidateMainPlaybackRequests();
   // Desactivar primero evita que una mezcla anterior siga sonando; después se cargan únicamente
   // las pistas que estén guardadas para la nueva canción y el perfil activo.
   if (externalMixerActive) deactivateExternalMix(true, { resumeOriginal: false });
   currentIndex = index;
   const song = songList[currentIndex];
+  latestMainPlaybackUrl = song.url || '';
   prepareExternalMixForSongChange(song);
 
   // Si cambiaste de canción (ej. con las teclas multimedia) mientras el Estudio estaba
@@ -3136,7 +5390,7 @@ function loadSong(index, shouldPlay = true) {
 
   if (shouldPlay) {
     if (toggleCrossfade && toggleCrossfade.checked) {
-      playSongWithCrossfade(song.url);
+      playSongWithCrossfade(song.url, 0, playbackToken);
     } else {
       activeAudio.src = song.url;
       activeAudio.currentTime = 0;
@@ -3155,47 +5409,95 @@ function loadSong(index, shouldPlay = true) {
   if (window.glasstrackRhythm && typeof window.glasstrackRhythm.syncSong === 'function') {
     try { window.glasstrackRhythm.syncSong(); } catch (_) {}
   }
+  return true;
 }
 
-function playSongWithCrossfade(newUrl, startAt = 0) {
+function playSongWithCrossfade(newUrl, startAt = 0, requestToken) {
+  if (requestToken === undefined) requestToken = invalidateMainPlaybackRequests();
+  if (requestToken !== mainPlaybackRequestToken) return;
+  latestMainPlaybackUrl = newUrl || latestMainPlaybackUrl;
   initAudioContext();
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
 
-  const nextAudio = (activeAudio === audio1) ? audio2 : audio1;
   const currentAudio = activeAudio;
-
+  const nextAudio = (activeAudio === audio1) ? audio2 : audio1;
+  if (mainCrossfadeTimer !== null) { clearInterval(mainCrossfadeTimer); mainCrossfadeTimer = null; }
+  if (nextAudio._fadeInterval) { clearInterval(nextAudio._fadeInterval); nextAudio._fadeInterval = null; }
+  nextAudio.pause();
   nextAudio.src = newUrl;
-  nextAudio.volume = 0;
-  if (startAt) {
-    const seekNext = () => { nextAudio.currentTime = startAt; nextAudio.removeEventListener('loadedmetadata', seekNext); };
-    if (nextAudio.readyState >= 1) nextAudio.currentTime = startAt;
-    else nextAudio.addEventListener('loadedmetadata', seekNext);
+  nextAudio.volume = startAt ? 0 : (toggleCrossfade && toggleCrossfade.checked ? 0 : (volumeSlider ? parseFloat(volumeSlider.value) : 1));
+
+  if (startAt > 0) {
+    const seekNext = () => {
+      if (mainPendingMetadataLoad && mainPendingMetadataLoad.handler === seekNext) mainPendingMetadataLoad = null;
+      if (requestToken !== mainPlaybackRequestToken || !sourceMatches(nextAudio, newUrl)) return;
+      try { nextAudio.currentTime = startAt; } catch (_) {}
+    };
+    if (nextAudio.readyState >= 1) seekNext();
+    else {
+      mainPendingMetadataLoad = { audio: nextAudio, handler: seekNext };
+      nextAudio.addEventListener('loadedmetadata', seekNext, { once: true });
+    }
   } else {
-    nextAudio.currentTime = 0;
+    try { nextAudio.currentTime = 0; } catch (_) {}
   }
+  // Publica el destino de esta solicitud antes de esperar play(): si el usuario
+  // pulsa Play o cambia otra vez de pista durante la carga, nunca usará el audio viejo.
+  activeAudio = nextAudio;
 
   const playPromise = nextAudio.play();
   if (playPromise !== undefined) {
-    playPromise.then(() => {
-      const step = 0.05;
-      const targetVol = volumeSlider ? parseFloat(volumeSlider.value) : 1;
-
-      const fade = setInterval(() => {
-        if (currentAudio.volume > step) currentAudio.volume -= step;
-        else { currentAudio.volume = 0; currentAudio.pause(); }
-
-        if (nextAudio.volume < targetVol - step) nextAudio.volume += step;
-        else { nextAudio.volume = targetVol; clearInterval(fade); }
-      }, 60);
+    Promise.resolve(playPromise).then(() => {
+      // No se debe permitir que una selección anterior reclame el audio activo.
+      if (requestToken !== mainPlaybackRequestToken) {
+        if (!sourceMatches(nextAudio, latestMainPlaybackUrl)) nextAudio.pause();
+        return;
+      }
+      const targetVol = Math.max(0, Math.min(1, volumeSlider ? parseFloat(volumeSlider.value) : 1));
+      if (toggleCrossfade && toggleCrossfade.checked) {
+        const currentStartVolume = Math.max(0, Math.min(1, currentAudio ? currentAudio.volume : 0));
+        const tickMs = 60;
+        // Conserva la cadencia de fundido que ya tenía el reproductor (≈1.2 s al 100%).
+        const steps = Math.max(1, Math.ceil(targetVol / 0.05));
+        let stepCount = 0;
+        mainCrossfadeTimer = setInterval(() => {
+          if (requestToken !== mainPlaybackRequestToken) {
+            clearInterval(mainCrossfadeTimer); mainCrossfadeTimer = null; return;
+          }
+          stepCount += 1;
+          const progress = Math.min(1, stepCount / steps);
+          if (currentAudio) {
+            currentAudio.volume = currentStartVolume * (1 - progress);
+            if (progress >= 1) { currentAudio.volume = 0; currentAudio.pause(); }
+          }
+          nextAudio.volume = targetVol * progress;
+          if (progress >= 1) {
+            nextAudio.volume = targetVol;
+            clearInterval(mainCrossfadeTimer); mainCrossfadeTimer = null;
+          }
+        }, tickMs);
+      } else nextAudio.volume = targetVol;
 
       activeAudio = nextAudio;
       if (playerCard) playerCard.classList.add('playing');
       if (playIcon) playIcon.innerHTML = '<path d="M5 4h6v16H5zM13 4h6v16h-6z"/>';
-    }).catch(err => console.error("Error en crossfade:", err));
+      syncCinemaPlayControl(true);
+      syncMiniPlayer();
+      syncVehicleMode();
+      syncMobileNowPlaying();
+    }).catch(err => {
+      if (requestToken === mainPlaybackRequestToken) console.error('Error en crossfade:', err);
+    });
   }
 }
 
 function playSong() {
+  if (songList[currentIndex] && songList[currentIndex].isHidden) {
+    const replacement = chooseAdjacentPlayableIndex(1, { useShuffle: isShuffle, allowWrap: true });
+    if (replacement >= 0) loadSong(replacement, true);
+    else stopForNoPlayableTracks(true);
+    return;
+  }
   if (externalMixerActive) {
     initAudioContext();
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
@@ -3212,6 +5514,9 @@ function playSong() {
   initAudioContext();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
+  const requestToken = mainPlaybackRequestToken;
+  const requestedAudio = activeAudio;
+  const requestedUrl = requestedAudio ? (requestedAudio.currentSrc || requestedAudio.src) : '';
   const targetVol = volumeSlider ? parseFloat(volumeSlider.value) : 1;
   const useFade = !toggleFadePlayback || toggleFadePlayback.checked;
   // En mezcla externa, el audio de la biblioteca actúa solo como reloj silenciado.
@@ -3221,6 +5526,8 @@ function playSong() {
 
   if (playPromise !== undefined) {
     playPromise.then(() => {
+      if (requestToken !== mainPlaybackRequestToken || requestedAudio !== activeAudio ||
+          (requestedUrl && !sourceMatches(requestedAudio, requestedUrl))) return;
       if (playerCard) playerCard.classList.add('playing');
       if (playIcon) playIcon.innerHTML = '<path d="M5 4h6v16H5zM13 4h6v16h-6z"/>';
       syncCinemaPlayControl(true);
@@ -3285,22 +5592,11 @@ function pauseSong() {
 if (playBtn) playBtn.addEventListener('click', () => { playSFX('click'); playerCard.classList.contains('playing') ? pauseSong() : playSong(); });
 if (nextBtn) nextBtn.addEventListener('click', () => {
   playSFX('click');
-  if (songList.length === 0) return;
-  if (isShuffle && songList.length > 1) {
-    // Evita que el modo aleatorio elija inmediatamente la misma canción.
-    const candidates = [];
-    for (let i = 0; i < songList.length; i++) if (i !== currentIndex) candidates.push(i);
-    currentIndex = candidates[Math.floor(Math.random() * candidates.length)];
-  } else {
-    currentIndex = isShuffle ? currentIndex : (currentIndex + 1) % songList.length;
-  }
-  loadSong(currentIndex);
+  navigatePlayableTrack(1, { shouldPlay: true, allowWrap: true, useShuffle: isShuffle, notifyIfEmpty: true });
 });
 if (prevBtn) prevBtn.addEventListener('click', () => {
   playSFX('click');
-  if (songList.length === 0) return;
-  currentIndex = (currentIndex - 1 + songList.length) % songList.length;
-  loadSong(currentIndex);
+  navigatePlayableTrack(-1, { shouldPlay: true, allowWrap: true, useShuffle: false, notifyIfEmpty: true });
 });
 
 function setShuffleEnabled(enabled, persist = true) {
@@ -3318,7 +5614,7 @@ function setShuffleEnabled(enabled, persist = true) {
 }
 
 function syncLoopButtons() {
-  const labels = ['Repetición desactivada', 'Repetir toda la lista', 'Repetir una canción'];
+  const labels = ['Repetición desactivada', activePlaybackPlaylist ? 'Repetir playlist' : 'Repetir toda la lista', 'Repetir una canción'];
   [loopBtn, cinemaLoopBtn].forEach(button => {
     if (!button) return;
     const active = loopMode !== 0;
@@ -3350,21 +5646,47 @@ syncLoopButtons();
       handleExternalTrackEndMismatch();
       return;
     }
-    if (loopMode === 2) {
+    // Un elemento antiguo puede emitir ended después de cambiar de canción; nunca
+    // debe avanzar la cola si ya no es el audio activo.
+    if (a !== activeAudio) return;
+    const endedSong = songList[currentIndex];
+    if (loopMode === 2 && endedSong && !endedSong.isHidden) {
       a.currentTime = 0;
       const restartPromise = a.play();
       if (restartPromise && typeof restartPromise.catch === 'function') restartPromise.catch(() => {});
+      return;
     } else if (concludorPlaying) {
-      // Si ya hicimos un crossfade manual hacia la siguiente pista, "activeAudio" ya cambió;
-      // si esta pista vieja igual llega a su final natural, no hay que avanzar dos veces.
-      if (a === activeAudio) advanceConcludorChain();
-    } else if (loopMode === 0 && !isShuffle && currentIndex >= songList.length - 1) {
-      // En modo desactivado, la reproducción automática se detiene al final de la lista.
-      if (a === activeAudio) pauseSong();
-    } else {
-      // Modo 1 repite la lista; el modo aleatorio mantiene su selección dinámica.
-      if (nextBtn) nextBtn.click();
+      // Conserva la cola independiente de Concluidor; no entra en la navegación normal.
+      advanceConcludorChain();
+      return;
     }
+
+    const playableIndices = getPlayableTrackIndices();
+    const currentPosition = playableIndices.indexOf(currentIndex);
+
+    // Una pista que se ocultó durante la reproducción no puede repetirse ni autoplay.
+    if (!endedSong || endedSong.isHidden || !playableIndices.includes(currentIndex)) {
+      navigatePlayableTrack(1, { shouldPlay: true, allowWrap: true, useShuffle: isShuffle, notifyIfEmpty: false });
+      return;
+    }
+
+    if (loopMode === 0) {
+      // Sin repetir lista, se detiene al llegar al límite de la cola activa; si aleatorio
+      // está habilitado, solo continúa cuando exista otra pista visible distinta.
+      const canContinue = isShuffle
+        ? playableIndices.some(index => index !== currentIndex)
+        : (currentPosition < 0 || currentPosition < playableIndices.length - 1);
+      if (!canContinue) {
+        pauseSong();
+        return;
+      }
+      navigatePlayableTrack(1, { shouldPlay: true, allowWrap: false, useShuffle: isShuffle, notifyIfEmpty: false });
+      return;
+    }
+
+    // Repetir lista: la cola elegida vuelve a su primera canción; en shuffle elige otra
+    // pista de esa misma cola. Nunca salta a la biblioteca completa desde una playlist.
+    navigatePlayableTrack(1, { shouldPlay: true, allowWrap: true, useShuffle: isShuffle, notifyIfEmpty: false });
   });
 });
 
@@ -3445,6 +5767,7 @@ if (btnFocusMode) {
 if (playerCard) {
   playerCard.addEventListener('mousedown', (e) => {
     if (!document.body.classList.contains('focus-mode')) return;
+    if (document.body.classList.contains('mobile-player-expanded') || document.body.classList.contains('mobile-layout') || document.body.classList.contains('mobile-mode')) return;
     if (e.target.closest('button') || e.target.closest('input')) return;
 
     isDragging = true;
@@ -3676,19 +5999,38 @@ if (btnCloseVm) btnCloseVm.addEventListener('click', () => { playSFX('close'); i
 // ==========================================
 // 8. RENDERIZADO Y NAVEGACIÓN DE BIBLIOTECA
 // ==========================================
-document.querySelectorAll('.nav-btn').forEach(btn => {
+function syncLibrarySectionIndicators() {
+  const hiddenOpen = !!(modalHidden && modalHidden.classList.contains('active'));
+  document.querySelectorAll('.nav-btn[data-tab]').forEach(button => {
+    const selected = !hiddenOpen && button.dataset.tab === currentTab;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  if (btnOpenHidden) {
+    btnOpenHidden.classList.toggle('active', hiddenOpen);
+    btnOpenHidden.setAttribute('aria-pressed', String(hiddenOpen));
+  }
+}
+
+function getVisiblePlaylistEntries(playlistName) {
+  const entries = playlists && Array.isArray(playlists[playlistName]) ? playlists[playlistName] : [];
+  return entries.map((storedSong, index) => ({ storedSong, index, realSong: findSongInLibrary(storedSong) }))
+    .filter(entry => !entry.realSong || !entry.realSong.isHidden);
+}
+
+document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
   btn.addEventListener('click', (e) => {
     playSFX('click');
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    e.target.classList.add('active');
-    currentTab = e.target.dataset.tab;
+    currentTab = e.currentTarget.dataset.tab;
     currentPlaylistView = null;
     if (btnBackPlaylist) btnBackPlaylist.classList.add('hidden');
     if (playlistViewHeader) playlistViewHeader.classList.add('hidden');
     if (btnCreatePlaylist) btnCreatePlaylist.classList.toggle('hidden', currentTab !== 'playlists');
+    syncLibrarySectionIndicators();
     renderPlaylist();
   });
 });
+syncLibrarySectionIndicators();
 
 if (btnBackPlaylist) {
   btnBackPlaylist.addEventListener('click', () => {
@@ -3706,13 +6048,14 @@ if (btnPlayPlaylist) {
   btnPlayPlaylist.addEventListener('click', () => {
     playSFX('click');
     if (!currentPlaylistView) return;
-    const pSongs = playlists[currentPlaylistView] || [];
-    for (let i = 0; i < pSongs.length; i++) {
-      const realSong = findSongInLibrary(pSongs[i]);
-      const realIndex = realSong ? songList.indexOf(realSong) : -1;
-      if (realIndex > -1) { loadSong(realIndex); return; }
+    activePlaybackPlaylist = currentPlaylistView;
+    syncLoopButtons();
+    const entries = getVisiblePlaylistEntries(currentPlaylistView);
+    for (const entry of entries) {
+      const realIndex = entry.realSong ? songList.indexOf(entry.realSong) : -1;
+      if (realIndex > -1 && !entry.realSong.isHidden) { loadSong(realIndex); return; }
     }
-    showToast('Ninguna canción de esta playlist está disponible en tu biblioteca actual.', 'error');
+    showToast('Esta playlist no tiene canciones visibles disponibles para reproducir.', 'error');
   });
 }
 
@@ -3742,8 +6085,9 @@ function renderPlaylist() {
       return;
     }
     pKeys.forEach(pName => {
-      const pSongs = playlists[pName] || [];
-      const coverUrl = pSongs.length > 0 ? pSongs[0].cover : "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80";
+      const visibleEntries = getVisiblePlaylistEntries(pName);
+      const coverSong = visibleEntries.length ? (visibleEntries[0].realSong || visibleEntries[0].storedSong) : null;
+      const coverUrl = coverSong && coverSong.cover ? coverSong.cover : "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80";
 
       const li = document.createElement('li');
       li.className = 'playlist-item';
@@ -3751,12 +6095,14 @@ function renderPlaylist() {
         <img src="${coverUrl}" class="item-thumb">
         <div class="item-details" style="padding: 10px;">
           <div class="item-title">${pName}</div>
-          <div class="item-artist">${pSongs.length} canciones</div>
+          <div class="item-artist">${visibleEntries.length} canciones disponibles</div>
         </div>
       `;
       li.addEventListener('click', () => {
         playSFX('open');
         currentPlaylistView = pName;
+        activePlaybackPlaylist = pName;
+        syncLoopButtons();
         if (btnBackPlaylist) btnBackPlaylist.classList.remove('hidden');
         renderPlaylist();
       });
@@ -3767,17 +6113,22 @@ function renderPlaylist() {
 
   if (currentPlaylistView) {
     const pSongs = playlists[currentPlaylistView] || [];
+    const visibleEntries = getVisiblePlaylistEntries(currentPlaylistView);
     if (playlistViewTitle) playlistViewTitle.textContent = currentPlaylistView;
-    if (playlistViewCover) playlistViewCover.src = pSongs.length > 0 ? pSongs[0].cover : "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80";
+    const coverSong = visibleEntries.length ? (visibleEntries[0].realSong || visibleEntries[0].storedSong) : null;
+    if (playlistViewCover) playlistViewCover.src = coverSong && coverSong.cover ? coverSong.cover : "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80";
     if (playlistViewHeader) playlistViewHeader.classList.remove('hidden');
 
     if (pSongs.length === 0) {
       playlistEl.innerHTML = '<li class="empty-msg">Playlist vacía. Agrega canciones usando el menú de 3 puntos.</li>';
       return;
     }
+    if (visibleEntries.length === 0) {
+      playlistEl.innerHTML = '<li class="empty-msg">Esta playlist solo contiene canciones ocultas. Muéstralas en Ocultos para poder reproducirlas.</li>';
+      return;
+    }
 
-    pSongs.forEach((storedSong, pIndex) => {
-      const realSong = findSongInLibrary(storedSong);
+    visibleEntries.forEach(({ storedSong, index: pIndex, realSong }) => {
       const realIndex = realSong ? songList.indexOf(realSong) : -1;
       const song = realSong || storedSong; // usa los datos actuales (título/portada editados), si existe
       const li = document.createElement('li');
@@ -3802,8 +6153,13 @@ function renderPlaylist() {
       });
 
       li.addEventListener('click', () => {
+        if (realSong && realSong.isHidden) return;
         if (song.sourceType === 'youtube' && song.youtubeId) { openYoutubePlayerModal(song); return; }
-        if (realIndex > -1) loadSong(realIndex);
+        if (realIndex > -1) {
+          activePlaybackPlaylist = currentPlaylistView;
+          syncLoopButtons();
+          loadSong(realIndex);
+        }
       });
       playlistEl.appendChild(li);
     });
@@ -3842,6 +6198,8 @@ function renderPlaylist() {
 
     li.addEventListener('click', () => {
       if (song.sourceType === 'youtube' && song.youtubeId) { openYoutubePlayerModal(song); return; }
+      activePlaybackPlaylist = null;
+      syncLoopButtons();
       loadSong(realIndex);
     });
     playlistEl.appendChild(li);
@@ -3859,6 +6217,7 @@ function openModal(modal) {
   if (document.body.classList.contains('cinema-exclusive-active')) {
     document.body.classList.add('cinema-modal-open');
   }
+  if (modal === modalHidden) syncLibrarySectionIndicators();
 }
 function closeModal(modal) {
   if (!modal) return;
@@ -3866,6 +6225,7 @@ function closeModal(modal) {
   if (document.body.classList.contains('cinema-modal-open') && !document.querySelector('.modal-overlay.active')) {
     document.body.classList.remove('cinema-modal-open');
   }
+  if (modal === modalHidden) syncLibrarySectionIndicators();
 }
 
 if (btnRenamePlaylist) {
@@ -3884,6 +6244,10 @@ if (btnDeletePlaylist) {
     if (!currentPlaylistView) return;
     playSFX('click');
     if (confirm(`¿Seguro que deseas eliminar la playlist "${currentPlaylistView}"?`)) {
+      if (activePlaybackPlaylist === currentPlaylistView) {
+        activePlaybackPlaylist = null;
+        syncLoopButtons();
+      }
       delete playlists[currentPlaylistView];
       savePlaylistsToStorage();
       currentPlaylistView = null;
@@ -3916,6 +6280,7 @@ if (btnSavePlaylist) {
       if (editingPlaylistName !== name) {
         playlists[name] = playlists[editingPlaylistName];
         delete playlists[editingPlaylistName];
+        if (activePlaybackPlaylist === editingPlaylistName) activePlaybackPlaylist = name;
         currentPlaylistView = name;
       }
     } else {
@@ -3970,6 +6335,7 @@ document.querySelectorAll('.setting-card-item[data-target]').forEach(card => {
     if (subPanel) {
       if (settingsMainView) settingsMainView.classList.add('slide-out');
       subPanel.classList.add('slide-in');
+      if (targetId === 'sub-data') refreshSafeBackupStatus().catch(() => {});
     }
   });
 });
@@ -4076,11 +6442,22 @@ if (optHideSong) {
   optHideSong.addEventListener('click', () => {
     playSFX('click');
     if (selectedSongForMenu) {
-      selectedSongForMenu.isHidden = !selectedSongForMenu.isHidden;
-      updateSongInDB(selectedSongForMenu);
+      const changedSong = selectedSongForMenu;
+      changedSong.isHidden = !changedSong.isHidden;
+      updateSongInDB(changedSong);
       closeModal(modalSongMenu);
+
+      // Si se oculta la canción que está sonando, no permitas que siga hasta un loop
+      // ni que se reinicie. Cambia a una pista visible de la cola activa o detén el audio.
+      if (changedSong.isHidden && songList[currentIndex] === changedSong) {
+        const wasPlaying = !!(activeAudio && !activeAudio.paused);
+        const replacement = chooseAdjacentPlayableIndex(1, { useShuffle: isShuffle, allowWrap: true });
+        if (replacement >= 0) loadSong(replacement, wasPlaying);
+        else stopForNoPlayableTracks(false);
+      }
       renderPlaylist();
       renderHiddenList();
+      syncLibrarySectionIndicators();
     }
   });
 }
@@ -4497,6 +6874,10 @@ async function hardDeleteSong(song) {
       tx.onabort = () => reject(tx.error || new Error('Transacción abortada'));
     });
 
+    // Mantener la copia segura, pero confirmar el registro de eliminación intencional
+    // antes de finalizar esta acción para que no se restaure por accidente al recargar.
+    await markSafeSongIntentionallyDeleted(song).catch(error => handleSafeBackupFailure(error, 'La canción se eliminó de la biblioteca principal, pero no se pudo marcar su estado en la copia segura.'));
+
     // 2) Libera la URL temporal de memoria.
     if (song.url) {
       try { URL.revokeObjectURL(song.url); } catch (_) {}
@@ -4564,7 +6945,7 @@ async function hardDeleteSong(song) {
     selectedSongForMenu = null;
     renderPlaylist();
     renderHiddenList();
-    showToast(`"${song.title}" eliminada permanentemente.`, 'info');
+    showToast(`"${song.title}" salió de la biblioteca principal; su copia segura se conserva.`, 'info', 3000);
     return true;
   } catch (error) {
     console.error('Error en hardDeleteSong:', error);
@@ -4580,7 +6961,7 @@ if (optDeleteSong) {
 
     const song = selectedSongForMenu;
     const confirmed = confirm(
-      `¿Eliminar permanentemente "${song.title}"?\n\nEl archivo se borrará de la biblioteca local y no podrá recuperarse desde Glasstrack.`
+      `¿Eliminar "${song.title}" de la biblioteca principal?\n\nLa copia de la Biblioteca Segura se conservará y no se borrará automáticamente. Si después quieres recuperarla, podrás usar Restaurar biblioteca en Ajustes.`
     );
 
     if (!confirmed) return;
@@ -4650,8 +7031,23 @@ if (toggleSFX) {
 if (btnFactoryReset) {
   btnFactoryReset.addEventListener('click', () => {
     playSFX('click');
-    if (confirm("¿Estás seguro de restablecer toda la configuración y la interfaz a los valores predeterminados?")) {
+    if (confirm("¿Estás seguro de restablecer la configuración visual y la interfaz a los valores predeterminados? La Biblioteca Segura, las canciones y la identidad de la cuenta se conservarán.")) {
+      const keepKeys = [
+        'glasstrackAccountsV2', 'glasstrackActiveProfileId', 'glasstrackSessionActive',
+        'glasstrack_safe_backup_auto_v1', 'glasstrack_safe_restore_auto_v1',
+        'glasstrack_storage_persisted', 'glasstrack_initialized',
+        'glasstrack_library_had_songs_v1'
+      ];
+      const kept = {};
+      keepKeys.forEach(key => { try { const value = localStorage.getItem(key); if (value !== null) kept[key] = value; } catch (_) {} });
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('glasstrack_library_had_songs_v1_')) kept[key] = localStorage.getItem(key);
+        }
+      } catch (_) {}
       localStorage.clear();
+      Object.entries(kept).forEach(([key, value]) => { try { localStorage.setItem(key, value); } catch (_) {} });
       location.reload();
     }
   });
@@ -5798,6 +8194,32 @@ function syncCinemaVolumeFill() {
   cinemaVolumeSlider.setAttribute('aria-valuetext', `${Math.round(value * 100)}%`);
 }
 
+// B66: protección de rangos nativos (velocidad, calibración, EQ y posibles controles Pitch).
+// Detener la propagación no cancela el valor nativo del slider; evita que el gestor de arrastre
+// de la página lo interprete como arrastre de archivos y muestre el cursor de bloqueo.
+function protectNativeRangeDragging(slider) {
+  if (!slider || slider.dataset.gspRangeDragProtected === '1') return;
+  slider.dataset.gspRangeDragProtected = '1';
+  slider.draggable = false;
+  slider.style.webkitUserDrag = 'none';
+  slider.addEventListener('dragstart', event => { event.preventDefault(); event.stopPropagation(); });
+  slider.addEventListener('pointerdown', event => { if (event.button === 0) event.stopPropagation(); }, { passive: true });
+  slider.addEventListener('mousedown', event => { if (event.button === 0) event.stopPropagation(); });
+  slider.addEventListener('selectstart', event => event.preventDefault());
+}
+document.querySelectorAll('input[type="range"]').forEach(protectNativeRangeDragging);
+// También protege controles de rango que algunos paneles crean bajo demanda (por ejemplo, Pitch/calibración).
+// El observador solo procesa nodos nuevos y no interviene en los valores ni en el evento input nativo.
+if (typeof MutationObserver !== 'undefined') {
+  const nativeRangeDragObserver = new MutationObserver(records => {
+    records.forEach(record => record.addedNodes.forEach(node => {
+      if (!(node instanceof Element)) return;
+      if (node instanceof HTMLInputElement && node.type === 'range') protectNativeRangeDragging(node);
+      node.querySelectorAll?.('input[type="range"]').forEach(protectNativeRangeDragging);
+    }));
+  });
+  nativeRangeDragObserver.observe(document.documentElement, { childList: true, subtree: true });
+}
 [volumeSlider, cinemaVolumeSlider].filter(Boolean).forEach((slider) => {
   slider.draggable = false;
   slider.style.webkitUserDrag = 'none';
@@ -6266,7 +8688,6 @@ const btnKaraokeSettings = document.getElementById('btn-karaoke-settings');
 const btnKaraokeSettingsOpen = document.getElementById('btn-karaoke-settings-open');
 const btnCloseKaraokeSettings = document.getElementById('btn-close-karaoke-settings');
 const btnSaveKaraokeSettings = document.getElementById('btn-save-karaoke-settings');
-const btnKaraokeVm = document.getElementById('btn-karaoke-vm');
 const btnKaraokeFollow = document.getElementById('btn-karaoke-follow');
 const karaokeLyricsScrollBodies = [karaokeLyricsSimpleBody, karaokeLyricsCoverBody].filter(Boolean);
 
@@ -6472,11 +8893,6 @@ function closeKaraokeMode() {
   }
   document.body.classList.remove('karaoke-mode-active');
   closeKaraokeSettings();
-  if (vmPanel) {
-    const wasKaraokeFloating = vmPanel.classList.contains('karaoke-vm-floating');
-    vmPanel.classList.remove('karaoke-vm-floating');
-    if (wasKaraokeFloating && !vmPanel.classList.contains('hidden')) vmPanel.classList.add('hidden');
-  }
 }
 
 if (btnOpenKaraoke) btnOpenKaraoke.addEventListener('click', openKaraokeMode);
@@ -6547,15 +8963,6 @@ if (karaokeVolumeEl && volumeSlider) {
   });
 }
 
-if (btnKaraokeVm && btnVmToggle && vmPanel) {
-  btnKaraokeVm.addEventListener('click', () => {
-    // Desde Karaoke se muestra el mismo panel existente sin alternarlo accidentalmente.
-    try { if (typeof initAudioContext === 'function') initAudioContext(); } catch (_) {}
-    vmPanel.classList.remove('hidden');
-    vmPanel.classList.add('karaoke-vm-floating');
-  });
-  document.getElementById('btn-close-vm')?.addEventListener('click', () => vmPanel.classList.remove('karaoke-vm-floating'));
-}
 function syncKaraokeFollowButton() {
   if (!btnKaraokeFollow) return;
   btnKaraokeFollow.classList.toggle('active', !!karaokeAutoFollowEnabled);
@@ -7839,11 +10246,8 @@ function renderConcludorCarousel() {
       concludorChain.splice(idx, 1);
       if (idx < concludorPosition) concludorPosition -= 1;
       else if (wasCurrent) {
-        // Evita que el audio actual siga sonando con un índice que ahora apunta a otra pista.
-        try { audio1.pause(); audio2.pause(); } catch (_) {}
-        concludorPlaying = false;
-        concludorFadeTriggered = false;
-        if (btnConcludorPlay) btnConcludorPlay.textContent = '▶ Iniciar mezcla';
+        // La entrada actual desapareció de la cola: invalida cargas/fundidos antes de renderizar.
+        stopConcludorPlayback({ resetPosition: false, render: false });
       }
       if (concludorPosition >= concludorChain.length) concludorPosition = Math.max(0, concludorChain.length - 1);
       saveConcludorChain();
@@ -8090,24 +10494,92 @@ if (concludorTrimCanvas) {
   window.addEventListener('touchend', () => { trimDragMode = null; });
 }
 
+let concludorPlaybackToken = 0;
+let concludorFadeTimer = null;
+let concludorMonitorTimer = null;
+let concludorPendingMetadata = null;
+let concludorCrossfadeInProgress = false;
+let concludorAudioOwned = false;
+let concludorPreviewTimer = null;
+let concludorPreviewToken = 0;
+let concludorPreviewPendingMetadata = null;
+
+function clearConcludorPendingMetadata() {
+  if (!concludorPendingMetadata) return;
+  const pending = concludorPendingMetadata;
+  concludorPendingMetadata = null;
+  try { pending.audio.removeEventListener('loadedmetadata', pending.handler); } catch (_) {}
+}
+
+function stopConcludorPreview(expectedToken) {
+  if (expectedToken !== undefined && expectedToken !== concludorPreviewToken) return;
+  concludorPreviewToken += 1;
+  if (concludorPreviewTimer !== null) { clearTimeout(concludorPreviewTimer); concludorPreviewTimer = null; }
+  if (concludorPreviewPendingMetadata) {
+    const pending = concludorPreviewPendingMetadata;
+    concludorPreviewPendingMetadata = null;
+    try { pending.audio.removeEventListener('loadedmetadata', pending.handler); } catch (_) {}
+  }
+  if (concludorPreviewAudio) {
+    try { concludorPreviewAudio.pause(); } catch (_) {}
+    try { concludorPreviewAudio.removeAttribute('src'); concludorPreviewAudio.load(); } catch (_) {}
+    concludorPreviewAudio = null;
+  }
+}
+
+function stopConcludorMonitor() {
+  if (concludorMonitorTimer !== null) { clearInterval(concludorMonitorTimer); concludorMonitorTimer = null; }
+}
+
+function startConcludorMonitor() {
+  if (concludorMonitorTimer === null) concludorMonitorTimer = setInterval(tickConcludorMonitor, 300);
+}
+
+function stopConcludorPlayback(options = {}) {
+  const stopSharedAudio = !!(concludorAudioOwned || concludorPlaying);
+  concludorPlaybackToken += 1;
+  clearConcludorPendingMetadata();
+  if (concludorFadeTimer !== null) { clearInterval(concludorFadeTimer); concludorFadeTimer = null; }
+  concludorCrossfadeInProgress = false;
+  stopConcludorMonitor();
+  stopConcludorPreview();
+  if (stopSharedAudio) {
+    [audio1, audio2].forEach(audio => { try { audio.pause(); } catch (_) {} });
+  }
+  concludorAudioOwned = false;
+  concludorPlaying = false;
+  concludorFadeTriggered = false;
+  if (options.resetPosition) concludorPosition = 0;
+  if (btnConcludorPlay) btnConcludorPlay.textContent = '▶ Iniciar mezcla';
+  const waveState = document.getElementById('concludor-wave-state');
+  if (waveState) waveState.textContent = 'EN ESPERA';
+  if (concludorRafId !== null) { cancelAnimationFrame(concludorRafId); concludorRafId = null; }
+  if (options.render !== false && typeof renderConcludorCarousel === 'function') renderConcludorCarousel();
+}
+
 const btnConcludorPreview = document.getElementById('btn-concludor-preview');
 if (btnConcludorPreview) {
   btnConcludorPreview.addEventListener('click', () => {
     playSFX('click');
     if (!trimTargetSong) return;
-    if (concludorPreviewAudio) { concludorPreviewAudio.pause(); concludorPreviewAudio = null; }
-    concludorPreviewAudio = new Audio(trimTargetSong.url);
+    stopConcludorPreview();
+    const previewToken = concludorPreviewToken;
+    const preview = new Audio(trimTargetSong.url);
+    concludorPreviewAudio = preview;
     const startAt = trimClipStart;
-    const dur = Math.max(0.5, trimClipEnd - trimClipStart);
+    const durationMs = Math.max(0.5, trimClipEnd - trimClipStart) * 1000;
     const startPreview = () => {
-      if (!concludorPreviewAudio) return;
-      concludorPreviewAudio.currentTime = startAt;
-      concludorPreviewAudio.play().catch(() => {});
-      setTimeout(() => {
-        if (concludorPreviewAudio) { concludorPreviewAudio.pause(); concludorPreviewAudio = null; }
-      }, dur * 1000);
+      if (previewToken !== concludorPreviewToken || concludorPreviewAudio !== preview) return;
+      if (concludorPreviewPendingMetadata && concludorPreviewPendingMetadata.handler === startPreview) concludorPreviewPendingMetadata = null;
+      try { preview.currentTime = startAt; } catch (_) {}
+      Promise.resolve(preview.play()).catch(() => {});
+      concludorPreviewTimer = window.setTimeout(() => stopConcludorPreview(previewToken), durationMs);
     };
-    concludorPreviewAudio.addEventListener('loadedmetadata', startPreview, { once: true });
+    if (preview.readyState >= 1) startPreview();
+    else {
+      concludorPreviewPendingMetadata = { audio: preview, handler: startPreview };
+      preview.addEventListener('loadedmetadata', startPreview, { once: true });
+    }
   });
 }
 
@@ -8115,7 +10587,7 @@ const btnConcludorBackList = document.getElementById('btn-concludor-back-list');
 if (btnConcludorBackList) {
   btnConcludorBackList.addEventListener('click', () => {
     playSFX('click');
-    if (concludorPreviewAudio) { concludorPreviewAudio.pause(); concludorPreviewAudio = null; }
+    stopConcludorPreview();
     if (concludorSearchInput) concludorSearchInput.value = '';
     renderConcludorAddList();
   });
@@ -8126,7 +10598,7 @@ if (btnConcludorConfirmAdd) {
   btnConcludorConfirmAdd.addEventListener('click', () => {
     playSFX('click');
     if (!trimTargetSong) return;
-    if (concludorPreviewAudio) { concludorPreviewAudio.pause(); concludorPreviewAudio = null; }
+    stopConcludorPreview();
     const fadeoutInput = document.getElementById('concludor-trim-fadeout');
     const entry = {
       song: trimTargetSong,
@@ -8153,47 +10625,72 @@ if (btnConcludorConfirmAdd) {
 let concludorFadeTriggered = false;
 
 function triggerConcludorCrossfade() {
+  if (!concludorPlaying || !concludorAudioOwned || concludorCrossfadeInProgress) return;
   const nextIndex = concludorPosition + 1;
   if (nextIndex >= concludorChain.length) return;
   const nextEntry = concludorChain[nextIndex];
   const realIndex = songList.indexOf(nextEntry.song);
-  if (realIndex < 0) { concludorPosition = nextIndex; triggerConcludorCrossfade(); return; }
+  if (realIndex < 0) {
+    concludorPosition = nextIndex;
+    advanceConcludorChain();
+    return;
+  }
 
   const currentEntry = concludorChain[concludorPosition];
   const fadeSeconds = getConcludorFadeSeconds(concludorPosition);
   const nextAudio = (activeAudio === audio1) ? audio2 : audio1;
   const currentAudio = activeAudio;
+  clearConcludorPendingMetadata();
+  if (concludorFadeTimer !== null) { clearInterval(concludorFadeTimer); concludorFadeTimer = null; }
+  const requestToken = ++concludorPlaybackToken;
+  concludorCrossfadeInProgress = true;
+  concludorAudioOwned = true;
 
   initAudioContext();
+  nextAudio.pause();
   nextAudio.src = nextEntry.song.url;
   nextAudio.volume = 0;
 
-  // BUG arreglado: poner currentTime justo después de cambiar el src casi nunca funciona
-  // (el navegador todavía no sabe la duración real) y por eso siempre sonaba desde el inicio.
-  // Ahora esperamos a "loadedmetadata" antes de buscar el segundo exacto y recién ahí reproducir.
+  // Espera a metadatos para aplicar el punto de inicio; el token cancela cualquier
+  // carga pendiente si el usuario cambia de pista, detiene o cierra Concluidor.
+  let startInvoked = false;
   const startCrossfadePlayback = () => {
-    nextAudio.currentTime = nextEntry.clipStart || 0;
-    const playPromise = nextAudio.play();
-    if (playPromise === undefined) return;
-    playPromise.then(() => {
+    if (startInvoked) return;
+    startInvoked = true;
+    if (concludorPendingMetadata && concludorPendingMetadata.handler === startCrossfadePlayback) concludorPendingMetadata = null;
+    if (requestToken !== concludorPlaybackToken || !concludorPlaying || !concludorAudioOwned) return;
+    try { nextAudio.currentTime = nextEntry.clipStart || 0; } catch (_) {}
+    Promise.resolve(nextAudio.play()).then(() => {
+      if (requestToken !== concludorPlaybackToken || !concludorPlaying || !concludorAudioOwned) return;
       const tickMs = 60;
-      const steps = Math.max(1, (fadeSeconds * 1000) / tickMs);
-      const step = 1 / steps;
-      const targetVol = volumeSlider ? parseFloat(volumeSlider.value) : 1;
-
-      const fade = setInterval(() => {
-        if (currentAudio.volume > step) currentAudio.volume -= step;
-        else { currentAudio.volume = 0; currentAudio.pause(); }
-        if (nextAudio.volume < targetVol - step) nextAudio.volume += step;
-        else { nextAudio.volume = targetVol; clearInterval(fade); }
-      }, tickMs);
-
+      const steps = Math.max(1, Math.ceil((fadeSeconds * 1000) / tickMs));
+      const targetVol = Math.max(0, Math.min(1, volumeSlider ? parseFloat(volumeSlider.value) : 1));
+      const currentStartVolume = Math.max(0, Math.min(1, currentAudio ? currentAudio.volume : 0));
+      let stepCount = 0;
       activeAudio = nextAudio;
       concludorPosition = nextIndex;
       concludorFadeTriggered = false;
 
-      // Actualizamos toda la pantalla (sin volver a llamar loadSong, eso reiniciaría el
-      // audio y cortaría el crossfade que recién empezamos)
+      // Mantiene el fundido durante la sesión; al invalidar la sesión, el timer se cancela.
+      concludorFadeTimer = setInterval(() => {
+        if (requestToken !== concludorPlaybackToken || !concludorPlaying || !concludorAudioOwned) {
+          if (concludorFadeTimer !== null) { clearInterval(concludorFadeTimer); concludorFadeTimer = null; }
+          return;
+        }
+        stepCount += 1;
+        const progress = Math.min(1, stepCount / steps);
+        if (currentAudio) {
+          currentAudio.volume = currentStartVolume * (1 - progress);
+          if (progress >= 1) { currentAudio.volume = 0; currentAudio.pause(); }
+        }
+        nextAudio.volume = targetVol * progress;
+        if (progress >= 1) {
+          nextAudio.volume = targetVol;
+          clearInterval(concludorFadeTimer); concludorFadeTimer = null;
+          concludorCrossfadeInProgress = false;
+        }
+      }, tickMs);
+
       currentIndex = realIndex;
       const song = nextEntry.song;
       if (title) title.textContent = song.title;
@@ -8210,38 +10707,60 @@ function triggerConcludorCrossfade() {
       updateMediaSession(song);
       syncMiniPlayer(true);
       syncVehicleMode();
-  syncMobileNowPlaying();
+      syncMobileNowPlaying();
       renderPlaylist();
       renderConcludorCarousel();
-    }).catch(err => console.error('Error en crossfade del Concluidor:', err));
+    }).catch(err => {
+      if (requestToken !== concludorPlaybackToken) return;
+      concludorCrossfadeInProgress = false;
+      try { nextAudio.pause(); } catch (_) {}
+      console.error('Error en crossfade del Concluidor:', err);
+      showToast('No se pudo iniciar la siguiente pista. La mezcla sigue disponible para reintentarlo.', 'error', 3000);
+    });
   };
 
   if (nextAudio.readyState >= 1) startCrossfadePlayback();
-  else nextAudio.addEventListener('loadedmetadata', startCrossfadePlayback, { once: true });
+  else {
+    concludorPendingMetadata = { audio: nextAudio, handler: startCrossfadePlayback };
+    nextAudio.addEventListener('loadedmetadata', startCrossfadePlayback, { once: true });
+  }
 }
 
 function playConcludorEntry(entry) {
   const realIndex = songList.indexOf(entry.song);
   if (realIndex < 0) { advanceConcludorChain(); return; }
 
-  // Igual que en el crossfade: poner currentTime justo después de cambiar el src no funciona
-  // de forma confiable (el navegador todavía no conoce la duración real), así que esperamos
-  // a "loadedmetadata" antes de buscar el segundo exacto. Esto es lo que causaba que
-  // siempre sonara desde el inicio en vez del fragmento elegido.
+  clearConcludorPendingMetadata();
+  if (concludorFadeTimer !== null) { clearInterval(concludorFadeTimer); concludorFadeTimer = null; }
+  concludorCrossfadeInProgress = false;
+  const requestToken = ++concludorPlaybackToken;
+  concludorAudioOwned = true;
   initAudioContext();
   audio1.pause();
   audio2.pause();
   activeAudio = audio1;
   currentIndex = realIndex;
   activeAudio.src = entry.song.url;
-  activeAudio.volume = volumeSlider ? parseFloat(volumeSlider.value) : 1;
+  activeAudio.volume = Math.max(0, Math.min(1, volumeSlider ? parseFloat(volumeSlider.value) : 1));
+  const entryAudio = activeAudio;
+  const entryUrl = entry.song.url;
 
+  let startInvoked = false;
   const startPlayback = () => {
-    activeAudio.currentTime = entry.clipStart || 0;
-    activeAudio.play().catch(err => console.error('Error al reproducir en Concluidor:', err));
+    if (startInvoked) return;
+    startInvoked = true;
+    if (concludorPendingMetadata && concludorPendingMetadata.handler === startPlayback) concludorPendingMetadata = null;
+    if (requestToken !== concludorPlaybackToken || !concludorPlaying || !concludorAudioOwned || !sourceMatches(entryAudio, entryUrl)) return;
+    try { entryAudio.currentTime = entry.clipStart || 0; } catch (_) {}
+    Promise.resolve(entryAudio.play()).catch(err => {
+      if (requestToken === concludorPlaybackToken) console.error('Error al reproducir en Concluidor:', err);
+    });
   };
-  if (activeAudio.readyState >= 1) startPlayback();
-  else activeAudio.addEventListener('loadedmetadata', startPlayback, { once: true });
+  if (entryAudio.readyState >= 1) startPlayback();
+  else {
+    concludorPendingMetadata = { audio: entryAudio, handler: startPlayback };
+    entryAudio.addEventListener('loadedmetadata', startPlayback, { once: true });
+  }
 
   const song = entry.song;
   if (title) title.textContent = song.title;
@@ -8261,19 +10780,16 @@ function playConcludorEntry(entry) {
   syncMobileNowPlaying();
   renderPlaylist();
   renderConcludorCarousel();
-
   concludorFadeTriggered = false;
 }
 
 function advanceConcludorChain() {
+  if (!concludorPlaying || !concludorAudioOwned) return;
   concludorPosition++;
   if (concludorPosition < concludorChain.length) {
     playConcludorEntry(concludorChain[concludorPosition]);
   } else {
-    concludorPlaying = false;
-    concludorPosition = 0;
-    const playBtn = document.getElementById('btn-concludor-play');
-    if (playBtn) playBtn.textContent = '▶ Iniciar mezcla';
+    stopConcludorPlayback({ resetPosition: true, render: false });
     renderConcludorCarousel();
     showToast('Mezcla completa terminada.', 'info');
   }
@@ -8327,6 +10843,8 @@ const concludorCrossfadeInput = document.getElementById('concludor-crossfade');
 const concludorCrossfadeValue = document.getElementById('concludor-crossfade-value');
 
 function closeConcludorWindow() {
+  // Cerrar/guardar la ventana es una parada real, no solo ocultar una capa.
+  stopConcludorPlayback({ resetPosition: false, render: false });
   if (concludorMode) {
     concludorMode.classList.remove('active');
     concludorMode.setAttribute('aria-hidden', 'true');
@@ -8346,6 +10864,8 @@ if (concludorCrossfadeInput) {
 if (btnConcludorMode) {
   btnConcludorMode.addEventListener('click', () => {
     playSFX('open');
+    // Una transición pendiente del reproductor principal no debe competir con Concluidor.
+    invalidateMainPlaybackRequests({ stabilizeCurrent: true });
     loadConcludorChain();
     const savedMode = localStorage.getItem('concludorMixMode');
     setConcludorMixMode(['fluid', 'rhythm', 'manual', 'smart'].includes(savedMode) ? savedMode : concludorMixMode, false);
@@ -8384,7 +10904,7 @@ if (btnConcludorAdd) {
 if (btnCloseConcludorAdd) {
   btnCloseConcludorAdd.addEventListener('click', () => {
     playSFX('close');
-    if (concludorPreviewAudio) { concludorPreviewAudio.pause(); concludorPreviewAudio = null; }
+    stopConcludorPreview();
     closeModal(modalConcludorAdd);
   });
 }
@@ -8442,13 +10962,27 @@ if (btnConcludorPlay) {
           triggerConcludorCrossfade();
           return;
         }
-        activeAudio.play().then(() => {
+        const resumeAudio = activeAudio;
+        const resumeToken = concludorPlaybackToken;
+        Promise.resolve(resumeAudio.play()).then(() => {
+          if (resumeToken !== concludorPlaybackToken || !concludorPlaying || !concludorAudioOwned) return;
+          startConcludorMonitor();
           btnConcludorPlay.textContent = 'Ⅱ Pausar mezcla';
           renderConcludorStudioState();
         }).catch(() => {});
       } else {
+        const pausedDuringCrossfade = concludorCrossfadeInProgress;
         audio1.pause();
         audio2.pause();
+        if (concludorFadeTimer !== null) { clearInterval(concludorFadeTimer); concludorFadeTimer = null; }
+        if (pausedDuringCrossfade && activeAudio) {
+          const targetVol = Math.max(0, Math.min(1, volumeSlider ? parseFloat(volumeSlider.value) : 1));
+          activeAudio.volume = targetVol;
+          const otherAudio = activeAudio === audio1 ? audio2 : audio1;
+          otherAudio.volume = 0;
+        }
+        concludorCrossfadeInProgress = false;
+        // La sesión queda en pausa, no se invalida; se puede continuar desde el punto actual.
         btnConcludorPlay.textContent = '▶ Continuar mezcla';
         const waveState = document.getElementById('concludor-wave-state');
         if (waveState) waveState.textContent = 'EN PAUSA';
@@ -8458,6 +10992,7 @@ if (btnConcludorPlay) {
     if (concludorChain.length === 0) { showToast('Agrega al menos una canción a la secuencia primero.', 'error'); return; }
     concludorPlaying = true;
     concludorPosition = Math.max(0, Math.min(concludorPosition, concludorChain.length - 1));
+    startConcludorMonitor();
     playConcludorEntry(concludorChain[concludorPosition]);
     btnConcludorPlay.textContent = 'Ⅱ Pausar mezcla';
     renderConcludorStudioState();
@@ -8474,6 +11009,7 @@ if (btnConcludorNext) {
     if (!concludorPlaying) {
       concludorPlaying = true;
       concludorPosition = Math.max(0, Math.min(concludorPosition, concludorChain.length - 1));
+      startConcludorMonitor();
       playConcludorEntry(concludorChain[concludorPosition]);
       if (btnConcludorPlay) btnConcludorPlay.textContent = 'Ⅱ Pausar mezcla';
       renderConcludorStudioState();
@@ -8487,10 +11023,7 @@ if (btnConcludorClear) {
   btnConcludorClear.addEventListener('click', () => {
     if (!concludorChain.length) return;
     if (!confirm('¿Vaciar todas las pistas de la sesión Concluidor?')) return;
-    if (concludorPlaying) {
-      try { audio1.pause(); audio2.pause(); } catch (_) {}
-      concludorPlaying = false;
-    }
+    stopConcludorPlayback({ resetPosition: true, render: false });
     concludorChain = [];
     concludorPosition = 0;
     concludorFadeTriggered = false;
@@ -8534,24 +11067,21 @@ if (btnConcludorMusic) {
   });
 }
 
-// Dispara la transición en el punto de conexión exacto que se eligió en el editor,
-// con el fundido configurado (antes esto se ignoraba y cortaba de golpe siempre).
-setInterval(() => {
-  if (!concludorPlaying) return;
+// Monitor de reproducción: solo existe mientras una sesión Concluidor está activa.
+// Al cerrar, vaciar o terminar la sesión se cancela, igual que sus fundidos pendientes.
+function tickConcludorMonitor() {
+  if (!concludorPlaying || !concludorAudioOwned || !activeAudio) return;
   const entry = concludorChain[concludorPosition];
   if (!entry) return;
   const fadeAt = entry.fadeAt !== undefined ? entry.fadeAt : entry.clipEnd;
   const fadeOutDuration = getConcludorFadeSeconds(concludorPosition);
   const triggerPoint = Math.max(entry.clipStart || 0, fadeAt - fadeOutDuration);
 
-  if (concludorMixMode !== 'manual' && !concludorFadeTriggered && activeAudio.currentTime >= triggerPoint) {
+  if (concludorMixMode !== 'manual' && !concludorFadeTriggered && !concludorCrossfadeInProgress && activeAudio.currentTime >= triggerPoint) {
     concludorFadeTriggered = true;
-    if (concludorPosition + 1 < concludorChain.length) {
-      triggerConcludorCrossfade();
-    }
+    if (concludorPosition + 1 < concludorChain.length) triggerConcludorCrossfade();
   }
   if (concludorMixMode === 'manual' && concludorPosition < concludorChain.length - 1 && activeAudio.currentTime >= fadeAt) {
-    // En modo manual, detenerse en el punto de conexión hasta que el usuario dé la orden.
     activeAudio.pause();
     try { activeAudio.currentTime = fadeAt; } catch (_) {}
     const waveState = document.getElementById('concludor-wave-state');
@@ -8562,16 +11092,17 @@ setInterval(() => {
     if (playBtn && activeAudio.paused) playBtn.textContent = '↗ Transición pendiente';
   }
   if (concludorPosition === concludorChain.length - 1 && activeAudio.currentTime >= fadeAt) {
-    activeAudio.pause();
-    try { activeAudio.currentTime = fadeAt; } catch (_) {}
-    concludorPlaying = false;
-    concludorPosition = 0;
-    const playBtn = document.getElementById('btn-concludor-play');
-    if (playBtn) playBtn.textContent = '▶ Iniciar mezcla';
+    stopConcludorPlayback({ resetPosition: true, render: false });
     renderConcludorCarousel();
     showToast('Mezcla completa terminada.', 'info');
   }
-}, 300);
+}
+
+window.addEventListener('pagehide', () => {
+  stopConcludorPlayback({ resetPosition: false, render: false });
+  stopConcludorPreview();
+  invalidateMainPlaybackRequests();
+});
 
 // ==========================================
 // BUSCADOR DE BIBLIOTECA
@@ -8686,7 +11217,7 @@ function applyMobileLayoutState(enabled) {
     'mobile-player-layer-open'
   );
 
-  root.classList.remove('mobile-layout-enabled');
+  root.classList.remove('mobile-layout-enabled', 'mobile-player-layer-open');
   body.style.removeProperty('top');
   body.style.removeProperty('pointer-events');
   root.style.removeProperty('pointer-events');
@@ -8720,6 +11251,7 @@ function applyMobileLayoutState(enabled) {
   scheduleMobileLayoutFrame(() => {
     window.scrollTo(0, Math.max(0, previousScroll));
   });
+  delete body.dataset.mobileScrollY;
 }
 
 if (toggleMobileLayout) {
@@ -8803,6 +11335,11 @@ if (mobileTabBar) {
   const rhythmItem = document.getElementById('top-mode-rhythm');
   const visualItem = document.getElementById('top-mode-visual');
   const jkItem = document.getElementById('top-mode-jk');
+  const mobileQuickMenu = document.getElementById('mobile-quick-menu');
+  const isMobileUi = () => document.body.classList.contains('mobile-layout') ||
+    document.body.classList.contains('mobile-mode') ||
+    document.body.classList.contains('mobile-layout-active') ||
+    document.body.classList.contains('mobile-mode-active');
 
   if (!trigger || !menu) return;
 
@@ -8812,9 +11349,12 @@ if (mobileTabBar) {
 
   const positionMenu = () => {
     if (!isOpen()) return;
+    // En escritorio posiciona el menú el listener dedicado de btn-pc-secondary-menu.
+    // Esto evita que un resize/scroll reubique el menú usando el botón móvil oculto.
+    if (!isMobileUi() && window.innerWidth > 768) return;
 
     const rect = trigger.getBoundingClientRect();
-    const menuWidth = Math.min(340, Math.max(280, menu.offsetWidth || 320));
+    const menuWidth = Math.min(340, menu.getBoundingClientRect().width || 320, Math.max(0, window.innerWidth - 20));
     const menuHeight = menu.offsetHeight || 210;
     const gap = 8;
     const viewportPadding = 10;
@@ -8836,12 +11376,14 @@ if (mobileTabBar) {
 
   const openMenu = () => {
     menu.classList.remove('hidden');
+    if (mobileQuickMenu) mobileQuickMenu.classList.toggle('active', isMobileUi());
     trigger.setAttribute('aria-expanded', 'true');
-    positionMenu();
+    requestAnimationFrame(positionMenu);
   };
 
   const closeMenu = () => {
     menu.classList.add('hidden');
+    if (mobileQuickMenu) mobileQuickMenu.classList.remove('active');
     trigger.setAttribute('aria-expanded', 'false');
   };
 
@@ -8938,15 +11480,9 @@ if (mobileTabBar) {
   }
 })();
 
-// Botón X para cerrar el reproductor expandido en celular
-const btnCloseMobilePlayer = document.getElementById('btn-close-mobile-player');
-if (btnCloseMobilePlayer) {
-  btnCloseMobilePlayer.addEventListener('click', () => {
-    playSFX('close');
-    if (playerCard) playerCard.classList.remove('mobile-expanded');
-    document.body.classList.remove('mobile-player-expanded');
-  });
-}
+// El cierre de reproductor móvil se conecta en MOBILE UI V3 / STATE SYNC,
+// donde también se sincroniza aria-hidden y la capa visual. Evitamos registrar
+// dos listeners sobre la misma X y duplicar los efectos de cierre.
 
 // ==========================================
 // AUTO-PAUSA AL CAMBIAR DE PESTAÑA Y RECORDAR POSICIÓN EXACTA
@@ -9011,6 +11547,10 @@ function drawPlayerVisualizer() {
   canvas.dataset.lastFrameTime = String(now);
 
   const rect = canvas.getBoundingClientRect();
+  if (document.hidden || canvas.classList.contains('hidden') || rect.width < 2 || rect.height < 2) {
+    playerVizRafId = null;
+    return;
+  }
   const dpr = Math.min(window.devicePixelRatio || 1, perf.visualizerQuality === 'low' ? 1 : 1.5);
   const w = Math.max(1, Math.round(rect.width * dpr));
   const h = Math.max(1, Math.round(rect.height * dpr));
@@ -9040,6 +11580,24 @@ if (toggleAudioVisualizer) {
     if (playerVisualizerCanvas) playerVisualizerCanvas.classList.toggle('hidden', !e.target.checked);
     if (e.target.checked && !playerVizRafId) drawPlayerVisualizer();
   });
+}
+// B66: si el canvas pasa de oculto/0px a visible al expandir el reproductor móvil,
+// se inicia una sola vez el bucle existente en vez de dejarlo girando en un tamaño inválido.
+if (playerVisualizerCanvas && typeof ResizeObserver !== 'undefined') {
+  const playerVizResizeObserver = new ResizeObserver(() => {
+    if (toggleAudioVisualizer?.checked && !playerVisualizerCanvas.classList.contains('hidden') && !document.hidden && !playerVizRafId) {
+      drawPlayerVisualizer();
+    }
+  });
+  playerVizResizeObserver.observe(playerVisualizerCanvas);
+  const playerForVizResize = document.getElementById('player-card');
+  if (playerForVizResize) playerVizResizeObserver.observe(playerForVizResize);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && toggleAudioVisualizer?.checked && !playerVisualizerCanvas.classList.contains('hidden') && !playerVizRafId) drawPlayerVisualizer();
+  });
+  window.addEventListener('resize', () => {
+    if (toggleAudioVisualizer?.checked && !playerVisualizerCanvas.classList.contains('hidden') && !playerVizRafId) drawPlayerVisualizer();
+  }, { passive: true });
 }
 
 // ==========================================
@@ -9309,10 +11867,11 @@ document.querySelectorAll('.studio-speed-btn').forEach(btn => {
     document.querySelectorAll('.studio-speed-btn').forEach(b => b.classList.remove('active'));
     e.currentTarget.classList.add('active');
     const rate = parseFloat(e.currentTarget.dataset.speed);
-    [audio1, audio2].forEach(a => {
+    [audio1, audio2].filter(Boolean).forEach(a => {
       a.playbackRate = rate;
-      a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false;
+      applyLinkedPlaybackRate(a);
     });
+    syncPlaybackSpeedIndicators();
   });
 });
 
@@ -11184,6 +13743,8 @@ if (typeof document !== 'undefined') {
   const rhythmAccentColorInput = $('rhythm-accent-color');
 
   const RYTHM_SETTING_KEY = 'glasstrack_rhythm_enabled';
+  // Tanda 2: Modo Ritmo queda cerrado temporalmente hasta terminar sus correcciones.
+  const RHYTHM_BETA_LOCKED = true;
   const RYTHM_GAME_SETTINGS_KEY = 'glasstrack_rhythm_game_settings';
   const RYTHM_MAPPING_KEY = 'glasstrack_rhythm_mapping';
   const RYTHM_TAB_KEY = 'glasstrack_rhythm_last_tab';
@@ -11396,11 +13957,19 @@ if (typeof document !== 'undefined') {
   }
 
   function setRhythmEnabled(enabled) {
-    rhythmEnabled = !!enabled;
+    rhythmEnabled = RHYTHM_BETA_LOCKED ? false : !!enabled;
     try { localStorage.setItem(RYTHM_SETTING_KEY, rhythmEnabled ? 'true' : 'false'); } catch (_) {}
-    if (toggleRhythm) toggleRhythm.checked = rhythmEnabled;
-    if (toggleRhythmDetail) toggleRhythmDetail.checked = rhythmEnabled;
-    if (!rhythmEnabled && !rhythmOverlay.classList.contains('hidden')) closeRhythm();
+    if (toggleRhythm) {
+      toggleRhythm.checked = rhythmEnabled;
+      if (RHYTHM_BETA_LOCKED) { toggleRhythm.disabled = true; toggleRhythm.setAttribute('aria-disabled', 'true'); }
+    }
+    if (toggleRhythmDetail) {
+      toggleRhythmDetail.checked = rhythmEnabled;
+      if (RHYTHM_BETA_LOCKED) { toggleRhythmDetail.disabled = true; toggleRhythmDetail.setAttribute('aria-disabled', 'true'); }
+    }
+    if (btnOpenRhythmGame && RHYTHM_BETA_LOCKED) { btnOpenRhythmGame.disabled = true; btnOpenRhythmGame.setAttribute('aria-disabled', 'true'); }
+    if (btnOpenRhythmStudy && RHYTHM_BETA_LOCKED) { btnOpenRhythmStudy.disabled = true; btnOpenRhythmStudy.setAttribute('aria-disabled', 'true'); }
+    if ((!rhythmEnabled || RHYTHM_BETA_LOCKED) && !rhythmOverlay.classList.contains('hidden')) closeRhythm();
   }
 
   function formatRhythmMs(sec) {
@@ -12082,6 +14651,10 @@ if (typeof document !== 'undefined') {
   }
 
   function openRhythm(tab = 'game') {
+    if (RHYTHM_BETA_LOCKED) {
+      rhythmNotify('Modo Ritmo bloqueado temporalmente mientras se corrige.');
+      return;
+    }
     if (!rhythmEnabled) {
       rhythmNotify('El Modo Ritmo está desactivado en Ajustes.');
       return;
@@ -12259,7 +14832,11 @@ if (typeof document !== 'undefined') {
       editorSpeed = speed;
       document.querySelectorAll('.rhythm-speed-btn').forEach(b => b.classList.toggle('active', b === btn));
       const audio = getRhythmAudio();
-      if (audio) audio.playbackRate = speed;
+      if (audio) {
+        audio.playbackRate = speed;
+        if (typeof applyLinkedPlaybackRate === 'function') applyLinkedPlaybackRate(audio);
+      }
+      if (typeof syncPlaybackSpeedIndicators === 'function') syncPlaybackSpeedIndicators();
     });
   });
 
@@ -12310,7 +14887,7 @@ if (typeof document !== 'undefined') {
     const tag = String(e.target?.tagName || '').toUpperCase();
     const typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable;
 
-    if (e.code === 'KeyX' && !e.ctrlKey && !e.altKey && !e.metaKey && !typing && !e.repeat) {
+    if (!RHYTHM_BETA_LOCKED && e.code === 'KeyX' && !e.ctrlKey && !e.altKey && !e.metaKey && !typing && !e.repeat) {
       e.preventDefault();
       rhythmOverlay.classList.contains('hidden') ? openRhythm('game') : closeRhythm();
       return;
@@ -12398,8 +14975,13 @@ if (typeof document !== 'undefined') {
     syncSong: syncRhythmSongIfChanged,
     getChart: () => chart.map(n => ({ ...n })),
     enableAndOpen: (tab = 'game') => {
+      if (RHYTHM_BETA_LOCKED) {
+        rhythmNotify('Modo Ritmo bloqueado temporalmente mientras se corrige.');
+        return false;
+      }
       if (!rhythmEnabled) setRhythmEnabled(true);
       openRhythm(tab);
+      return true;
     }
   };
 })();
@@ -16331,7 +18913,7 @@ if (typeof document !== 'undefined') {
   const fileInputEl = document.getElementById('file-input');
   const addMusicBtn = document.getElementById('btn-mobile-add-music');
   const quickMenu = document.getElementById('mobile-quick-menu');
-  const quickTrigger = document.getElementById('btn-mobile-secondary-menu');
+  const quickTrigger = document.getElementById('btn-top-experiences');
   const player = document.getElementById('player-card');
   const nowPlaying = document.getElementById('mobile-nowplaying-bar');
 
@@ -16346,19 +18928,8 @@ if (typeof document !== 'undefined') {
     });
   }
 
-  /* Menú de tres puntos: opciones rápidas, sin Mini Player ni Enfoque duplicado. */
-  if (quickTrigger && quickMenu) {
-    quickTrigger.addEventListener('click', event => {
-      if (!isMobileMode()) return;
-      event.preventDefault();
-      event.stopPropagation();
-      quickMenu.classList.toggle('active');
-      quickTrigger.setAttribute('aria-expanded', String(quickMenu.classList.contains('active')));
-      const experiences = document.getElementById('top-experiences-menu');
-      if (experiences) experiences.classList.add('hidden');
-      try { if (typeof playSFX === 'function') playSFX('click'); } catch (_) {}
-    }, true);
-
+  /* Los accesos rápidos se muestran dentro del único menú de tres puntos en móvil. */
+  if (quickMenu) {
     quickMenu.addEventListener('click', event => {
       const button = event.target.closest('[data-mobile-quick]');
       if (!button || !isMobileMode()) return;
@@ -16367,7 +18938,12 @@ if (typeof document !== 'undefined') {
 
       const action = button.dataset.mobileQuick;
       quickMenu.classList.remove('active');
-      quickTrigger.setAttribute('aria-expanded', 'false');
+      const experiences = document.getElementById('top-experiences-menu');
+      const experiencesTrigger = document.getElementById('btn-top-experiences');
+      experiences?.classList.add('hidden');
+      experiencesTrigger?.setAttribute('aria-expanded', 'false');
+      quickTrigger?.setAttribute('aria-expanded', 'false');
+      try { if (typeof playSFX === 'function') playSFX('click'); } catch (_) {}
 
       const target = {
         eq: document.getElementById('btn-eq-toggle'),
@@ -16377,14 +18953,13 @@ if (typeof document !== 'undefined') {
         shuffle: document.getElementById('shuffle'),
         loop: document.getElementById('loop')
       }[action];
-
       if (target) target.click();
     });
   }
 
   document.addEventListener('click', event => {
     if (!quickMenu || !quickMenu.classList.contains('active')) return;
-    if (quickMenu.contains(event.target) || event.target === quickTrigger || quickTrigger?.contains(event.target)) return;
+    if (quickMenu.contains(event.target) || quickTrigger?.contains(event.target)) return;
     quickMenu.classList.remove('active');
     quickTrigger?.setAttribute('aria-expanded', 'false');
   }, true);
@@ -16462,15 +19037,13 @@ if (typeof document !== 'undefined') {
   }, true);
 
   /* ---------------------------------------------------------
-     5 BANDAS EQ MÓVILES — conectadas a los filtros EXISTENTES.
-     60->64Hz, 230->250Hz, 910->1kHz, 4k->4kHz, 14k->16kHz.
+     10 BANDAS EQ MÓVILES — cada deslizador controla la banda real correspondiente.
+     Se conserva el motor desktop y se comparte el mismo estado de los filtros.
      --------------------------------------------------------- */
   const mobileEqMap = [
-    ['mobile-eq-230', 3],
-    ['mobile-eq-910', 5],
-    ['mobile-eq-60', 1],
-    ['mobile-eq-4k', 7],
-    ['mobile-eq-14k', 9]
+    ['mobile-eq-32', 0], ['mobile-eq-64', 1], ['mobile-eq-125', 2], ['mobile-eq-250', 3],
+    ['mobile-eq-500', 4], ['mobile-eq-1k', 5], ['mobile-eq-2k', 6], ['mobile-eq-4k', 7],
+    ['mobile-eq-8k', 8], ['mobile-eq-16k', 9]
   ];
 
   const getDesktopEqSliders = () =>
@@ -16479,6 +19052,17 @@ if (typeof document !== 'undefined') {
   const updateMobileEqOutput = (id, value) => {
     const output = document.getElementById(id + '-value');
     if (output) output.textContent = `${Number(value).toFixed(1).replace('.0','')} dB`;
+    const input = document.getElementById(id);
+    const band = input?.closest('.mobile-eq-band');
+    if (band) {
+      const numeric = Math.max(-12, Math.min(12, Number(value) || 0));
+      const fillHeight = Math.round(Math.abs(numeric) / 12 * 54);
+      const fillTop = numeric > 0 ? 74 - fillHeight : 74;
+      band.style.setProperty('--eq-fill-top', `${fillTop}px`);
+      band.style.setProperty('--eq-fill-height', `${fillHeight}px`);
+      band.classList.toggle('is-neutral', Math.abs(numeric) < 0.01);
+      band.setAttribute('data-eq-value', numeric.toFixed(1));
+    }
   };
 
   const syncMobileEqFromDesktop = () => {
@@ -18775,12 +21359,6 @@ if (typeof document !== 'undefined') {
   const settingsModal = document.getElementById('karaoke-settings-modal');
   const closeSettings = document.getElementById('btn-close-karaoke-settings');
   const closeKaraoke = document.getElementById('btn-close-karaoke');
-  const vmPanelEl = document.getElementById('vm-panel');
-  const vmClose = document.getElementById('btn-close-vm');
-  const karaokeTracksButton = document.getElementById('btn-karaoke-tracks');
-  const externalTracksToggle = document.getElementById('btn-toggle-external-mixer');
-  const externalTracksPanel = document.getElementById('external-track-mixer-panel');
-  const externalTracksClose = document.getElementById('btn-collapse-external-mixer');
   let objectUrl = '';
   let raf = 0;
   let lastSize = '';
@@ -18901,33 +21479,6 @@ if (typeof document !== 'undefined') {
     event.stopPropagation();
     closeKaraokeMode();
   }, true);
-  // El mezclador existente se presenta como ventana flotante y su X solo la oculta.
-  if (vmPanelEl) {
-    vmClose?.addEventListener('click', (event) => {
-      if (!vmPanelEl.classList.contains('karaoke-vm-floating')) return;
-      event.preventDefault(); event.stopPropagation();
-      vmPanelEl.classList.add('hidden'); vmPanelEl.classList.remove('karaoke-vm-floating');
-    }, true);
-  }
-  karaokeTracksButton?.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!vmPanelEl || !externalTracksPanel) return;
-    // Mostrar el panel original en modo flotante y abrir directamente su sección de pistas.
-    try { if (typeof initAudioContext === 'function') initAudioContext(); } catch (_) {}
-    vmPanelEl.classList.remove('hidden');
-    vmPanelEl.classList.add('karaoke-vm-floating');
-    externalTracksPanel.classList.remove('hidden');
-    externalTracksPanel.setAttribute('aria-hidden','false');
-    externalTracksToggle?.setAttribute('aria-expanded','true');
-    externalTracksToggle?.classList.add('active');
-  });
-  externalTracksClose?.addEventListener('click', () => {
-    if (vmPanelEl?.classList.contains('karaoke-vm-floating')) {
-      vmPanelEl.classList.add('hidden');
-      vmPanelEl.classList.remove('karaoke-vm-floating');
-    }
-  });
   const mo = new MutationObserver(() => startAnimationIfNeeded());
   if (root) mo.observe(root, {attributes:true, attributeFilter:['class']});
   document.addEventListener('visibilitychange', startAnimationIfNeeded);
@@ -18939,3 +21490,305 @@ if (typeof document !== 'undefined') {
   if (openSettings || openSettingsSecondary) { /* listeners originales conservan el mismo flujo de apertura */ }
   applyBackground(initialMode, false);
 })();
+
+/* =========================================================
+   GLASSTRACK PRO B57 — TANDA 1 / PANEL EXCLUSIVITY + AUTO FIT
+   Aislado del motor de audio. Mantiene la adaptación avanzada
+   desactivada de forma predeterminada.
+   ========================================================= */
+(() => {
+  'use strict';
+
+  const body = document.body;
+  const root = document.documentElement;
+  const eq = document.getElementById('eq-panel');
+  const vm = document.getElementById('vm-panel');
+  const lyrics = document.getElementById('lyrics-panel');
+  const closeMobilePlayer = document.getElementById('btn-close-mobile-player');
+  const autoFitToggle = document.getElementById('toggle-mobile-auto-fit');
+  const mobileModeActive = () => [
+    'mobile-layout', 'mobile-mode', 'mobile-layout-active', 'mobile-mode-active'
+  ].some(name => body.classList.contains(name));
+
+  const panelSpecs = {
+    eq: { panel: eq, button: document.getElementById('btn-eq-toggle'), isOpen: () => !!eq && !eq.classList.contains('hidden') },
+    vm: { panel: vm, button: document.getElementById('btn-vm-toggle'), isOpen: () => !!vm && !vm.classList.contains('hidden') },
+    lyrics: { panel: lyrics, button: document.getElementById('btn-lyrics-toggle'), isOpen: () => !!lyrics && lyrics.classList.contains('active') }
+  };
+  const mobileButtons = {
+    eq: document.getElementById('mobile-player-eq'),
+    vm: document.getElementById('mobile-player-vm'),
+    lyrics: document.getElementById('mobile-player-lyrics')
+  };
+
+  function closePanel(name) {
+    const spec = panelSpecs[name];
+    if (!spec?.panel) return;
+    if (name === 'lyrics') spec.panel.classList.remove('active');
+    else spec.panel.classList.add('hidden');
+  }
+
+  function syncPanelButtons() {
+    Object.entries(panelSpecs).forEach(([name, spec]) => {
+      const opened = spec.isOpen();
+      [spec.button, mobileButtons[name]].filter(Boolean).forEach(button => {
+        button.classList.toggle('is-panel-open', opened);
+        button.setAttribute('aria-expanded', String(opened));
+      });
+      spec.panel?.setAttribute('aria-hidden', String(!opened));
+    });
+  }
+
+  // En móvil los tres paneles comparten una sola superficie: nunca deben
+  // permanecer abiertos uno encima de otro. En PC conservan su comportamiento.
+  document.addEventListener('click', event => {
+    if (!mobileModeActive() || document.getElementById('karaoke-mode')?.classList.contains('active')) return;
+    const clicked = event.target.closest('#btn-eq-toggle, #btn-vm-toggle, #btn-lyrics-toggle');
+    if (!clicked) return;
+    const name = clicked.id === 'btn-eq-toggle' ? 'eq' : clicked.id === 'btn-vm-toggle' ? 'vm' : 'lyrics';
+    const current = panelSpecs[name];
+    if (!current?.panel) return;
+
+    const isCurrentOpen = current.isOpen();
+    // Si se vuelve a pulsar el panel abierto, este se cierra y no se ejecuta
+    // el listener antiguo que solo sabía volver a abrir Letras.
+    if (isCurrentOpen) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closePanel(name);
+      try { if (typeof playSFX === 'function') playSFX('close'); } catch (_) {}
+      syncPanelButtons();
+      scheduleOverflowCheck();
+      return;
+    }
+
+    Object.keys(panelSpecs).forEach(other => { if (other !== name) closePanel(other); });
+    // Deja continuar el listener original para abrir/inicializar el panel elegido.
+    requestAnimationFrame(() => { syncPanelButtons(); scheduleOverflowCheck(); });
+  }, true);
+
+  // Mantiene coherencia al cerrar un panel desde su propia X o por otro flujo.
+  ['btn-close-eq', 'btn-close-vm', 'btn-close-lyrics'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => requestAnimationFrame(syncPanelButtons), true);
+  });
+  if (typeof MutationObserver !== 'undefined') {
+    [eq, vm, lyrics].filter(Boolean).forEach(panel => {
+      new MutationObserver(() => requestAnimationFrame(syncPanelButtons))
+        .observe(panel, { attributes: true, attributeFilter: ['class'] });
+    });
+  }
+  syncPanelButtons();
+
+  function syncMobileCloseButton() {
+    if (!closeMobilePlayer) return;
+    const visible = mobileModeActive() && body.classList.contains('mobile-player-expanded') &&
+      !!document.getElementById('player-card')?.classList.contains('mobile-expanded');
+    closeMobilePlayer.setAttribute('aria-hidden', String(!visible));
+    closeMobilePlayer.tabIndex = visible ? 0 : -1;
+  }
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(syncMobileCloseButton).observe(body, { attributes: true, attributeFilter: ['class'] });
+    const playerForClose = document.getElementById('player-card');
+    if (playerForClose) new MutationObserver(syncMobileCloseButton).observe(playerForClose, { attributes: true, attributeFilter: ['class'] });
+  }
+  syncMobileCloseButton();
+
+  // Adaptación avanzada opcional. CSS responsive básico no depende de este switch.
+  const autoFitKey = 'glasstrackMobileAutoFitEnabled';
+  let lastOverflowWidth = 0;
+  let checkPending = false;
+  let tightActive = false;
+  try { autoFitToggle && (autoFitToggle.checked = localStorage.getItem(autoFitKey) === 'true'); } catch (_) {
+    if (autoFitToggle) autoFitToggle.checked = false;
+  }
+
+  function setAutoFitEnabled(enabled, persist = false) {
+    root.classList.toggle('mobile-auto-fit-enabled', !!enabled);
+    if (!enabled) {
+      root.classList.remove('mobile-auto-fit-tight');
+      tightActive = false;
+      lastOverflowWidth = 0;
+    }
+    if (persist) {
+      try { localStorage.setItem(autoFitKey, enabled ? 'true' : 'false'); } catch (_) {}
+    }
+    if (enabled) scheduleOverflowCheck();
+  }
+
+  function relevantOverflowingElements() {
+    return [
+      document.querySelector('.top-global-bar'),
+      document.querySelector('.player-card.mobile-expanded .top-bar'),
+      document.querySelector('.player-card.mobile-expanded .controls'),
+      document.getElementById('mobile-player-actions'),
+      document.querySelector('#cinema-mode.active .cinema-controls'),
+      document.querySelector('#cinema-mode.active .cinema-seekbar-wrapper'),
+      document.querySelector('#cinema-mode.active .cinema-cover-col'),
+      document.querySelector('#cinema-mode.active .cinema-volume-row')
+    ].filter(el => el && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden');
+  }
+
+  function detectOverflow() {
+    const viewportWidth = Math.max(1, root.clientWidth || window.innerWidth);
+    for (const el of relevantOverflowingElements()) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && (rect.left < -1 || rect.right > viewportWidth + 1)) return true;
+      const allowsInternalScroll = el.matches('.lyrics-body, .lyrics-panel, .eq-panel, #vm-panel');
+      if (!allowsInternalScroll && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 3) return true;
+      const kids = Array.from(el.children).filter(child => {
+        const style = getComputedStyle(child);
+        const r = child.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && r.width > 0 && r.height > 0;
+      });
+      for (let i = 0; i < kids.length; i++) {
+        const a = kids[i].getBoundingClientRect();
+        if (a.left < rect.left - 2 || a.right > rect.right + 2) return true;
+        for (let j = i + 1; j < kids.length; j++) {
+          const b = kids[j].getBoundingClientRect();
+          const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+          const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+          if (overlapX > 3 && overlapY > 3) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function runOverflowCheck() {
+    checkPending = false;
+    const enabled = !!autoFitToggle?.checked && mobileModeActive();
+    if (!enabled) {
+      if (root.classList.contains('mobile-auto-fit-tight')) root.classList.remove('mobile-auto-fit-tight');
+      tightActive = false;
+      lastOverflowWidth = 0;
+      return;
+    }
+    const width = Math.max(1, root.clientWidth || window.innerWidth);
+    const overflow = detectOverflow();
+    if (overflow) {
+      if (!tightActive) {
+        tightActive = true;
+        lastOverflowWidth = width;
+      }
+      root.classList.add('mobile-auto-fit-tight');
+      return;
+    }
+    // Evita oscilaciones: solo se retira el modo compacto tras un aumento claro
+    // del ancho disponible, no en cada ResizeObserver tras aplicar el ajuste.
+    if (tightActive && width >= lastOverflowWidth + 72) {
+      root.classList.remove('mobile-auto-fit-tight');
+      tightActive = false;
+      lastOverflowWidth = 0;
+      if (detectOverflow()) {
+        root.classList.add('mobile-auto-fit-tight');
+        tightActive = true;
+        lastOverflowWidth = width;
+      }
+    }
+  }
+
+  function scheduleOverflowCheck() {
+    if (checkPending) return;
+    checkPending = true;
+    requestAnimationFrame(runOverflowCheck);
+  }
+
+  autoFitToggle?.addEventListener('change', () => {
+    setAutoFitEnabled(autoFitToggle.checked, true);
+  });
+  // Los observadores solo programan una medición ligera; no mutan estilos de audio.
+  window.addEventListener('resize', scheduleOverflowCheck, { passive: true });
+  window.addEventListener('orientationchange', scheduleOverflowCheck, { passive: true });
+  ['btn-cinema-mode', 'btn-close-cinema', 'mobile-nowplaying-bar', 'btn-close-mobile-player', 'toggle-mobile-layout']
+    .forEach(id => document.getElementById(id)?.addEventListener('click', () => scheduleOverflowCheck(), true));
+  window.visualViewport?.addEventListener('resize', scheduleOverflowCheck, { passive: true });
+  if (typeof ResizeObserver !== 'undefined') {
+    const autoFitResizeObserver = new ResizeObserver(scheduleOverflowCheck);
+    autoFitResizeObserver.observe(root);
+    relevantOverflowingElements().forEach(el => autoFitResizeObserver.observe(el));
+  }
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(scheduleOverflowCheck).observe(body, { attributes: true, attributeFilter: ['class'] });
+  }
+  setAutoFitEnabled(!!autoFitToggle?.checked, false);
+})();
+
+
+/* =========================================================
+   B61 — TANDA 2: CONTENCIÓN DEL SCROLL DEL REPRODUCTOR MÓVIL
+   Impide que la rueda/scroll mueva la página o la tarjeta expandida;
+   se conserva el desplazamiento nativo de zonas con contenido largo.
+   ========================================================= */
+(() => {
+  'use strict';
+  const SCROLL_ZONE_SELECTOR = [
+    '#mobile-inline-lyrics', '.mobile-inline-lyrics', '.mobile-inline-lyrics-body',
+    '.lyrics-body', '#cinema-lyrics-body', '.cinema-lyrics-col',
+    '.settings-panel', '.settings-sub-panel', '.sub-content',
+    '.modal-scroll-area', '.modal-window', '.rhythm-settings-window',
+    '.rhythm-view', '.karaoke-lyrics-body', '.karaoke-settings-window',
+    '.visual-editor-controls', '.library-content', '.playlist-view'
+  ].join(',');
+
+  const hasVerticalScrollRoom = (element) => {
+    if (!element || element === document.body || element === document.documentElement) return false;
+    const style = window.getComputedStyle(element);
+    const permitsScroll = /(auto|scroll|overlay)/.test(`${style.overflowY} ${style.overflow}`);
+    return permitsScroll && element.scrollHeight > element.clientHeight + 1;
+  };
+
+  const isIntentionalScrollZone = (target) => {
+    if (!(target instanceof Element)) return false;
+    let element = target.closest(SCROLL_ZONE_SELECTOR);
+    while (element) {
+      if (hasVerticalScrollRoom(element)) return true;
+      const parent = element.parentElement;
+      element = parent ? parent.closest(SCROLL_ZONE_SELECTOR) : null;
+    }
+    return false;
+  };
+
+  document.addEventListener('wheel', (event) => {
+    if (!document.body.classList.contains('mobile-player-expanded')) return;
+    if (isIntentionalScrollZone(event.target)) return;
+    // No se cancela el gesto de controles horizontales/inputs, solo el scroll exterior.
+    if (event.target instanceof Element && event.target.closest('input[type="range"], button, select, textarea')) return;
+    event.preventDefault();
+  }, { capture: true, passive: false });
+})();
+
+// B68: aplicar el estado de controles que solo existe en el DOM después de importar/restaurar.
+function b68ApplyPendingControlRestore(attempt = 0) {
+  let raw = null;
+  try { raw = localStorage.getItem('glasstrack_b68_pending_control_restore'); } catch (_) {}
+  if (!raw) return;
+  let saved;
+  try { saved = JSON.parse(raw); } catch (_) { try { localStorage.removeItem('glasstrack_b68_pending_control_restore'); } catch (_) {} return; }
+  const remaining = {};
+  const changed = [];
+  Object.entries(saved || {}).forEach(([id, state]) => {
+    const el = document.getElementById(id);
+    if (!el) { if (attempt < 20) remaining[id] = state; return; }
+    if (el instanceof HTMLSelectElement && state.value != null && !Array.from(el.options).some(option => option.value === String(state.value))) {
+      if (attempt < 20) remaining[id] = state;
+      return;
+    }
+    const type = String(el.type || el.tagName || '').toLowerCase();
+    if (['file', 'password', 'submit', 'button', 'reset', 'hidden'].includes(type)) return;
+    let didChange = false;
+    if ('checked' in el && state.checked !== undefined && !!el.checked !== !!state.checked) { el.checked = !!state.checked; didChange = true; }
+    if (state.value !== undefined && el.value !== String(state.value)) { el.value = String(state.value); didChange = true; }
+    if (didChange) changed.push(el);
+  });
+  changed.forEach(el => {
+    try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+    try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+  });
+  if (Object.keys(remaining).length && attempt < 20) {
+    try { localStorage.setItem('glasstrack_b68_pending_control_restore', JSON.stringify(remaining)); } catch (_) {}
+    setTimeout(() => b68ApplyPendingControlRestore(attempt + 1), 450);
+  } else {
+    try { localStorage.removeItem('glasstrack_b68_pending_control_restore'); } catch (_) {}
+  }
+}
+setTimeout(() => b68ApplyPendingControlRestore(0), 450);

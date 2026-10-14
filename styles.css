@@ -11950,7 +11950,7 @@ body.concludor-open { overflow: hidden !important; }
 .concludor-next-text strong { color: #e0ebfa; font-size: 10px; font-weight: 700; }
 .concludor-next-text span { color: #8498b3; font-size: 9px; }
 .concludor-next-arrow { color: #89d8ff; font-size: 18px; }
-.concludor-playback-row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(157,188,228,.1); }
+.concludor-playback-row { position: sticky; bottom: 0; z-index: 25; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; margin: 0 0 13px; padding: 11px 12px; border: 1px solid rgba(137,190,235,.2); border-radius: 14px; background: linear-gradient(135deg, rgba(16,25,40,.97), rgba(8,15,27,.97)); box-shadow: 0 -7px 24px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.035); backdrop-filter: blur(14px); }
 .concludor-playback-note { display: flex; align-items: center; gap: 8px; min-width: 0; color: #8193ad; font-size: 9px; line-height: 1.4; }
 .concludor-mini-signal { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 2px; background: #7589a5; }
 .concludor-status.is-playing ~ .concludor-main-grid .concludor-mini-signal { background: #7fe8bd; }
@@ -12039,6 +12039,10 @@ body.concludor-open { overflow: hidden !important; }
 #modal-concludor-add .modal-header h3 { color: #e4f1ff; }
 #concludor-add-list .playlist-item:hover { background: rgba(111,187,240,.09); border-color: rgba(125,202,248,.24); }
 
+@media (min-width: 851px) and (max-height: 980px) {
+  .concludor-left-column { padding-bottom: 12px; }
+  .concludor-playback-dock { margin-top: 0; }
+}
 @media (max-width: 1100px) {
   .concludor-shell { padding: 17px 18px 10px; }
   .concludor-header { align-items: flex-start; }
@@ -12085,7 +12089,8 @@ body.concludor-open { overflow: hidden !important; }
   .concludor-next-art-wrap { width: 29px; height: 29px; flex-basis: 29px; }
   .concludor-next-text strong { font-size: 8px; }
   .concludor-next-text span { font-size: 7px; }
-  .concludor-playback-row { flex-direction: column; align-items: stretch; margin-top: 13px; padding-top: 12px; }
+  .concludor-playback-row { flex-direction: column; align-items: stretch; gap: 7px; margin: 0 0 10px; padding: 9px; }
+  .concludor-playback-note { font-size: 8px; }
   .concludor-playback-controls { width: 100%; }
   .concludor-secondary-action, .concludor-primary-action { flex: 1; padding: 0 8px; min-width: 0; font-size: 9px; }
   .concludor-modes-section, .concludor-mix-settings { padding: 13px 11px; }
@@ -12122,4 +12127,3021 @@ body.concludor-open { overflow: hidden !important; }
   .concludor-left-column > .concludor-hero-panel,
   .concludor-left-column > .concludor-modes-section,
   .concludor-left-column > .concludor-mix-settings { flex-shrink: 0 !important; }
+}
+
+
+/* =========================================================
+   GLASSTRACK PRO B56 — CIERRE MÓVIL Y CONTROLES SIN RECORTES
+   Ajustes aislados a la interfaz móvil; no alteran la vista PC.
+   ========================================================= */
+.mobile-player-close-btn {
+  display: none !important;
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 13px !important;
+  background: rgba(8,10,16,.82) !important;
+  color: #fff !important;
+  box-shadow: 0 6px 22px rgba(0,0,0,.22) !important;
+  cursor: pointer !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+  /* La cabecera se adapta a teléfonos angostos en vez de empujar botones fuera del viewport. */
+  body.mobile-layout .top-global-bar,
+  body.mobile-mode .top-global-bar {
+    box-sizing: border-box !important;
+    left: auto !important;
+    right: max(6px, env(safe-area-inset-right)) !important;
+    width: max-content !important;
+    max-width: calc(100vw - 12px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    flex: 0 1 auto !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(2px, 1vw, 4px) !important;
+    padding: 3px !important;
+  }
+
+  body.mobile-layout .top-global-bar > #btn-top-experiences,
+  body.mobile-layout .top-global-bar > #btn-vehicle-mode,
+  body.mobile-layout .top-global-bar > #btn-mobile-add-music,
+  body.mobile-layout .top-global-bar > #btn-fullscreen,
+  body.mobile-layout .top-global-bar > #btn-mobile-secondary-menu,
+  body.mobile-mode .top-global-bar > #btn-top-experiences,
+  body.mobile-mode .top-global-bar > #btn-vehicle-mode,
+  body.mobile-mode .top-global-bar > #btn-mobile-add-music,
+  body.mobile-mode .top-global-bar > #btn-fullscreen,
+  body.mobile-mode .top-global-bar > #btn-mobile-secondary-menu {
+    box-sizing: border-box !important;
+    flex: 0 1 clamp(28px, 9.8vw, 38px) !important;
+    width: clamp(28px, 9.8vw, 38px) !important;
+    min-width: 0 !important;
+    max-width: 38px !important;
+    height: clamp(30px, 9.8vw, 38px) !important;
+    padding: 4px !important;
+    border-radius: 9px !important;
+  }
+
+  body.mobile-layout .top-global-bar > button svg,
+  body.mobile-mode .top-global-bar > button svg {
+    flex: 0 0 auto !important;
+    width: clamp(14px, 5vw, 19px) !important;
+    height: clamp(14px, 5vw, 19px) !important;
+    max-width: 100% !important;
+  }
+
+  /* El botón X está dentro del reproductor y solo aparece al expandirlo en móvil. */
+  body.mobile-layout.mobile-player-expanded #btn-close-mobile-player,
+  body.mobile-mode.mobile-player-expanded #btn-close-mobile-player {
+    display: inline-flex !important;
+    position: absolute !important;
+    top: max(10px, env(safe-area-inset-top)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    z-index: 1300 !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded #btn-close-mobile-player svg,
+  body.mobile-mode.mobile-player-expanded #btn-close-mobile-player svg {
+    width: 20px !important;
+    height: 20px !important;
+    pointer-events: none !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded {
+    box-sizing: border-box !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    scrollbar-width: none !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded::-webkit-scrollbar,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* La cabecera reserva un espacio real para que los iconos no se oculten debajo de la X. */
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .top-bar,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .top-bar {
+    box-sizing: border-box !important;
+    left: 8px !important;
+    right: 62px !important;
+    max-width: calc(100% - 70px) !important;
+    padding-right: 0 !important;
+    gap: clamp(4px, 1.5vw, 8px) !important;
+  }
+
+  /* Los siete controles de transporte pueden pasar a una segunda fila, nunca salirse por los bordes. */
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .controls,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .controls {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: clamp(5px, 1.7vw, 9px) !important;
+    padding: 0 2px !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .controls .icon-btn,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .controls .icon-btn {
+    box-sizing: border-box !important;
+    flex: 0 1 clamp(36px, 11.5vw, 44px) !important;
+    width: clamp(36px, 11.5vw, 44px) !important;
+    min-width: 0 !important;
+    max-width: 44px !important;
+    height: clamp(36px, 11.5vw, 44px) !important;
+    padding: 5px !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .controls .btn-play,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .controls .btn-play {
+    box-sizing: border-box !important;
+    flex: 0 0 clamp(48px, 15vw, 58px) !important;
+    width: clamp(48px, 15vw, 58px) !important;
+    min-width: 0 !important;
+    max-width: 58px !important;
+    height: clamp(48px, 15vw, 58px) !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .volume-container,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .volume-container {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: clamp(5px, 2vw, 9px) !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded #volume,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded #volume {
+    flex: 1 1 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .mobile-player-actions,
+  body.mobile-mode.mobile-player-expanded .mobile-player-actions {
+    box-sizing: border-box !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr) !important;
+    min-width: 0 !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .mobile-player-action,
+  body.mobile-mode.mobile-player-expanded .mobile-player-action {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+}
+
+/* En móviles apaisados, la carátula reduce su tamaño y el reproductor sigue siendo desplazable. */
+@media (max-width: 850px) and (max-height: 520px) {
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded {
+    padding-top: max(48px, calc(env(safe-area-inset-top) + 38px)) !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: max(82px, calc(env(safe-area-inset-bottom) + 72px)) !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .cover-container,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .cover-container {
+    width: min(38vh, 180px) !important;
+    height: min(38vh, 180px) !important;
+    margin: 0 auto 9px !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .player-visualizer,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .player-visualizer {
+    height: 25px !important;
+    margin-bottom: 7px !important;
+  }
+
+  body.mobile-layout.mobile-player-expanded .player-card.mobile-expanded .controls,
+  body.mobile-mode.mobile-player-expanded .player-card.mobile-expanded .controls {
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+  }
+}
+
+/* =========================================================
+   GLASSTRACK PRO B57 — TANDA 1
+   Interfaz Celular: X exclusiva, capas estables en Cine,
+   paneles táctiles y adaptación avanzada opcional.
+   ========================================================= */
+
+/* La X de cierre pertenece exclusivamente al reproductor expandido móvil.
+   No aparece en el reproductor normal de PC, incluso si se conserva en el DOM. */
+body:not(.mobile-layout):not(.mobile-mode):not(.mobile-layout-active):not(.mobile-mode-active) #btn-close-mobile-player {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #btn-close-mobile-player {
+  display: inline-flex !important;
+  visibility: visible !important;
+  position: absolute !important;
+  top: max(10px, env(safe-area-inset-top)) !important;
+  right: max(10px, env(safe-area-inset-right)) !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 2147483006 !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  flex: 0 0 42px !important;
+  border-radius: 12px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #btn-close-mobile-player svg {
+  width: 20px !important;
+  height: 20px !important;
+  pointer-events: none !important;
+}
+
+/* La tarjeta expandida nunca recorta horizontalmente sus controles. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded {
+  box-sizing: border-box !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #progress-container,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .time-stamps,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .volume-container {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .controls {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: clamp(6px, 2.4vw, 14px) !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .controls > button {
+  flex: 0 1 auto !important;
+  min-width: 32px !important;
+  max-width: 18vw !important;
+}
+
+/* Paneles de herramienta como hojas flotantes cómodas en móvil, con scroll propio. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .eq-panel:not(.hidden):not(.karaoke-vm-floating) {
+    position: fixed !important;
+    top: auto !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: min(58dvh, 560px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+    border-radius: 18px !important;
+    z-index: 2147483004 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #vm-panel:not(.hidden) {
+    max-height: min(58dvh, 560px) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .lyrics-panel.active {
+    position: fixed !important;
+    top: auto !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    max-width: none !important;
+    height: min(58dvh, 560px) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px) !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    border: 1px solid var(--card-border, rgba(255,255,255,.15)) !important;
+    border-radius: 18px !important;
+    z-index: 2147483005 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .lyrics-panel.active .lyrics-header {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    padding-top: 2px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .lyrics-panel.active .lyrics-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 20px 4px 28px !important;
+  }
+}
+
+/* Modo Cine móvil: cabecera fija, transporte compacto y texto con scroll propio.
+   Las reglas aplican por el modo elegido, no solo por el ancho CSS del dispositivo. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  overscroll-behavior: none !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-content {
+  display: block !important;
+  position: relative !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Identidad de la canción: permanece fija cuando el usuario desplaza las letras. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-col {
+  position: fixed !important;
+  top: max(8px, env(safe-area-inset-top)) !important;
+  left: max(8px, env(safe-area-inset-left)) !important;
+  right: max(132px, calc(env(safe-area-inset-right) + 124px)) !important;
+  width: auto !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  z-index: 2147483002 !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-art {
+  display: block !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  flex: 0 0 42px !important;
+  aspect-ratio: 1 / 1 !important;
+  object-fit: cover !important;
+  border-radius: 9px !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  gap: 2px !important;
+  text-align: left !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info h4,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info p {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info h4 { font-size: clamp(.72rem, 3vw, .92rem) !important; line-height: 1.2 !important; }
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info p { font-size: clamp(.60rem, 2.4vw, .72rem) !important; line-height: 1.2 !important; opacity: .76 !important; }
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-song-menu { pointer-events: auto !important; }
+
+/* X, cambiar estilo de letra y visualizador forman un grupo fijo y compacto. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-close {
+  position: fixed !important;
+  top: max(8px, env(safe-area-inset-top)) !important;
+  right: max(8px, env(safe-area-inset-right)) !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2147483006 !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-style-btn,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-toggle {
+  position: fixed !important;
+  top: max(9px, env(safe-area-inset-top)) !important;
+  bottom: auto !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+  z-index: 2147483006 !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-style-btn {
+  right: max(49px, calc(env(safe-area-inset-right) + 45px)) !important;
+  left: auto !important;
+  border-radius: 10px !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-toggle {
+  right: max(90px, calc(env(safe-area-inset-right) + 86px)) !important;
+  left: auto !important;
+  border-radius: 10px !important;
+}
+
+/* Controles de reproducción cercanos a la cabecera, sin superponerse a la X. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls {
+  position: fixed !important;
+  top: max(62px, calc(env(safe-area-inset-top) + 54px)) !important;
+  left: max(8px, env(safe-area-inset-left)) !important;
+  right: max(8px, env(safe-area-inset-right)) !important;
+  bottom: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-flow: row wrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: clamp(3px, 1.5vw, 7px) !important;
+  transform: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  z-index: 2147483004 !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > button {
+  display: inline-flex !important;
+  box-sizing: border-box !important;
+  flex: 0 1 30px !important;
+  width: 30px !important;
+  min-width: 28px !important;
+  max-width: 42px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+  flex-basis: 39px !important;
+  width: 39px !important;
+  min-width: 39px !important;
+  height: 39px !important;
+  min-height: 39px !important;
+  border-radius: 50% !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls .cinema-speed { font-size: .68rem !important; }
+
+/* Barra de progreso visible siempre en Cine móvil; volumen inmediatamente debajo. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-seekbar-wrapper {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed !important;
+  top: max(105px, calc(env(safe-area-inset-top) + 97px)) !important;
+  left: max(12px, env(safe-area-inset-left)) !important;
+  right: max(12px, env(safe-area-inset-right)) !important;
+  bottom: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  gap: 8px !important;
+  z-index: 2147483004 !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-seekbar-wrapper .progress-container {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 7px !important;
+  touch-action: pan-x !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-current-time,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-duration { flex: 0 0 auto !important; }
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-row {
+  display: flex !important;
+  position: fixed !important;
+  top: max(133px, calc(env(safe-area-inset-top) + 125px)) !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+  width: min(72vw, 300px) !important;
+  max-width: calc(100vw - 36px) !important;
+  margin: 0 !important;
+  z-index: 2147483004 !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-control,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-control input {
+  pointer-events: auto !important;
+  min-width: 0 !important;
+  touch-action: pan-x !important;
+}
+
+/* Las letras y el visualizador ampliado comparten una zona desplazable separada. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-col {
+  position: fixed !important;
+  inset: max(174px, calc(env(safe-area-inset-top) + 166px)) max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-body {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  padding: 12px 10px 28px !important;
+  margin: 0 !important;
+  text-align: center !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-stage {
+  max-width: 100% !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  pointer-events: none !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-expanded .cinema-lyrics-col {
+  position: fixed !important;
+  inset: max(174px, calc(env(safe-area-inset-top) + 166px)) 8px max(12px, env(safe-area-inset-bottom)) 8px !important;
+  overflow: hidden !important;
+}
+
+/* En móviles bajos o apaisados se compacta el encabezado, sin moverlo con las letras. */
+@media (max-height: 560px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-col {
+    height: 38px !important; min-height: 38px !important; max-height: 38px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-art {
+    width: 34px !important; height: 34px !important; min-width: 34px !important; max-width: 34px !important; flex-basis: 34px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls {
+    top: max(48px, calc(env(safe-area-inset-top) + 40px)) !important;
+    gap: 3px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > button {
+    flex-basis: 27px !important; width: 27px !important; min-width: 25px !important; height: 27px !important; min-height: 27px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+    flex-basis: 34px !important; width: 34px !important; min-width: 34px !important; height: 34px !important; min-height: 34px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-seekbar-wrapper {
+    top: max(82px, calc(env(safe-area-inset-top) + 74px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-row {
+    top: max(108px, calc(env(safe-area-inset-top) + 100px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-col,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-expanded .cinema-lyrics-col {
+    inset: max(145px, calc(env(safe-area-inset-top) + 137px)) 8px max(8px, env(safe-area-inset-bottom)) 8px !important;
+  }
+}
+
+/* La adaptación avanzada es opcional; las reglas base anteriores siguen vigentes. */
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .top-global-bar,
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .top-bar {
+  gap: 2px !important;
+  max-width: calc(100vw - 10px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+}
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .top-global-bar > button {
+  width: clamp(27px, 8.5vw, 34px) !important;
+  min-width: 0 !important;
+  padding: 3px !important;
+}
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls {
+  gap: 2px !important;
+  left: 4px !important;
+  right: 4px !important;
+}
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > button {
+  flex-basis: 26px !important;
+  width: 26px !important;
+  min-width: 24px !important;
+  height: 27px !important;
+  min-height: 27px !important;
+}
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+  flex-basis: 34px !important; width: 34px !important; min-width: 34px !important; height: 34px !important; min-height: 34px !important;
+}
+html.mobile-auto-fit-tight :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-col {
+  right: max(124px, calc(env(safe-area-inset-right) + 116px)) !important;
+}
+
+/* Guardas finas para teléfonos extremadamente estrechos; evitan que el row
+   de transporte de Cine cree una segunda fila encima de la barra de progreso. */
+@media (max-width: 350px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls {
+    flex-wrap: nowrap !important;
+    gap: 2px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > button {
+    flex: 0 1 25px !important;
+    width: 25px !important;
+    min-width: 22px !important;
+    height: 27px !important;
+    min-height: 27px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+}
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .eq-panel:not(.hidden):not(.karaoke-vm-floating) {
+    position: fixed !important;
+    top: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #vm-panel:not(.hidden).karaoke-vm-floating {
+    right: max(14px, env(safe-area-inset-right)) !important;
+    bottom: max(90px, env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(420px, calc(100vw - 24px)) !important;
+    max-width: min(420px, calc(100vw - 24px)) !important;
+    max-height: min(78dvh, 720px) !important;
+  }
+}
+
+/* GLASSTRACK PRO B57 — TANDA 1: remate de paneles móviles.
+   Evita que las transforms históricas de centrado saquen EQ/VM fuera de pantalla.
+   No altera los paneles flotantes propios del Karaoke. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .eq-panel:not(.hidden):not(.karaoke-vm-floating),
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #vm-panel:not(.hidden):not(.karaoke-vm-floating) {
+    position: fixed !important;
+    top: auto !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    max-height: min(58dvh, 560px) !important;
+    margin: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .lyrics-panel.active {
+    position: fixed !important;
+    top: auto !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    height: min(58dvh, 560px) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px) !important;
+    margin: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  /* En el reproductor expandido, Letras ocupa la franja sobre progreso/volumen
+     en lugar de ocultar dichos controles con una hoja inferior. */
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .lyrics-panel.active {
+    top: max(56px, calc(env(safe-area-inset-top) + 48px)) !important;
+    bottom: auto !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: auto !important;
+    width: calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 16px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    height: min(39dvh, 320px) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 72px) !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* GLASSTRACK PRO B58 — TANDA 1 BUGFIX
+   El reproductor expandido móvil actúa como un marco fijo (HUD) unido al viewport.
+   Nunca debe desplazarse junto con letras largas; solo el contenido de letras hace scroll. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: pan-x pan-y !important;
+  isolation: isolate !important;
+  padding-top: max(58px, calc(env(safe-area-inset-top) + 52px)) !important;
+  padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+}
+
+/* Recuadro fijo y legible para controles/caratula; no depende del scroll de la letra. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .top-bar,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .cover-container,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .song-info,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #progress-container,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .time-stamps,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .controls,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded .volume-container,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #mobile-player-actions {
+  position: relative !important;
+  flex-shrink: 0 !important;
+  z-index: 2 !important;
+}
+
+/* La ventana de Letras mantiene el comportamiento de hoja móvil estable.
+   Se elimina el posicionamiento especial encima del reproductor que la hacía
+   cambiar de lado/altura y competir con la cabecera cuando la letra era larga. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .lyrics-panel.active {
+    position: fixed !important;
+    top: auto !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
+    height: min(58dvh, 560px) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px) !important;
+    margin: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    overflow: hidden !important;
+    z-index: 2147483005 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .lyrics-panel.active .lyrics-body {
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+}
+
+/* =========================================================
+   GLASSTRACK PRO B59 — BUGFIX CINE MÓVIL / HUD FIJO
+   - El HUD y los controles quedan anclados al viewport.
+   - Letras conserva su propio scroll y no arrastra la reproducción.
+   - La barra EQ / Letras / Voz-Música baja debajo del volumen.
+   - Solo afecta al reproductor/cine en pantalla móvil; no altera PC.
+   ========================================================= */
+
+/* La animación de expansión terminaba dejando transform activo en el reproductor.
+   Un transform en el padre puede convertir los hijos fixed en elementos ligados
+   al reproductor, en vez de a la cámara/viewport. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded {
+  animation: none !important;
+  transform: none !important;
+  translate: none !important;
+  rotate: none !important;
+  scale: none !important;
+  perspective: none !important;
+  filter: none !important;
+  contain: none !important;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+/* Panel inferior: queda debajo del volumen, no encima de la barra deslizante. */
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #mobile-player-actions {
+  position: fixed !important;
+  left: max(10px, env(safe-area-inset-left)) !important;
+  right: max(10px, env(safe-area-inset-right)) !important;
+  bottom: max(58px, calc(env(safe-area-inset-bottom) + 52px)) !important;
+  top: auto !important;
+  margin: 0 !important;
+  z-index: 2147482001 !important;
+  transform: none !important;
+  translate: none !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #mobile-inline-lyrics-wrap {
+  position: fixed !important;
+  left: max(14px, env(safe-area-inset-left)) !important;
+  right: max(14px, env(safe-area-inset-right)) !important;
+  bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  top: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  z-index: 2147482002 !important;
+  transform: none !important;
+  translate: none !important;
+  pointer-events: auto !important;
+}
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .player-card.mobile-expanded #mobile-inline-lyrics {
+  max-height: min(18dvh, 120px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+}
+
+/* Cine móvil: sacar los botones del recorte de la columna de carátula.
+   Las cuatro zonas quedan fijadas a la ventana, aunque la letra sea muy larga. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    transform: none !important;
+    translate: none !important;
+    perspective: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-content {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    translate: none !important;
+    perspective: none !important;
+  }
+
+  /* No recortar los hijos fijados al viewport dentro de la antigua columna. */
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-cover-col {
+    overflow: visible !important;
+    clip-path: none !important;
+    contain: none !important;
+    transform: none !important;
+    translate: none !important;
+    filter: none !important;
+    perspective: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-controls {
+    position: fixed !important;
+    top: max(66px, calc(env(safe-area-inset-top) + 58px)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(3px, 1.1vw, 8px) !important;
+    padding: 7px clamp(5px, 1.8vw, 12px) !important;
+    margin: 0 !important;
+    border: 1px solid rgba(255,255,255,.13) !important;
+    border-radius: 16px !important;
+    background: rgba(8,10,14,.72) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,.23) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(1.15) !important;
+    backdrop-filter: blur(14px) saturate(1.15) !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 2147483004 !important;
+    pointer-events: auto !important;
+    overflow: visible !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-controls > button {
+    flex: 0 1 clamp(25px, 7.5vw, 39px) !important;
+    width: clamp(25px, 7.5vw, 39px) !important;
+    min-width: clamp(24px, 7vw, 36px) !important;
+    max-width: 42px !important;
+    height: clamp(29px, 8.5vw, 39px) !important;
+    min-height: 29px !important;
+    max-height: 40px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex-shrink: 1 !important;
+    transform: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+    flex: 0 0 clamp(35px, 10vw, 46px) !important;
+    width: clamp(35px, 10vw, 46px) !important;
+    min-width: 35px !important;
+    height: clamp(35px, 10vw, 46px) !important;
+    min-height: 35px !important;
+    max-height: 46px !important;
+    border-radius: 50% !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-seekbar-wrapper {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: max(122px, calc(env(safe-area-inset-top) + 114px)) !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    gap: 7px !important;
+    padding: 7px 10px !important;
+    margin: 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-radius: 12px !important;
+    background: rgba(8,10,14,.56) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 2147483004 !important;
+    pointer-events: auto !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-seekbar-wrapper .progress-container {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 7px !important;
+    touch-action: pan-x !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-volume-row {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: max(163px, calc(env(safe-area-inset-top) + 155px)) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: min(76vw, 310px) !important;
+    max-width: calc(100vw - 28px) !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    padding: 6px 10px !important;
+    margin: 0 !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-radius: 999px !important;
+    background: rgba(8,10,14,.62) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+    transform: translateX(-50%) !important;
+    translate: none !important;
+    z-index: 2147483004 !important;
+    pointer-events: auto !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-volume-control,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-volume-control input {
+    min-width: 0 !important;
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-lyrics-col {
+    position: fixed !important;
+    top: max(205px, calc(env(safe-area-inset-top) + 197px)) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    inset: max(205px, calc(env(safe-area-inset-top) + 197px)) max(8px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 1 !important;
+  }
+
+}
+
+/* En móviles apaisados/bajos: se mantienen los controles dentro del viewport y
+   se reserva menos altura para el HUD, dejando una zona de letra independiente. */
+@media (max-width: 860px) and (max-height: 560px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-controls {
+    top: max(44px, calc(env(safe-area-inset-top) + 38px)) !important;
+    padding: 4px 6px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-seekbar-wrapper {
+    top: max(91px, calc(env(safe-area-inset-top) + 85px)) !important;
+    padding: 5px 8px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-volume-row {
+    top: max(128px, calc(env(safe-area-inset-top) + 122px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-lyrics-col {
+    inset: max(166px, calc(env(safe-area-inset-top) + 158px)) 7px max(7px, env(safe-area-inset-bottom)) 7px !important;
+  }
+}
+
+/* El visualizador compacto usa una franja propia entre volumen y letra; nunca
+   se superpone al encabezado ni a los controles de reproducción. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-audio-visualizer-bar {
+    position: fixed !important;
+    top: max(199px, calc(env(safe-area-inset-top) + 191px)) !important;
+    left: max(14px, env(safe-area-inset-left)) !important;
+    right: max(14px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 2147483004 !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-lyrics-col {
+    top: max(224px, calc(env(safe-area-inset-top) + 216px)) !important;
+    inset: max(224px, calc(env(safe-area-inset-top) + 216px)) max(8px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)) !important;
+  }
+}
+
+@media (max-width: 860px) and (max-height: 560px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-audio-visualizer-bar {
+    top: max(163px, calc(env(safe-area-inset-top) + 155px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active, body) #cinema-mode.active .cinema-lyrics-col {
+    top: max(188px, calc(env(safe-area-inset-top) + 180px)) !important;
+    inset: max(188px, calc(env(safe-area-inset-top) + 180px)) 7px max(7px, env(safe-area-inset-bottom)) 7px !important;
+  }
+}
+
+/* =========================================================
+   GLASSTRACK PRO B60 — BUGFIX REAL: HUD FIJO DEL REPRODUCTOR MÓVIL
+   La captura mostraba la tarjeta del reproductor desplazándose/cubriéndose
+   cuando Letras estaba abierta. Esta regla trabaja en #player-card (no solo
+   en #cinema-mode): fija cada zona al viewport y reserva el scroll a la letra.
+   Exclusivo de la Interfaz Celular y del reproductor expandido.
+   ========================================================= */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded {
+    --gsp-mobile-hud-top: max(58px, calc(env(safe-area-inset-top) + 52px));
+    --gsp-mobile-cover-size: min(74vw, 38dvh, 320px);
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: pan-x pan-y !important;
+    animation: none !important;
+    transform: none !important;
+    translate: none !important;
+    rotate: none !important;
+    scale: none !important;
+    filter: none !important;
+    perspective: none !important;
+    contain: none !important;
+    will-change: auto !important;
+    z-index: 1200 !important;
+  }
+
+  /* Ancla las piezas principales al viewport: no dependen del alto de la letra. */
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container {
+    position: fixed !important;
+    top: var(--gsp-mobile-hud-top) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--gsp-mobile-cover-size) !important;
+    height: var(--gsp-mobile-cover-size) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: min(38dvh, 320px) !important;
+    margin: 0 !important;
+    flex: none !important;
+    transform: translateX(-50%) !important;
+    translate: none !important;
+    z-index: 3204 !important;
+    overflow: visible !important;
+    pointer-events: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .song-info {
+    position: fixed !important;
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 8px) !important;
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 4px !important;
+    text-align: center !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: none !important;
+    transform: none !important;
+    z-index: 3204 !important;
+    pointer-events: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .player-visualizer {
+    position: fixed !important;
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 48px) !important;
+    left: 18px !important;
+    right: 18px !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 14px !important;
+    max-height: 14px !important;
+    margin: 0 !important;
+    z-index: 3203 !important;
+    pointer-events: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container {
+    position: fixed !important;
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 70px) !important;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 7px !important;
+    min-height: 7px !important;
+    margin: 0 !important;
+    flex: none !important;
+    transform: none !important;
+    z-index: 3205 !important;
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .time-stamps {
+    position: fixed !important;
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 82px) !important;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    flex: none !important;
+    transform: none !important;
+    z-index: 3205 !important;
+    pointer-events: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .controls {
+    position: fixed !important;
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 118px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 48px !important;
+    margin: 0 !important;
+    padding: 0 2px !important;
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(3px, 1.4vw, 9px) !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 3206 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .controls > button {
+    box-sizing: border-box !important;
+    flex: 0 1 clamp(28px, 10.2vw, 43px) !important;
+    width: clamp(28px, 10.2vw, 43px) !important;
+    min-width: 0 !important;
+    max-width: 43px !important;
+    height: clamp(32px, 10.2vw, 43px) !important;
+    min-height: 32px !important;
+    max-height: 43px !important;
+    margin: 0 !important;
+    padding: 3px !important;
+    pointer-events: auto !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .controls > .btn-play {
+    flex: 0 0 clamp(42px, 13vw, 54px) !important;
+    width: clamp(42px, 13vw, 54px) !important;
+    min-width: 42px !important;
+    max-width: 54px !important;
+    height: clamp(42px, 13vw, 54px) !important;
+    min-height: 42px !important;
+    max-height: 54px !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container {
+    position: fixed !important;
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 174px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 5px 8px !important;
+    flex: none !important;
+    transform: none !important;
+    z-index: 3206 !important;
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #volume {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #btn-close-mobile-player {
+    position: fixed !important;
+    top: max(9px, env(safe-area-inset-top)) !important;
+    right: max(9px, env(safe-area-inset-right)) !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 3210 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-player-actions {
+    position: fixed !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: max(58px, calc(env(safe-area-inset-bottom) + 52px)) !important;
+    top: auto !important;
+    margin: 0 !important;
+    z-index: 3207 !important;
+    transform: none !important;
+    translate: none !important;
+    pointer-events: auto !important;
+  }
+
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-inline-lyrics-wrap {
+    position: fixed !important;
+    left: max(14px, env(safe-area-inset-left)) !important;
+    right: max(14px, env(safe-area-inset-right)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    z-index: 3208 !important;
+    transform: none !important;
+    translate: none !important;
+    pointer-events: auto !important;
+  }
+
+  /* Si Letras se abre, la tarjeta deja pasar el fondo del panel, pero sus
+     controles quedan arriba y utilizables. Solo el cuerpo de Letras hace scroll. */
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded .app-layout {
+    position: relative !important;
+    z-index: 3201 !important;
+    transform: none !important;
+    translate: none !important;
+    filter: none !important;
+    perspective: none !important;
+    contain: none !important;
+    will-change: auto !important;
+    pointer-events: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded {
+    z-index: 3202 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    pointer-events: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-bg-fluid,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded::before,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded::after,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #youtube-player-host {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #btn-close-mobile-player,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .controls,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .controls > button,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #volume,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-player-actions,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-inline-lyrics-wrap {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .song-info,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-visualizer,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .time-stamps {
+    visibility: visible !important;
+    pointer-events: none !important;
+  }
+
+  /* La regla antigua ocultaba el dock durante Letras. Aquí permanece anclado
+     abajo para que EQ, Letras y Voz/Música no desaparezcan al leer. */
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-player-actions,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-inline-lyrics-wrap {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* En pantallas bajas se compacta el bloque superior para no invadir el dock. */
+@media (max-width: 860px) and (max-height: 620px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded {
+    --gsp-mobile-hud-top: max(46px, calc(env(safe-area-inset-top) + 40px));
+    --gsp-mobile-cover-size: min(58vw, 24dvh, 190px);
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .controls {
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 112px) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container {
+    top: calc(var(--gsp-mobile-hud-top) + var(--gsp-mobile-cover-size) + 164px) !important;
+  }
+}
+
+@media (max-width: 860px) {
+  html:has(body.mobile-player-expanded) {
+    height: 100% !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+  body.mobile-player-expanded {
+    height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded .app-layout {
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded .app-layout > :not(#player-card) {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
+
+/* =========================================================
+   GLASSTRACK PRO B61 — TANDA 2: VENTANAS, NAVEGACIÓN Y CAPAS MÓVILES
+   Solo reglas de layout móvil; no cambia la composición de escritorio.
+   ========================================================= */
+@media (max-width: 860px) {
+  /* Modo Vista es ahora el botón único de tres puntos en móvil. */
+  body.mobile-layout #btn-top-experiences,
+  body.mobile-mode #btn-top-experiences,
+  body.mobile-layout-active #btn-top-experiences,
+  body.mobile-mode-active #btn-top-experiences {
+    min-width: 39px !important;
+    width: 39px !important;
+    height: 39px !important;
+    padding: 7px !important;
+    justify-content: center !important;
+  }
+  body.mobile-layout #btn-top-experiences svg,
+  body.mobile-mode #btn-top-experiences svg,
+  body.mobile-layout-active #btn-top-experiences svg,
+  body.mobile-mode-active #btn-top-experiences svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  body.mobile-layout .top-experiences-menu,
+  body.mobile-mode .top-experiences-menu,
+  body.mobile-layout-active .top-experiences-menu,
+  body.mobile-mode-active .top-experiences-menu {
+    position: fixed !important;
+    width: min(340px, calc(100vw - 16px)) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Ventanas emergentes: dentro del viewport, centradas y desplazables sin cortar la X. */
+  .modal-overlay:not(#modal-settings) {
+    box-sizing: border-box !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+  .modal-overlay:not(#modal-settings) > .modal-window {
+    box-sizing: border-box !important;
+    width: min(94vw, 560px) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom))) !important;
+    margin: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    transform: none !important;
+    transform-origin: center center !important;
+  }
+  .modal-overlay:not(#modal-settings) > .modal-window > .modal-header,
+  .modal-overlay:not(#modal-settings) > .modal-window > .account-modal-header {
+    position: sticky !important;
+    top: -1px !important;
+    z-index: 8 !important;
+    flex: 0 0 auto !important;
+    background: rgba(22, 24, 34, .98) !important;
+    padding-top: max(8px, env(safe-area-inset-top)) !important;
+  }
+  .modal-overlay:not(#modal-settings) .modal-scroll-area {
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+  #modal-calibrate-lyrics .calibrate-window {
+    width: min(94vw, 620px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom))) !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+
+  /* Ajustes conserva su ventana completa; cada subpanel tiene scroll propio y Volver sticky. */
+  body.mobile-layout #modal-settings,
+  body.mobile-mode #modal-settings,
+  body.mobile-layout-active #modal-settings,
+  body.mobile-mode-active #modal-settings {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    z-index: 10000 !important;
+  }
+  body.mobile-layout #modal-settings .settings-window,
+  body.mobile-mode #modal-settings .settings-window,
+  body.mobile-layout-active #modal-settings .settings-window,
+  body.mobile-mode-active #modal-settings .settings-window {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+  }
+  body.mobile-layout #modal-settings .settings-slider-wrapper,
+  body.mobile-mode #modal-settings .settings-slider-wrapper,
+  body.mobile-layout-active #modal-settings .settings-slider-wrapper,
+  body.mobile-mode-active #modal-settings .settings-slider-wrapper {
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  body.mobile-layout #modal-settings .settings-panel,
+  body.mobile-mode #modal-settings .settings-panel,
+  body.mobile-layout-active #modal-settings .settings-panel,
+  body.mobile-mode-active #modal-settings .settings-panel {
+    box-sizing: border-box !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(22px, env(safe-area-inset-bottom)) !important;
+  }
+  body.mobile-layout #modal-settings .settings-sub-panel,
+  body.mobile-mode #modal-settings .settings-sub-panel,
+  body.mobile-layout-active #modal-settings .settings-sub-panel,
+  body.mobile-mode-active #modal-settings .settings-sub-panel {
+    box-sizing: border-box !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(22px, env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  body.mobile-layout #modal-settings .settings-sub-panel .btn-sub-back,
+  body.mobile-mode #modal-settings .settings-sub-panel .btn-sub-back,
+  body.mobile-layout-active #modal-settings .settings-sub-panel .btn-sub-back,
+  body.mobile-mode-active #modal-settings .settings-sub-panel .btn-sub-back {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    flex: 0 0 auto !important;
+    margin-top: 0 !important;
+    margin-bottom: 10px !important;
+    background: rgba(20, 22, 30, .96) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+  body.mobile-layout .visual-style-settings-panel .sub-content,
+  body.mobile-mode .visual-style-settings-panel .sub-content,
+  body.mobile-layout-active .visual-style-settings-panel .sub-content,
+  body.mobile-mode-active .visual-style-settings-panel .sub-content,
+  body.mobile-layout .rhythm-settings-content,
+  body.mobile-mode .rhythm-settings-content,
+  body.mobile-layout-active .rhythm-settings-content,
+  body.mobile-mode-active .rhythm-settings-content {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* Ritmo y sus ajustes, si el modo vuelve a habilitarse, permanecen dentro del viewport. */
+  .rhythm-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)) !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+  .rhythm-shell {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin: auto !important;
+    border-radius: 16px !important;
+  }
+  .rhythm-settings-modal {
+    position: absolute !important;
+    inset: 0 !important;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)) !important;
+    overflow: hidden !important;
+  }
+  .rhythm-settings-window {
+    box-sizing: border-box !important;
+    width: min(94vw, 760px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - max(20px, env(safe-area-inset-top)) - max(20px, env(safe-area-inset-bottom))) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .rhythm-mode-locked,
+  #toggle-rhythm-mode-detail:disabled,
+  #btn-open-rhythm-game:disabled {
+    cursor: not-allowed !important;
+  }
+  .rhythm-lock-notice {
+    padding: 12px !important;
+    border: 1px solid rgba(255, 190, 90, .2) !important;
+    border-radius: 12px !important;
+    background: rgba(255, 190, 90, .07) !important;
+    line-height: 1.5 !important;
+  }
+
+  /* La tarjeta expandida no arrastra el viewport. Solo las áreas de contenido se desplazan. */
+  html:has(body.mobile-player-expanded),
+  html:has(body.mobile-player-expanded) body,
+  body.mobile-player-expanded {
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded {
+    overscroll-behavior: none !important;
+    -webkit-overflow-scrolling: auto !important;
+    touch-action: pan-y !important;
+    cursor: default !important;
+  }
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded .lyrics-body,
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-inline-lyrics,
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded .mobile-inline-lyrics,
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded .mobile-inline-lyrics-body {
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded button,
+  body.mobile-player-expanded #player-card.player-card.mobile-expanded input[type="range"] {
+    touch-action: manipulation !important;
+  }
+
+  /* Modo Cine: cabecera, controles y X quedan fijos; solo letras/visualizador cambian de zona. */
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active {
+    --gsp-cinema-safe-top: max(6px, env(safe-area-inset-top));
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    transform: none !important;
+    translate: none !important;
+    perspective: none !important;
+    isolation: isolate !important;
+    z-index: 1700 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-content {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    translate: none !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-col {
+    position: fixed !important;
+    top: var(--gsp-cinema-safe-top) !important;
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(139px, calc(env(safe-area-inset-right) + 131px)) !important;
+    width: auto !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    contain: none !important;
+    transform: none !important;
+    filter: none !important;
+    pointer-events: none !important;
+    z-index: 40 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-art {
+    display: block !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    flex: 0 0 40px !important;
+    object-fit: cover !important;
+    border-radius: 9px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    text-align: left !important;
+    gap: 1px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info h4,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-track-info p {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-close {
+    position: fixed !important;
+    top: var(--gsp-cinema-safe-top) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 120 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-style-btn,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-toggle {
+    position: fixed !important;
+    top: calc(var(--gsp-cinema-safe-top) + 1px) !important;
+    bottom: auto !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    max-width: 34px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 115 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-style-btn {
+    right: max(54px, calc(env(safe-area-inset-right) + 52px)) !important;
+    left: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-toggle {
+    right: max(95px, calc(env(safe-area-inset-right) + 93px)) !important;
+    left: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls {
+    position: fixed !important;
+    top: max(56px, calc(env(safe-area-inset-top) + 48px)) !important;
+    left: max(7px, env(safe-area-inset-left)) !important;
+    right: max(7px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 42px !important;
+    margin: 0 !important;
+    padding: 4px 5px !important;
+    display: flex !important;
+    flex-flow: row nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: clamp(1px, .8vw, 5px) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    border-radius: 14px !important;
+    background: rgba(8,10,14,.70) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.20) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    backdrop-filter: blur(14px) !important;
+    transform: none !important;
+    translate: none !important;
+    overflow: visible !important;
+    z-index: 100 !important;
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > button {
+    box-sizing: border-box !important;
+    flex: 1 1 0 !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 42px !important;
+    height: clamp(29px, 8.3vw, 37px) !important;
+    min-height: 29px !important;
+    max-height: 37px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+    flex: 1.15 1 0 !important;
+    width: auto !important;
+    min-width: 32px !important;
+    max-width: 43px !important;
+    height: clamp(34px, 10vw, 42px) !important;
+    min-height: 34px !important;
+    max-height: 42px !important;
+    border-radius: 50% !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls .cinema-speed {
+    font-size: .65rem !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-seekbar-wrapper {
+    position: fixed !important;
+    top: max(103px, calc(env(safe-area-inset-top) + 95px)) !important;
+    left: max(9px, env(safe-area-inset-left)) !important;
+    right: max(9px, env(safe-area-inset-right)) !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 27px !important;
+    height: 27px !important;
+    margin: 0 !important;
+    padding: 4px 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    border-radius: 10px !important;
+    background: rgba(8,10,14,.48) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    backdrop-filter: blur(10px) !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 95 !important;
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-seekbar-wrapper .progress-container {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: 6px !important;
+    touch-action: pan-x !important;
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-current-time,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-duration {
+    flex: 0 0 auto !important;
+    font-size: .55rem !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-row {
+    position: fixed !important;
+    top: max(135px, calc(env(safe-area-inset-top) + 127px)) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: min(74vw, 300px) !important;
+    max-width: calc(100vw - 28px) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 5px 9px !important;
+    display: flex !important;
+    transform: translateX(-50%) !important;
+    translate: none !important;
+    z-index: 98 !important;
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-control,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-control input {
+    min-width: 0 !important;
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+  /* The compact meter only reserves room when that mode is selected. */
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-bar {
+    display: none !important;
+    position: fixed !important;
+    top: max(169px, calc(env(safe-area-inset-top) + 161px)) !important;
+    left: max(12px, env(safe-area-inset-left)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    max-height: 14px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    translate: none !important;
+    z-index: 96 !important;
+    pointer-events: none !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-bar-active .cinema-audio-visualizer-bar {
+    display: block !important;
+    opacity: .86 !important;
+    overflow: hidden !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-col {
+    position: fixed !important;
+    inset: max(174px, calc(env(safe-area-inset-top) + 166px)) max(7px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left)) !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow: hidden !important;
+    clip-path: none !important;
+    contain: none !important;
+    transform: none !important;
+    translate: none !important;
+    filter: none !important;
+    perspective: none !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-bar-active .cinema-lyrics-col {
+    inset: max(192px, calc(env(safe-area-inset-top) + 184px)) max(7px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-body {
+    position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    padding: 10px 10px max(26px, env(safe-area-inset-bottom)) !important;
+    z-index: 11 !important;
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-stage {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    pointer-events: none !important;
+    z-index: 12 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-expanded .cinema-lyrics-col {
+    position: fixed !important;
+    inset: max(174px, calc(env(safe-area-inset-top) + 166px)) max(7px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left)) !important;
+    overflow: hidden !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-expanded .cinema-audio-visualizer-stage {
+    display: block !important;
+    opacity: 1 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-expanded #cinema-lyrics-body {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
+@media (max-width: 860px) and (max-height: 620px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-col {
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-cover-art {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
+    flex-basis: 32px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls {
+    top: max(43px, calc(env(safe-area-inset-top) + 37px)) !important;
+    min-height: 36px !important;
+    padding: 3px 4px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > button {
+    height: 27px !important;
+    min-height: 27px !important;
+    max-height: 30px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-controls > .cinema-play-btn {
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-seekbar-wrapper {
+    top: max(82px, calc(env(safe-area-inset-top) + 76px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-volume-row {
+    top: max(111px, calc(env(safe-area-inset-top) + 103px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-audio-visualizer-bar {
+    top: max(143px, calc(env(safe-area-inset-top) + 135px)) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active .cinema-lyrics-col {
+    inset: max(145px, calc(env(safe-area-inset-top) + 137px)) 7px max(7px, env(safe-area-inset-bottom)) 7px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) #cinema-mode.active.cinema-visualizer-bar-active .cinema-lyrics-col {
+    inset: max(163px, calc(env(safe-area-inset-top) + 155px)) 7px max(7px, env(safe-area-inset-bottom)) 7px !important;
+  }
+}
+
+
+/* B61 T2 refinement: unified three-dot menu keeps every former mobile quick action reachable. */
+@media (max-width: 768px) {
+  body.mobile-layout #top-experiences-menu:not(.hidden),
+  body.mobile-mode #top-experiences-menu:not(.hidden),
+  body.mobile-layout-active #top-experiences-menu:not(.hidden),
+  body.mobile-mode-active #top-experiences-menu:not(.hidden) {
+    display: block !important;
+    box-sizing: border-box !important;
+    padding-bottom: 10px !important;
+  }
+  body.mobile-layout #top-experiences-menu .mobile-quick-menu,
+  body.mobile-mode #top-experiences-menu .mobile-quick-menu,
+  body.mobile-layout-active #top-experiences-menu .mobile-quick-menu,
+  body.mobile-mode-active #top-experiences-menu .mobile-quick-menu {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    display: none !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    margin: 7px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body.mobile-layout #top-experiences-menu .mobile-quick-menu.active,
+  body.mobile-mode #top-experiences-menu .mobile-quick-menu.active,
+  body.mobile-layout-active #top-experiences-menu .mobile-quick-menu.active,
+  body.mobile-mode-active #top-experiences-menu .mobile-quick-menu.active {
+    display: grid !important;
+  }
+  .mobile-quick-menu-label { display: none; }
+  body.mobile-layout #top-experiences-menu .mobile-quick-menu-label,
+  body.mobile-mode #top-experiences-menu .mobile-quick-menu-label,
+  body.mobile-layout-active #top-experiences-menu .mobile-quick-menu-label,
+  body.mobile-mode-active #top-experiences-menu .mobile-quick-menu-label {
+    display: block !important;
+    margin: 11px 7px 4px !important;
+    padding-top: 9px !important;
+    border-top: 1px solid rgba(255,255,255,.10) !important;
+    color: rgba(255,255,255,.62) !important;
+    font-size: .62rem !important;
+    font-weight: 700 !important;
+    letter-spacing: .06em !important;
+    text-transform: uppercase !important;
+  }
+  body.mobile-layout #top-experiences-menu .mobile-quick-item,
+  body.mobile-mode #top-experiences-menu .mobile-quick-item,
+  body.mobile-layout-active #top-experiences-menu .mobile-quick-item,
+  body.mobile-mode-active #top-experiences-menu .mobile-quick-item {
+    min-width: 0 !important;
+    min-height: 38px !important;
+    padding: 8px !important;
+    font-size: .68rem !important;
+  }
+}
+@media (min-width: 769px) {
+  #top-experiences-menu .mobile-quick-menu,
+  #top-experiences-menu .mobile-quick-menu-label { display: none !important; }
+}
+
+
+/* B65 — Bugfix: vista previa en video al mantener un control de velocidad 3 segundos */
+.playback-speed-control {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  touch-action: manipulation;
+}
+.playback-speed-value { font-size: .72rem; font-weight: 750; letter-spacing: -.02em; line-height: 1; }
+#btn-quick-speed.playback-speed-control { min-width: 50px; width: auto; padding: 0 8px; border-radius: 24px; }
+#cinema-speed.playback-speed-control { min-width: 50px; width: auto; padding: 0 7px; border-radius: 22px; }
+#karaoke-speed.playback-speed-control { min-width: 58px; min-height: 38px; padding: 7px 11px; }
+#btn-karaoke-settings {
+  flex: 0 0 42px !important;
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  border-radius: 12px !important;
+  overflow: visible !important;
+  touch-action: manipulation;
+}
+#btn-karaoke-settings svg { display: block; flex: 0 0 20px; width: 20px; height: 20px; }
+.karaoke-header-actions { align-items: center; }
+.karaoke-header-actions #btn-karaoke-settings,
+.karaoke-header-actions #btn-close-karaoke { align-self: center; }
+.runner-video-popover {
+  position: fixed;
+  z-index: 2147483000;
+  display: none;
+  box-sizing: border-box;
+  width: 118px;
+  aspect-ratio: 1 / 1;
+  padding: 5px;
+  border: 1px solid rgba(0,0,0,.16);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(0,0,0,.30), 0 2px 7px rgba(0,0,0,.14);
+  pointer-events: auto;
+  overflow: hidden;
+  contain: layout paint style;
+  transform: translateZ(0);
+}
+.runner-video-popover.is-visible { display: block; animation: runner-video-popover-in .12s ease-out both; }
+.runner-video-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  isolation: isolate;
+}
+.runner-video-content {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: grayscale(1) contrast(1.08);
+  background: #fff;
+}
+/* Para un clip con silueta oscura y fondo blanco, el modo screen tiñe la silueta con el color de interfaz y mantiene blanco el fondo. */
+.runner-video-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--runner-tint-color, var(--primary-color, var(--accent-color, #8a99ad)));
+  mix-blend-mode: screen;
+}
+@keyframes runner-video-popover-in {
+  from { opacity: 0; transform: translateY(3px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 780px) {
+  #btn-quick-speed.playback-speed-control { min-width: 46px; padding: 0 6px; gap: 3px !important; }
+  #cinema-speed.playback-speed-control { min-width: 46px; padding: 0 5px; gap: 3px !important; }
+  #karaoke-speed.playback-speed-control { min-height: 42px; min-width: 54px; padding: 6px 8px; }
+  .playback-speed-value { font-size: .68rem; }
+  #btn-karaoke-settings { width: 38px !important; min-width: 38px !important; max-width: 38px !important; height: 38px !important; min-height: 38px !important; max-height: 38px !important; }
+  .runner-video-popover { width: min(112px, calc(100vw - 16px)); padding: 4px; border-radius: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .runner-video-popover.is-visible { animation: none; }
+}
+
+
+/* =========================================================
+   GLASSTRACK PRO B66 — BUGFIX MÓVIL / LETRAS / EQ / VELOCIDAD
+   Ajustes localizados: PC mantiene su distribución; no reescribe el motor de audio.
+   ========================================================= */
+
+/* Rango de velocidad: draggable nativo, sin capas que intercepten el cursor. */
+#sub-audio .audio-speed-control-row {
+  display: grid !important;
+  grid-template-columns: minmax(84px, 1fr) auto 46px !important;
+  align-items: center !important;
+  gap: 9px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+#input-audio-speed,
+#calibrate-speed,
+input[type="range"].pitch-slider,
+input[type="range"][id*="pitch" i] {
+  position: relative !important;
+  z-index: 4 !important;
+  pointer-events: auto !important;
+  cursor: ew-resize !important;
+  touch-action: pan-x !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-user-drag: none !important;
+}
+#sub-audio .audio-speed-control-row #input-audio-speed {
+  display: block !important;
+  min-width: 76px !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+#sub-audio .audio-speed-control-row .setting-value-badge {
+  position: relative !important;
+  z-index: 2 !important;
+  white-space: nowrap !important;
+}
+.runner-live-indicator {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 46px;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 44px;
+  min-width: 46px;
+  border: 1px solid rgba(0,0,0,.16);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--runner-tint-color, var(--primary-color, #556b85));
+  box-shadow: 0 2px 7px rgba(0,0,0,.15);
+  overflow: hidden;
+  isolation: isolate;
+}
+.runner-live-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.runner-live-indicator.video-ready .runner-live-video { opacity: 1; }
+.runner-live-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--runner-tint-color, var(--primary-color, #556b85));
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+}
+.runner-live-indicator.video-ready .runner-live-tint { opacity: 1; }
+.runner-live-fallback {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 39px;
+  height: 39px;
+  color: var(--runner-tint-color, var(--primary-color, #556b85));
+  animation: runner-body-bob var(--runner-cycle-duration, .36s) ease-in-out infinite alternate;
+}
+.runner-live-indicator.video-ready .runner-live-fallback { display: none; }
+.runner-silhouette .runner-arm-a,
+.runner-silhouette .runner-arm-b,
+.runner-silhouette .runner-leg-a,
+.runner-silhouette .runner-leg-b {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: var(--runner-cycle-duration, .36s);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+.runner-silhouette .runner-arm-a { animation-name: runner-arm-swing-a; }
+.runner-silhouette .runner-arm-b { animation-name: runner-arm-swing-b; }
+.runner-silhouette .runner-leg-a { animation-name: runner-leg-swing-a; }
+.runner-silhouette .runner-leg-b { animation-name: runner-leg-swing-b; }
+@keyframes runner-body-bob { from { transform: translateY(1px); } to { transform: translateY(-2px); } }
+@keyframes runner-arm-swing-a { from { transform: rotate(-8deg); } to { transform: rotate(13deg); } }
+@keyframes runner-arm-swing-b { from { transform: rotate(12deg); } to { transform: rotate(-9deg); } }
+@keyframes runner-leg-swing-a { from { transform: rotate(10deg); } to { transform: rotate(-14deg); } }
+@keyframes runner-leg-swing-b { from { transform: rotate(-13deg); } to { transform: rotate(10deg); } }
+
+/* Ventanita flotante más pequeña, sin capturar el puntero ni bloquear el arrastre. */
+.runner-video-popover {
+  width: 84px !important;
+  height: 84px !important;
+  padding: 3px !important;
+  border-radius: 9px !important;
+  pointer-events: none !important;
+  z-index: 2147483007 !important;
+}
+.runner-video-frame { border-radius: 6px !important; }
+.runner-video-content { opacity: 0; transition: opacity .08s linear; }
+.runner-video-popover.video-ready .runner-video-content { opacity: 1; }
+.runner-video-popover:not(.video-ready) .runner-video-tint { opacity: 0; }
+.runner-video-tint { opacity: 0; }
+.runner-video-popover.video-ready .runner-video-tint { opacity: 1; }
+.runner-svg-fallback {
+  position: absolute;
+  inset: 5px;
+  display: block;
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
+  color: var(--runner-tint-color, var(--primary-color, #556b85));
+  animation: runner-body-bob var(--runner-cycle-duration, .36s) ease-in-out infinite alternate;
+}
+.runner-video-popover.video-ready .runner-svg-fallback { display: none; }
+@media (max-width: 780px) {
+  .runner-video-popover { width: 74px !important; height: 74px !important; padding: 3px !important; }
+  #sub-audio .audio-speed-control-row { grid-template-columns: minmax(70px, 1fr) auto 42px !important; gap: 7px !important; }
+  .runner-live-indicator { flex-basis: 42px; width: 42px; min-width: 42px; height: 40px; }
+  .runner-live-fallback { width: 35px; height: 35px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .runner-live-fallback, .runner-svg-fallback, .runner-silhouette * { animation: none !important; }
+}
+
+/* Letras móvil: capa propia, opaca; no hacer transparente ni esconder la carátula del reproductor. */
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded {
+  background: var(--card-bg, rgba(18,18,24,.92)) !important;
+  background-color: var(--card-bg, rgba(18,18,24,.92)) !important;
+  border-color: var(--card-border, rgba(255,255,255,.12)) !important;
+  box-shadow: 0 18px 55px rgba(0,0,0,.28) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  pointer-events: auto !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-bg-fluid {
+  display: block !important;
+  visibility: visible !important;
+  opacity: .85 !important;
+  pointer-events: none !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container img,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .song-info,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-visualizer:not(.hidden),
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .time-stamps {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .song-info,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-visualizer,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .time-stamps {
+  pointer-events: none !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-visualizer:not(.hidden) {
+  display: block !important;
+  min-height: 26px !important;
+  position: relative !important;
+  z-index: 3 !important;
+}
+/* Las capas internas del reproductor no deben desaparecer por la regla antigua de Letras exclusiva. */
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded::before,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded::after {
+  display: revert !important;
+  opacity: revert !important;
+  pointer-events: none !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .controls,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .controls button,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #volume,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #btn-close-mobile-player {
+  pointer-events: auto !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active,
+:is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded .lyrics-panel.active {
+  position: fixed !important;
+  top: auto !important;
+  bottom: max(8px, env(safe-area-inset-bottom)) !important;
+  left: max(8px, env(safe-area-inset-left)) !important;
+  right: max(8px, env(safe-area-inset-right)) !important;
+  width: auto !important;
+  height: min(54dvh, 500px) !important;
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px) !important;
+  min-height: 230px !important;
+  margin: 0 !important;
+  padding: 12px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background: rgba(12,15,21,.985) !important;
+  background-color: rgba(12,15,21,.985) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 17px !important;
+  box-shadow: 0 16px 55px rgba(0,0,0,.5) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  backdrop-filter: blur(18px) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  translate: none !important;
+  z-index: 2147483100 !important;
+  pointer-events: auto !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active .lyrics-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  z-index: 0 !important;
+  opacity: .12 !important;
+  pointer-events: none !important;
+  filter: blur(22px) brightness(.25) !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active .lyrics-header,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active .lyrics-body,
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active .lyrics-editor {
+  position: relative !important;
+  z-index: 1 !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active .lyrics-header {
+  flex: 0 0 auto !important;
+  min-height: 38px !important;
+  margin: 0 0 8px !important;
+  padding: 0 0 8px !important;
+}
+body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active .lyrics-body {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 16px 8px 24px !important;
+  margin: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  touch-action: pan-y !important;
+  pointer-events: auto !important;
+}
+
+/* EQ móvil: diez bandas reales, puntos arrastrables y línea blanca desde el centro. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .eq-panel:not(.hidden):not(.karaoke-vm-floating) {
+    max-height: min(64dvh, 560px) !important;
+    padding: 11px 8px max(12px, env(safe-area-inset-bottom)) !important;
+    gap: 8px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-slider-grid {
+    display: grid !important;
+    grid-template-columns: repeat(10, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    height: 156px !important;
+    min-height: 156px !important;
+    gap: 1px !important;
+    align-items: stretch !important;
+    overflow: visible !important;
+    margin-top: 0 !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band {
+    position: relative !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 144px !important;
+    overflow: visible !important;
+    display: grid !important;
+    grid-template-rows: 18px 112px 14px !important;
+    justify-items: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+    font-size: .43rem !important;
+    color: rgba(255,255,255,.72) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band output {
+    grid-row: 1 !important;
+    position: relative !important;
+    z-index: 4 !important;
+    max-width: 100% !important;
+    font-size: .43rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    color: rgba(255,255,255,.92) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band input[type="range"] {
+    grid-row: 2 !important;
+    position: relative !important;
+    z-index: 3 !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    max-width: 22px !important;
+    height: 112px !important;
+    min-height: 112px !important;
+    max-height: 112px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    appearance: auto !important;
+    -webkit-appearance: slider-vertical !important;
+    writing-mode: vertical-lr !important;
+    direction: rtl !important;
+    background: transparent !important;
+    accent-color: #fff !important;
+    pointer-events: auto !important;
+    cursor: ns-resize !important;
+    touch-action: pan-y !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band input[type="range"]::-webkit-slider-runnable-track {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band input[type="range"]::-moz-range-track {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    width: 10px !important;
+    height: 10px !important;
+    border: 1px solid rgba(15,18,22,.9) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.5) !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-band input[type="range"]::-moz-range-thumb {
+    width: 10px !important;
+    height: 10px !important;
+    border: 1px solid rgba(15,18,22,.9) !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+  }
+  .mobile-eq-band .mobile-eq-frequency {
+    grid-row: 3 !important;
+    z-index: 4 !important;
+    align-self: center !important;
+    font-size: .43rem !important;
+    letter-spacing: -.03em !important;
+    white-space: nowrap !important;
+  }
+  .mobile-eq-band .mobile-eq-track,
+  .mobile-eq-band .mobile-eq-fill {
+    position: absolute !important;
+    left: 50% !important;
+    width: 2px !important;
+    border-radius: 2px !important;
+    transform: translateX(-50%) !important;
+    pointer-events: none !important;
+  }
+  .mobile-eq-band .mobile-eq-track {
+    top: 20px !important;
+    height: 108px !important;
+    background: rgba(255,255,255,.22) !important;
+    z-index: 1 !important;
+  }
+  .mobile-eq-band .mobile-eq-fill {
+    top: var(--eq-fill-top, 74px) !important;
+    height: var(--eq-fill-height, 0px) !important;
+    background: #fff !important;
+    box-shadow: 0 0 4px rgba(255,255,255,.32) !important;
+    z-index: 2 !important;
+  }
+  .mobile-eq-band.is-neutral .mobile-eq-fill { opacity: 0 !important; }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active) .mobile-eq-bottom-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr) !important;
+    gap: 8px !important;
+    margin-top: 2px !important;
+    align-items: start !important;
+  }
+  .mobile-eq-select select { min-width: 0 !important; width: 100% !important; font-size: .68rem !important; }
+  .mobile-eq-presets { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 4px !important; margin: 0 !important; }
+  .mobile-eq-preset { min-width: 0 !important; padding: 5px 2px !important; font-size: .55rem !important; }
+}
+
+/* Reproductor celular fijo: scroll no arrastra el HUD. El canvas solo se ve si está activado. */
+@media (max-width: 860px) {
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: none !important;
+    background: var(--card-bg, rgba(18,18,24,.92)) !important;
+    border-color: var(--card-border, rgba(255,255,255,.12)) !important;
+    isolation: isolate !important;
+    transform: none !important;
+    filter: none !important;
+    contain: none !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .controls,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-player-actions {
+    pointer-events: auto !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #volume,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container .progress-bar {
+    pointer-events: auto !important;
+    touch-action: pan-x !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .player-visualizer:not(.hidden) {
+    display: block !important;
+    visibility: visible !important;
+    opacity: .95 !important;
+    pointer-events: none !important;
+    position: relative !important;
+    z-index: 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    flex: 0 0 28px !important;
+  }
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .top-bar,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .song-info,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .time-stamps,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .controls,
+  :is(body.mobile-layout, body.mobile-mode, body.mobile-layout-active, body.mobile-mode-active).mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container {
+    flex-shrink: 0 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+
+/* B66 final hardening: neutraliza las reglas antiguas que ocultaban y transparentaban
+   la tarjeta cuando Letras está abierta; el panel tiene su propia capa y medida real. */
+@media (max-width: 860px) {
+  html:has(body.mobile-lyrics-exclusive-active.mobile-player-expanded),
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    zoom: 1 !important;
+    transform: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh !important;
+    box-sizing: border-box !important;
+    background: rgba(18, 18, 24, .94) !important;
+    background-color: rgba(18, 18, 24, .94) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    box-shadow: 0 18px 55px rgba(0,0,0,.28) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+    overflow: hidden !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    filter: none !important;
+    contain: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .player-bg-fluid {
+    display: block !important;
+    visibility: visible !important;
+    opacity: .74 !important;
+    pointer-events: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container img,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .song-info,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .top-bar,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .controls,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .controls button,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #progress-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .volume-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #volume,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #btn-close-mobile-player,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded #mobile-player-actions {
+    display: revert !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .cover-container,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #player-card.player-card.mobile-expanded .song-info {
+    pointer-events: none !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #lyrics-panel.lyrics-panel.active,
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active {
+    position: fixed !important;
+    inset: auto 8px max(8px, env(safe-area-inset-bottom)) 8px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 16px) !important;
+    height: min(52dvh, 480px) !important;
+    min-height: min(220px, calc(100dvh - 24px)) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px) !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+    translate: none !important;
+    zoom: 1 !important;
+    z-index: 2147483100 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    background: rgba(12,15,21,.985) !important;
+    background-color: rgba(12,15,21,.985) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #lyrics-panel .lyrics-header {
+    flex: 0 0 auto !important;
+    display: flex !important;
+    min-width: 0 !important;
+    position: relative !important;
+    z-index: 2 !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #lyrics-panel #btn-close-lyrics {
+    display: inline-flex !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    position: relative !important;
+    z-index: 3 !important;
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+  body.mobile-lyrics-exclusive-active.mobile-player-expanded #lyrics-panel .lyrics-body {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+  }
+  body.mobile-layout .eq-panel:not(.hidden),
+  body.mobile-mode .eq-panel:not(.hidden),
+  body.mobile-layout-active .eq-panel:not(.hidden),
+  body.mobile-mode-active .eq-panel:not(.hidden) {
+    left: max(8px, env(safe-area-inset-left)) !important;
+    right: max(8px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 16px) !important;
+    box-sizing: border-box !important;
+  }
+}
+.runner-video-popover {
+  width: 70px !important;
+  height: 70px !important;
+  padding: 2px !important;
+  border-radius: 8px !important;
+  pointer-events: none !important;
+}
+.runner-video-frame { border-radius: 5px !important; }
+@media (max-width: 780px) {
+  .runner-video-popover { width: 60px !important; height: 60px !important; padding: 2px !important; }
+  #sub-audio .audio-speed-control-row { grid-template-columns: minmax(64px, 1fr) auto 36px !important; gap: 6px !important; }
+  .runner-live-indicator { flex-basis: 36px !important; width: 36px !important; min-width: 36px !important; height: 34px !important; border-radius: 7px !important; }
+  .runner-live-fallback { width: 30px !important; height: 30px !important; }
+}
+/* El indicador fijo de Ajustes es pasivo y nunca captura los gestos del control. */
+.runner-live-indicator,
+.runner-live-indicator * { pointer-events: none !important; }
+
+
+/* ==========================================
+   B68 — Panel Biblioteca Segura
+   ========================================== */
+.safe-library-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 2px 0 18px;
+  padding: 17px;
+  border: 1px solid color-mix(in srgb, var(--primary-color, #9b8cff) 30%, var(--card-border, rgba(255,255,255,.12)));
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+  box-shadow: 0 12px 28px rgba(0,0,0,.13), inset 0 1px rgba(255,255,255,.045);
+  overflow: hidden;
+}
+.safe-library-panel::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--primary-color, #9b8cff);
+  opacity: .9;
+}
+.safe-library-heading { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.safe-library-emblem {
+  display: grid; place-items: center; flex: 0 0 46px; width: 46px; height: 46px;
+  border-radius: 13px; color: var(--primary-color, #b4a5ff);
+  background: color-mix(in srgb, var(--primary-color, #9b8cff) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color, #9b8cff) 27%, transparent);
+}
+.safe-library-title-wrap { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
+.safe-library-title-wrap .setting-title { font-size: .98rem; letter-spacing: .01em; }
+.safe-library-title-wrap .setting-desc { line-height: 1.45; }
+.safe-library-state {
+  flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; border: 1px solid rgba(74,222,128,.25);
+  background: rgba(74,222,128,.09); color: #83e6a6; font-size: .68rem; font-weight: 700; white-space: nowrap;
+}
+.safe-library-state.is-paused { color: #f3c779; background: rgba(245,158,11,.09); border-color: rgba(245,158,11,.25); }
+.safe-library-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.safe-library-stat {
+  display: flex; flex-direction: column; justify-content: center; gap: 5px; min-width: 0; min-height: 67px;
+  padding: 10px 11px; border: 1px solid rgba(255,255,255,.075); border-radius: 11px;
+  background: rgba(0,0,0,.13);
+}
+.safe-library-stat strong { display: block; overflow-wrap: anywhere; color: var(--text-main, #f8fafc); font-size: .88rem; font-weight: 650; line-height: 1.25; }
+.safe-library-stat span { color: var(--text-sub, #a7aab5); font-size: .68rem; line-height: 1.35; }
+.safe-library-options { display: flex; flex-direction: column; gap: 0; }
+.safe-library-option { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 1px; border-bottom: 1px solid rgba(255,255,255,.065); }
+.safe-library-option:last-child { border-bottom: 0; }
+.safe-library-option .setting-info { flex: 1; min-width: 0; }
+.safe-library-option .setting-title { font-size: .82rem; }
+.safe-library-option .setting-desc { display: block; margin-top: 3px; max-width: 580px; line-height: 1.45; }
+.safe-library-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.safe-library-actions .action-btn {
+  min-height: 36px; padding: 8px 11px; border: 1px solid var(--card-border, rgba(255,255,255,.13));
+  background: rgba(255,255,255,.055); border-radius: 9px; font-size: .74rem; transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.safe-library-actions .action-btn:hover { background: rgba(255,255,255,.11); border-color: color-mix(in srgb, var(--primary-color, #9b8cff) 45%, transparent); }
+.safe-library-actions .action-btn:active { transform: translateY(1px); }
+.safe-library-actions .safe-library-primary { color: #fff; background: color-mix(in srgb, var(--primary-color, #8b7aff) 45%, rgba(255,255,255,.06)); border-color: color-mix(in srgb, var(--primary-color, #8b7aff) 55%, transparent); }
+.safe-library-actions .action-btn:disabled { opacity: .55; cursor: wait; }
+.safe-library-delete { max-width: 100%; margin-top: -2px; }
+.safe-library-message { margin: 0; padding: 9px 11px; color: var(--text-sub, #a7aab5); background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.06); border-radius: 9px; font-size: .73rem; line-height: 1.5; overflow-wrap: anywhere; }
+.safe-library-message.is-success { color: #a7efbd; border-color: rgba(74,222,128,.16); background: rgba(74,222,128,.045); }
+.safe-library-message.is-warning { color: #f2d69b; border-color: rgba(245,158,11,.16); background: rgba(245,158,11,.045); }
+.safe-library-message.is-error { color: #ffb3b3; border-color: rgba(248,113,113,.22); background: rgba(248,113,113,.06); }
+.safe-library-footnote { margin: -3px 0 0; color: var(--text-sub, #a7aab5); font-size: .68rem; line-height: 1.5; }
+.safe-external-backup { margin-bottom: 15px; padding-top: 4px; }
+@media (max-width: 650px) {
+  .safe-library-panel { padding: 13px; gap: 12px; border-radius: 13px; }
+  .safe-library-heading { align-items: flex-start; flex-wrap: wrap; }
+  .safe-library-emblem { flex-basis: 40px; width: 40px; height: 40px; border-radius: 11px; }
+  .safe-library-title-wrap { flex-basis: calc(100% - 54px); }
+  .safe-library-state { margin-left: 51px; }
+  .safe-library-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .safe-library-stat:last-child { grid-column: 1 / -1; }
+  .safe-library-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .safe-library-actions .action-btn { min-width: 0; width: 100%; }
+  .safe-library-actions #btn-safe-export { grid-column: 1 / -1; }
+}
+
+
+/* B68 — respaldo temporal, puntos de guardado e importación completa */
+.safe-library-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.safe-library-option-timed { align-items: center; }
+.safe-library-timer-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-shrink: 0; }
+.safe-library-interval {
+  width: 100%; min-width: 150px; max-width: 220px; padding: 9px 11px; color: var(--text-main, #f8fafc);
+  background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.12); border-radius: 9px;
+  font: inherit; font-size: .78rem; outline: none;
+}
+.safe-library-interval:focus { border-color: color-mix(in srgb, var(--primary-color, #9b8cff) 70%, transparent); }
+.safe-library-interval option { color: #16161d; background: #fff; }
+.safe-library-checkpoint-row { display: flex; flex-direction: column; gap: 7px; }
+.safe-library-checkpoint-row label { color: var(--text-sub, #a7aab5); font-size: .74rem; font-weight: 600; }
+.safe-library-checkpoint-row .safe-library-interval { max-width: none; }
+.safe-import-panel {
+  display: flex; flex-direction: column; gap: 13px; margin: 14px 0 17px; padding: 17px;
+  background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+  border: 1px solid rgba(255,255,255,.09); border-radius: 15px;
+}
+.safe-import-heading { display: flex; align-items: center; gap: 11px; }
+.safe-import-heading > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.safe-import-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 40px; height: 40px; border-radius: 11px; color: var(--primary-color, #b5a8ff); background: color-mix(in srgb, var(--primary-color, #8b7aff) 13%, transparent); font-size: 1.35rem; font-weight: 700; }
+.safe-import-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 168px; padding: 20px 14px;
+  text-align: center; border: 1px dashed rgba(255,255,255,.22); border-radius: 12px; background: rgba(0,0,0,.12);
+  transition: background .18s ease, border-color .18s ease, transform .18s ease; outline: none;
+}
+.safe-import-dropzone:focus-visible, .safe-import-dropzone.is-dragover { border-color: var(--primary-color, #a99bff); background: color-mix(in srgb, var(--primary-color, #8b7aff) 11%, transparent); }
+.safe-import-dropzone.is-dragover { transform: scale(1.005); }
+.safe-import-drop-icon { display: flex; align-items: center; justify-content: center; width: 45px; height: 45px; border: 1px solid color-mix(in srgb, var(--primary-color, #8b7aff) 35%, transparent); border-radius: 12px; color: var(--primary-color, #b5a8ff); background: color-mix(in srgb, var(--primary-color, #8b7aff) 9%, transparent); font-family: 'Fira Code', monospace; font-size: .9rem; font-weight: 700; }
+.safe-import-dropzone strong { color: var(--text-main, #f8fafc); font-size: .84rem; }
+.safe-import-drop-hint { color: var(--text-sub, #a7aab5); font-size: .73rem; }
+.safe-import-dropzone .action-btn { margin-top: 4px; }
+.safe-import-dropzone.is-busy { opacity: .7; pointer-events: none; }
+@media (max-width: 720px) {
+  .safe-library-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .safe-library-option-timed { align-items: flex-start; flex-wrap: wrap; }
+  .safe-library-timer-controls { width: 100%; justify-content: space-between; padding-top: 3px; }
+  .safe-library-interval { min-width: 0; max-width: none; flex: 1; }
+  .safe-import-panel { padding: 13px; border-radius: 12px; }
+  .safe-import-dropzone { min-height: 150px; padding: 16px 10px; }
 }
