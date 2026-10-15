@@ -1,10 +1,59 @@
 // ==========================================
-// Glasstrack Pro B68 — Biblioteca Segura, puntos de guardado e importación completa
 // 1. BASE DE DATOS INDEXEDDB Y ESTADO GLOBAL
 // ==========================================
 let db;
 const dbRequest = indexedDB.open("MusicPlayerDB", 5);
 const GLASSTRACK_INITIALIZED_KEY = 'glasstrack_initialized';
+const GLASSTRACK_LIBRARY_COUNT_PREFIX = 'glasstrack_library_count_v1_';
+let libraryLoadGeneration = 0;
+let libraryPersistenceRetryAttempted = false;
+
+function libraryCountStorageKey(profileId) {
+  return GLASSTRACK_LIBRARY_COUNT_PREFIX + encodeURIComponent(String(profileId || 'guest'));
+}
+function saveLibraryCountHint(profileId, count) {
+  try {
+    const safeCount = Math.max(0, Number(count) || 0);
+    localStorage.setItem(libraryCountStorageKey(profileId), String(safeCount));
+    if (safeCount > 0) localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
+  } catch (_) {}
+}
+function refreshLibraryCountHint(profileId = activeProfileId) {
+  return new Promise(resolve => {
+    if (!db || !db.objectStoreNames.contains('songs')) { resolve(null); return; }
+    let tx;
+    let count = 0;
+    try {
+      tx = db.transaction(['songs'], 'readonly');
+      const request = tx.objectStore('songs').openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          saveLibraryCountHint(profileId, count);
+          resolve(count);
+          return;
+        }
+        const song = cursor.value;
+        if ((song.accountId || GLASSTRACK_GUEST_ID) === profileId) count++;
+        cursor.continue();
+      };
+      request.onerror = () => resolve(null);
+      tx.onerror = () => resolve(null);
+      tx.onabort = () => resolve(null);
+    } catch (_) { resolve(null); }
+  });
+}
+
+function retryPersistentStorageAfterUserAction() {
+  if (libraryPersistenceRetryAttempted) return;
+  libraryPersistenceRetryAttempted = true;
+  try {
+    if (localStorage.getItem('glasstrack_storage_persisted') === 'true') return;
+  } catch (_) {}
+  requestPersistentStorage().then(granted => {
+    if (!granted) console.info('El navegador no concedió almacenamiento persistente tras añadir música. La biblioteca seguirá usando IndexedDB, pero Chrome aún podría limpiar datos del sitio en condiciones excepcionales.');
+  }).catch(() => {});
+}
 
 async function requestPersistentStorage() {
   try {
@@ -100,16 +149,8 @@ dbRequest.onsuccess = (e) => {
   requestPersistentStorage().then(granted => {
     if (!granted) console.info('El navegador no confirmó almacenamiento persistente; conserva una copia de seguridad de la biblioteca.');
   }).catch(() => {});
-  const finishInitialLoading = () => {
-    loadStoredSongs();
-    loadStoredBackground();
-    refreshSafeBackupStatus().catch(() => {});
-  };
-  openSafeBackupDatabase().then(finishInitialLoading).catch(error => {
-    console.warn('Biblioteca Segura no disponible; se conserva la biblioteca principal:', error);
-    finishInitialLoading();
-    setSafeLibraryMessage('No se pudo abrir la base independiente de seguridad. La biblioteca principal sigue disponible; revisa el espacio del navegador.', 'error');
-  });
+  loadStoredSongs();
+  loadStoredBackground();
 };
 
 dbRequest.onerror = (e) => {
@@ -2999,587 +3040,6 @@ function updateTimerUI() {
 
 
 // ==========================================
-// BIBLIOTECA SEGURA — BASE INDEPENDIENTE
-// ==========================================
-const SAFE_BACKUP_DB_NAME = 'GlasstrackSafeLibraryDB';
-const SAFE_BACKUP_DB_VERSION = 2;
-const SAFE_BACKUP_AUTO_KEY = 'glasstrack_safe_backup_auto_v1';
-const SAFE_RESTORE_AUTO_KEY = 'glasstrack_safe_restore_auto_v1';
-const SAFE_TEMPORARY_BACKUP_KEY = 'glasstrack_safe_temporary_backup_v2';
-const SAFE_TEMPORARY_INTERVAL_KEY = 'glasstrack_safe_temporary_interval_minutes_v2';
-const SAFE_TEMPORARY_LAST_KEY = 'glasstrack_safe_temporary_last_run_v2';
-const SAFE_BACKUP_SNAPSHOT_STORE = 'snapshots';
-let safeTemporaryBackupTimer = null;
-let safeTemporaryStartupTimer = null;
-let safeTemporaryBackupRunning = null;
-let safeTemporaryLastRunAt = 0;
-let b68VisibilityHandlerReady = false;
-let safeBackupDb = null;
-let safeBackupOpenPromise = null;
-let safeBackupQueue = Promise.resolve();
-let safeRestoreTimer = null;
-let safeRestoreGeneration = 0;
-let safeBackupFailureNotified = false;
-
-function isSafeBackupEnabled() {
-  try { return localStorage.getItem(SAFE_BACKUP_AUTO_KEY) !== 'false'; } catch (_) { return true; }
-}
-function isSafeAutoRestoreEnabled() {
-  try { return localStorage.getItem(SAFE_RESTORE_AUTO_KEY) !== 'false'; } catch (_) { return true; }
-}
-function makeSafeBackupId() {
-  try { if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID(); } catch (_) {}
-  return `safe_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
-}
-function safeBackupKey(profileId, safeBackupId) {
-  return `${String(profileId || GLASSTRACK_GUEST_ID)}::${String(safeBackupId)}`;
-}
-function openSafeBackupDatabase() {
-  if (safeBackupDb) return Promise.resolve(safeBackupDb);
-  if (safeBackupOpenPromise) return safeBackupOpenPromise;
-  safeBackupOpenPromise = new Promise((resolve, reject) => {
-    if (!window.indexedDB) { reject(new Error('IndexedDB no está disponible en este navegador.')); return; }
-    let request;
-    try { request = indexedDB.open(SAFE_BACKUP_DB_NAME, SAFE_BACKUP_DB_VERSION); }
-    catch (error) { reject(error); return; }
-    request.onupgradeneeded = event => {
-      const database = event.target.result;
-      let store;
-      if (!database.objectStoreNames.contains('protectedSongs')) {
-        store = database.createObjectStore('protectedSongs', { keyPath: 'key' });
-      } else {
-        store = event.target.transaction.objectStore('protectedSongs');
-      }
-      if (!store.indexNames.contains('profileId')) store.createIndex('profileId', 'profileId', { unique: false });
-      if (!store.indexNames.contains('safeBackupId')) store.createIndex('safeBackupId', 'safeBackupId', { unique: false });
-      let snapshotsStore;
-      if (!database.objectStoreNames.contains(SAFE_BACKUP_SNAPSHOT_STORE)) {
-        snapshotsStore = database.createObjectStore(SAFE_BACKUP_SNAPSHOT_STORE, { keyPath: 'id' });
-      } else {
-        snapshotsStore = event.target.transaction.objectStore(SAFE_BACKUP_SNAPSHOT_STORE);
-      }
-      if (!snapshotsStore.indexNames.contains('profileId')) snapshotsStore.createIndex('profileId', 'profileId', { unique: false });
-    };
-    request.onsuccess = event => {
-      safeBackupDb = event.target.result;
-      safeBackupDb.onversionchange = () => { try { safeBackupDb.close(); } catch (_) {} safeBackupDb = null; safeBackupOpenPromise = null; };
-      resolve(safeBackupDb);
-    };
-    request.onerror = () => reject(request.error || new Error('No se pudo abrir la Biblioteca Segura.'));
-    request.onblocked = () => console.warn('La base de seguridad está bloqueada por otra pestaña de Glasstrack.');
-  }).catch(error => {
-    safeBackupOpenPromise = null;
-    throw error;
-  });
-  return safeBackupOpenPromise;
-}
-function fastSafeHash(value) {
-  const text = String(value || '');
-  let hash = 2166136261;
-  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
-  return `${(hash >>> 0).toString(16)}:${text.length}`;
-}
-function safeFingerprint(song) {
-  const blob = song?.fileBlob;
-  // No serializar la carátula/las letras completas dentro de otro JSON: puede ser
-  // contenido grande en base64. Se calcula una huella y se libera en esta iteración.
-  const cover = typeof song?.cover === 'string' ? song.cover : '';
-  const lyrics = typeof song?.lyrics === 'string' ? song.lyrics : '';
-  let metadataHash = '';
-  try { metadataHash = fastSafeHash(JSON.stringify(song?.metadata || {})); } catch (_) { metadataHash = 'metadata-unserializable'; }
-  const data = JSON.stringify({
-    id: song?.safeBackupId || '', title: song?.title || '', artist: song?.artist || '', album: song?.album || '',
-    duration: song?.duration || song?.length || '', coverHash: fastSafeHash(cover), lyricsHash: fastSafeHash(lyrics), metadataHash,
-    isFav: !!song?.isFav, isHidden: !!song?.isHidden, sourceType: song?.sourceType || '',
-    youtubeId: song?.youtubeId || '', directUrl: song?.directUrl || '',
-    fileName: blob?.name || '', fileType: blob?.type || '', fileSize: blob?.size || 0,
-    fileLastModified: blob?.lastModified || 0, track: song?.track || '', year: song?.year || '',
-    genre: song?.genre || '', artistSort: song?.artistSort || ''
-  });
-  return fastSafeHash(data);
-}
-function approximateSongSize(song) {
-  let total = Number(song?.fileBlob?.size || 0);
-  if (typeof song?.cover === 'string' && song.cover.startsWith('data:')) total += Math.ceil(song.cover.length * 0.75);
-  if (typeof song?.lyrics === 'string') total += song.lyrics.length * 2;
-  total += 1024;
-  return total;
-}
-function cloneSongForSafeBackup(song, profileId) {
-  const snapshot = { ...song };
-  delete snapshot.url; // Las URL de blob son temporales y se reconstruyen al cargar la biblioteca.
-  snapshot.accountId = profileId || snapshot.accountId || GLASSTRACK_GUEST_ID;
-  if (!snapshot.safeBackupId) snapshot.safeBackupId = makeSafeBackupId();
-  return snapshot;
-}
-function writeSafeBackupRecord(song, profileId) {
-  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
-    const snapshot = cloneSongForSafeBackup(song, profileId);
-    const key = safeBackupKey(snapshot.accountId, snapshot.safeBackupId);
-    const fingerprint = safeFingerprint(snapshot);
-    let tx;
-    let savedRecord = null;
-    try {
-      tx = database.transaction(['protectedSongs'], 'readwrite');
-      const store = tx.objectStore('protectedSongs');
-      const existingRequest = store.get(key);
-      existingRequest.onsuccess = () => {
-        const old = existingRequest.result;
-        if (old && old.fingerprint === fingerprint) {
-          savedRecord = old;
-          return;
-        }
-        savedRecord = {
-          key,
-          profileId: snapshot.accountId,
-          safeBackupId: snapshot.safeBackupId,
-          song: snapshot,
-          fingerprint,
-          sizeBytes: approximateSongSize(snapshot),
-          backedUpAt: new Date().toISOString(),
-          restoreExcluded: old ? !!old.restoreExcluded : false,
-          intentionalDeleteAt: old ? (old.intentionalDeleteAt || null) : null
-        };
-        store.put(savedRecord);
-      };
-      existingRequest.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = () => resolve({ record: savedRecord, unchanged: !!(savedRecord && savedRecord.backedUpAt && savedRecord.fingerprint === fingerprint) });
-      tx.onerror = () => reject(tx.error || new Error('No se pudo verificar la copia segura.'));
-      tx.onabort = () => reject(tx.error || new Error('La copia segura se canceló. Comprueba el espacio disponible.'));
-    } catch (error) { reject(error); }
-  }));
-}
-function queueSafeSongBackup(song, options = {}) {
-  if (!song) return Promise.resolve(false);
-  if (!options.force && !isSafeBackupEnabled()) return Promise.resolve(false);
-  const profileId = song.accountId || activeProfileId || GLASSTRACK_GUEST_ID;
-  if (!song.safeBackupId) song.safeBackupId = makeSafeBackupId();
-  const snapshot = cloneSongForSafeBackup(song, profileId);
-  const operation = safeBackupQueue.catch(() => {}).then(() => writeSafeBackupRecord(snapshot, profileId));
-  safeBackupQueue = operation.catch(() => {});
-  return operation.then(result => result);
-}
-function getSafeBackupRecords(profileId = activeProfileId) {
-  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction(['protectedSongs'], 'readonly');
-      const request = tx.objectStore('protectedSongs').index('profileId').getAll(String(profileId || GLASSTRACK_GUEST_ID));
-      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
-      request.onerror = () => reject(request.error || new Error('No se pudieron leer las canciones protegidas.'));
-      tx.onerror = () => reject(tx.error || new Error('Error leyendo la Biblioteca Segura.'));
-    } catch (error) { reject(error); }
-  }));
-}
-
-function b68EstimateStoredBytes(value, seen = new WeakSet()) {
-  if (value == null) return 0;
-  if (typeof value === 'string') return value.length * 2;
-  if (typeof value === 'number' || typeof value === 'boolean') return 8;
-  if (typeof Blob !== 'undefined' && value instanceof Blob) return Number(value.size) || 0;
-  if (value instanceof ArrayBuffer) return value.byteLength;
-  if (ArrayBuffer.isView(value)) return value.byteLength;
-  if (value instanceof Date) return 8;
-  if (typeof value !== 'object') return 0;
-  if (seen.has(value)) return 0;
-  seen.add(value);
-  let total = 0;
-  if (Array.isArray(value)) {
-    for (const child of value) total += b68EstimateStoredBytes(child, seen);
-  } else {
-    for (const [key, child] of Object.entries(value)) total += key.length * 2 + b68EstimateStoredBytes(child, seen);
-  }
-  return total;
-}
-
-function getSafeBackupStats(profileId = activeProfileId) {
-  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
-    let count = 0, bytes = 0, latest = 0;
-    const targetProfile = String(profileId || GLASSTRACK_GUEST_ID);
-    try {
-      const stores = ['protectedSongs'];
-      if (database.objectStoreNames.contains(SAFE_BACKUP_SNAPSHOT_STORE)) stores.push(SAFE_BACKUP_SNAPSHOT_STORE);
-      const tx = database.transaction(stores, 'readonly');
-      const request = tx.objectStore('protectedSongs').index('profileId').openCursor(IDBKeyRange.only(targetProfile));
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (!cursor) return;
-        const record = cursor.value;
-        count++;
-        bytes += Number(record.sizeBytes || approximateSongSize(record.song));
-        latest = Math.max(latest, Date.parse(record.backedUpAt || '') || 0);
-        cursor.continue();
-      };
-      request.onerror = () => reject(request.error || new Error('No se pudieron contar las canciones protegidas.'));
-      if (stores.includes(SAFE_BACKUP_SNAPSHOT_STORE)) {
-        const snapshotsReq = tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).index('profileId').getAll(targetProfile);
-        snapshotsReq.onsuccess = () => {
-          (Array.isArray(snapshotsReq.result) ? snapshotsReq.result : []).forEach(snapshot => {
-            bytes += b68EstimateStoredBytes(snapshot);
-            latest = Math.max(latest, Date.parse(snapshot.createdAt || '') || 0);
-          });
-        };
-        snapshotsReq.onerror = () => console.warn('No se pudo calcular el tamaño de todos los puntos de guardado.');
-      }
-      tx.oncomplete = () => resolve({ count, bytes, latest });
-      tx.onerror = () => reject(tx.error || new Error('Error consultando el resumen de la Biblioteca Segura.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la consulta de la Biblioteca Segura.'));
-    } catch (error) { reject(error); }
-  }));
-}
-
-function getPrimarySongsForProfile(profileId = activeProfileId) {
-  return new Promise((resolve, reject) => {
-    if (!db) { reject(new Error('La biblioteca principal todavía no está lista.')); return; }
-    try {
-      const tx = db.transaction(['songs'], 'readonly');
-      const request = tx.objectStore('songs').getAll();
-      request.onsuccess = () => {
-        const all = Array.isArray(request.result) ? request.result : [];
-        resolve(all.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) === (profileId || GLASSTRACK_GUEST_ID)));
-      };
-      request.onerror = () => reject(request.error || new Error('No se pudieron leer las canciones de la biblioteca.'));
-      tx.onerror = () => reject(tx.error || new Error('Error leyendo la biblioteca principal.'));
-    } catch (error) { reject(error); }
-  });
-}
-async function seedSafeBackupFromSongs(songs, profileId = activeProfileId, force = false) {
-  if ((!force && !isSafeBackupEnabled()) || !Array.isArray(songs) || songs.length === 0) return { protected: 0, skipped: 0 };
-  let protectedCount = 0;
-  for (const song of songs) {
-    try {
-      await queueSafeSongBackup(song, { force: true });
-      protectedCount++;
-    } catch (error) {
-      console.warn('Falló el respaldo de una canción:', song?.title, error);
-      throw error;
-    }
-  }
-  return { protected: protectedCount, skipped: 0 };
-}
-function handleSafeBackupFailure(error, message) {
-  console.error(message || 'Error de Biblioteca Segura:', error);
-  setSafeLibraryMessage(`${message || 'No se pudo completar la copia segura'} ${error?.message || 'Comprueba el espacio disponible y los permisos del navegador.'}`, 'error');
-  if (!safeBackupFailureNotified) {
-    safeBackupFailureNotified = true;
-    showToast('Una o más canciones no pudieron verificarse en la Biblioteca Segura. Revisa el panel de Gestión de Datos y Biblioteca.', 'error', 6000);
-    setTimeout(() => { safeBackupFailureNotified = false; }, 10000);
-  }
-}
-function setSafeLibraryMessage(message, kind = 'info') {
-  const element = document.getElementById('safe-library-message');
-  if (!element) return;
-  element.textContent = String(message || '');
-  element.classList.remove('is-error', 'is-success', 'is-warning');
-  if (kind === 'error') element.classList.add('is-error');
-  else if (kind === 'success') element.classList.add('is-success');
-  else if (kind === 'warning') element.classList.add('is-warning');
-}
-function formatSafeBytes(bytes) {
-  const size = Math.max(0, Number(bytes) || 0);
-  if (size < 1024) return `${Math.round(size)} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-async function refreshSafeBackupStatus() {
-  const countEl = document.getElementById('safe-library-count');
-  if (!countEl) return;
-  const backupToggle = document.getElementById('toggle-safe-backup');
-  const restoreToggle = document.getElementById('toggle-safe-restore');
-  if (backupToggle) backupToggle.checked = isSafeBackupEnabled();
-  if (restoreToggle) restoreToggle.checked = isSafeAutoRestoreEnabled();
-  try {
-    const { count, bytes, latest } = await getSafeBackupStats(activeProfileId);
-    countEl.textContent = String(count);
-    const sizeEl = document.getElementById('safe-library-size');
-    if (sizeEl) sizeEl.textContent = formatSafeBytes(bytes);
-    const latestEl = document.getElementById('safe-library-last-run');
-    if (latestEl) latestEl.textContent = latest ? new Date(latest).toLocaleString() : 'Aún no disponible';
-    const stateEl = document.getElementById('safe-library-state');
-    if (stateEl) {
-      stateEl.textContent = !isSafeBackupEnabled() ? 'Automática pausada' : 'Copia activa';
-      stateEl.classList.toggle('is-paused', !isSafeBackupEnabled());
-    }
-    if (count && !isSafeBackupEnabled()) setSafeLibraryMessage(`Se conservan ${count} canción(es) protegida(s). La copia automática está pausada; el respaldo existente no se ha borrado.`, 'warning');
-    else if (count) setSafeLibraryMessage(`Biblioteca Segura disponible: ${count} canción(es) protegida(s). Las copias se mantienen separadas de la biblioteca principal.`, 'success');
-    else if (!isSafeBackupEnabled()) setSafeLibraryMessage('La copia automática está pausada. Actívala para proteger las canciones nuevas; no se ha eliminado ningún respaldo existente.', 'warning');
-    else setSafeLibraryMessage('La Biblioteca Segura aún no contiene canciones. Al activar la copia automática, Glasstrack protegerá la biblioteca actual.', 'info');
-    return { count, bytes, latest };
-  } catch (error) {
-    const stateEl = document.getElementById('safe-library-state');
-    if (stateEl) { stateEl.textContent = 'No disponible'; stateEl.classList.add('is-paused'); }
-    countEl.textContent = '—';
-    const sizeEl = document.getElementById('safe-library-size'); if (sizeEl) sizeEl.textContent = 'No disponible';
-    const latestEl = document.getElementById('safe-library-last-run'); if (latestEl) latestEl.textContent = 'No disponible';
-    throw error;
-  }
-}
-async function backupCurrentLibrary(force = true) {
-  const profileId = activeProfileId;
-  const primarySongs = await getPrimarySongsForProfile(profileId);
-  if (primarySongs.length === 0) {
-    await refreshSafeBackupStatus().catch(() => {});
-    setSafeLibraryMessage('La biblioteca principal está vacía. No se ha sobrescrito ni borrado la copia segura.', 'warning');
-    showToast('Biblioteca vacía: el respaldo anterior se conserva intacto.', 'warning', 3500);
-    return { protected: 0, empty: true };
-  }
-  const button = document.getElementById('btn-safe-backup-now');
-  if (button) { button.disabled = true; button.textContent = 'Verificando…'; }
-  try {
-    await seedSafeBackupFromSongs(primarySongs, profileId, force);
-    const status = await refreshSafeBackupStatus();
-    setSafeLibraryMessage(`Copia verificada correctamente. Se comprobaron ${primarySongs.length} canción(es); las copias anteriores que no están en la biblioteca principal se conservaron.`, 'success');
-    showToast(`Biblioteca Segura actualizada: ${primarySongs.length} canción(es) revisada(s).`, 'success', 3000);
-    return status;
-  } finally {
-    if (button) { button.disabled = false; button.textContent = 'Respaldar ahora'; }
-  }
-}
-function cancelSafeAutoRestore() {
-  safeRestoreGeneration++;
-  if (safeRestoreTimer) clearTimeout(safeRestoreTimer);
-  safeRestoreTimer = null;
-}
-async function scheduleSafeAutoRestore(profileId = activeProfileId) {
-  cancelSafeAutoRestore();
-  if (!isSafeAutoRestoreEnabled()) return;
-  let records;
-  try { records = await getSafeBackupRecords(profileId); }
-  catch (error) { console.warn('No se pudo comprobar el respaldo antes de programar la recuperación:', error); return; }
-  const eligible = records.filter(record => !record.restoreExcluded);
-  if (!eligible.length) {
-    if (records.length) setSafeLibraryMessage('Hay copias seguras guardadas, pero están marcadas como eliminadas intencionalmente. No se restaurarán solas; puedes recuperarlas manualmente.', 'warning');
-    return;
-  }
-  const generation = safeRestoreGeneration;
-  setSafeLibraryMessage(`Biblioteca principal vacía. Esperando hasta dos minutos y comprobando ${eligible.length} respaldo(s) válido(s) antes de recuperar.`, 'warning');
-  safeRestoreTimer = setTimeout(async () => {
-    if (generation !== safeRestoreGeneration || profileId !== activeProfileId || !isSafeAutoRestoreEnabled()) return;
-    safeRestoreTimer = null;
-    try {
-      const currentSongs = await getPrimarySongsForProfile(profileId);
-      if (currentSongs.length > 0) {
-        setSafeLibraryMessage('La biblioteca ya contiene canciones. Se canceló la recuperación automática para evitar duplicados.', 'success');
-        return;
-      }
-      await restoreSafeLibrary({ profileId, automatic: true });
-    } catch (error) {
-      handleSafeBackupFailure(error, 'La recuperación automática no se pudo completar.');
-    }
-  }, 120000);
-}
-function markSafeSongIntentionallyDeleted(song) {
-  if (!song) return Promise.resolve();
-  const profileId = song.accountId || activeProfileId;
-  const mark = () => openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
-    const key = safeBackupKey(profileId, song.safeBackupId);
-    try {
-      const tx = database.transaction(['protectedSongs'], 'readwrite');
-      const store = tx.objectStore('protectedSongs');
-      const request = store.get(key);
-      request.onsuccess = () => {
-        const record = request.result;
-        if (record) {
-          record.restoreExcluded = true;
-          record.intentionalDeleteAt = new Date().toISOString();
-          store.put(record);
-        }
-      };
-      request.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudo actualizar el estado del respaldo.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la actualización del respaldo.'));
-    } catch (error) { reject(error); }
-  }));
-  return queueSafeSongBackup(song, { force: true }).catch(() => {}).then(mark).then(() => refreshSafeBackupStatus());
-}
-async function setSafeRecordRestoreBlocked(record, blocked) {
-  const database = await openSafeBackupDatabase();
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction(['protectedSongs'], 'readwrite');
-      const store = tx.objectStore('protectedSongs');
-      const request = store.get(record.key);
-      request.onsuccess = () => {
-        if (!request.result) return;
-        const updated = request.result;
-        updated.restoreExcluded = !!blocked;
-        updated.intentionalDeleteAt = blocked ? new Date().toISOString() : null;
-        store.put(updated);
-      };
-      request.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudo actualizar el estado de restauración.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló el cambio de estado del respaldo.'));
-    } catch (error) { reject(error); }
-  });
-}
-function areSameSongForRestore(existing, protectedSong) {
-  if (existing?.safeBackupId && protectedSong?.safeBackupId && existing.safeBackupId === protectedSong.safeBackupId) return true;
-  const normalize = value => String(value || '').trim().toLocaleLowerCase();
-  if (normalize(existing?.title) !== normalize(protectedSong?.title) || normalize(existing?.artist) !== normalize(protectedSong?.artist)) return false;
-  if (existing?.youtubeId || protectedSong?.youtubeId) return normalize(existing.youtubeId) === normalize(protectedSong.youtubeId);
-  if (existing?.directUrl || protectedSong?.directUrl) return normalize(existing.directUrl) === normalize(protectedSong.directUrl);
-  const existingFile = existing?.fileBlob, protectedFile = protectedSong?.fileBlob;
-  if (existingFile || protectedFile) return !!existingFile && !!protectedFile && existingFile.size === protectedFile.size && normalize(existingFile.name) === normalize(protectedFile.name);
-  return true;
-}
-async function restoreSafeLibrary(options = {}) {
-  const profileId = options.profileId || activeProfileId;
-  const automatic = !!options.automatic;
-  const currentSongs = await getPrimarySongsForProfile(profileId);
-  if (automatic && currentSongs.length > 0) {
-    setSafeLibraryMessage('La biblioteca ya contiene canciones. Se canceló la recuperación para evitar duplicados.', 'success');
-    return { restored: 0, skipped: 0 };
-  }
-  const allRecords = await getSafeBackupRecords(profileId);
-  const records = automatic ? allRecords.filter(record => !record.restoreExcluded) : allRecords;
-  if (!records.length) {
-    const note = allRecords.length
-      ? 'No hay canciones aptas para recuperación automática: las copias disponibles corresponden a canciones que eliminaste intencionalmente. Puedes recuperarlas manualmente.'
-      : 'No hay canciones protegidas para esta cuenta. No se modificó la biblioteca principal.';
-    setSafeLibraryMessage(note, 'warning');
-    if (!automatic) showToast('No hay canciones respaldadas para recuperar en esta cuenta.', 'warning', 3000);
-    return { restored: 0, skipped: 0 };
-  }
-  const existing = currentSongs.slice();
-  const toRestore = [];
-  let skipped = 0;
-  for (const record of records) {
-    const protectedSong = record.song;
-    if (!protectedSong) { skipped++; continue; }
-    if (existing.some(song => areSameSongForRestore(song, protectedSong))) { skipped++; continue; }
-    const song = { ...protectedSong, accountId: profileId, safeBackupId: protectedSong.safeBackupId || record.safeBackupId };
-    delete song.id;
-    delete song.url;
-    toRestore.push({ record, song });
-    existing.push(song);
-  }
-  if (!toRestore.length) {
-    setSafeLibraryMessage(`La biblioteca ya contiene todas las canciones respaldadas (${skipped} omitida(s) para evitar duplicados).`, 'success');
-    showToast('No faltan canciones por restaurar; se evitaron duplicados.', 'info', 3000);
-    return { restored: 0, skipped };
-  }
-  const button = document.getElementById('btn-safe-restore-now');
-  if (button && !automatic) { button.disabled = true; button.textContent = 'Restaurando…'; }
-  try {
-    await new Promise((resolve, reject) => {
-      try {
-        const tx = db.transaction(['songs'], 'readwrite');
-        const store = tx.objectStore('songs');
-        toRestore.forEach(({ song }) => store.add(song));
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error || new Error('No se pudieron guardar las canciones restauradas.'));
-        tx.onabort = () => reject(tx.error || new Error('La restauración se canceló. Comprueba el almacenamiento disponible.'));
-      } catch (error) { reject(error); }
-    });
-    for (const { record } of toRestore) await setSafeRecordRestoreBlocked(record, false);
-    try {
-      localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
-      localStorage.setItem(`glasstrack_library_had_songs_v1_${profileId}`, 'true');
-    } catch (_) {}
-    if (profileId === activeProfileId) loadStoredSongs();
-    const message = `Recuperación completada: ${toRestore.length} canción(es) restaurada(s); ${skipped} omitida(s) para evitar duplicados.`;
-    setSafeLibraryMessage(message, 'success');
-    showToast(message, 'success', 5000);
-    await refreshSafeBackupStatus().catch(() => {});
-    return { restored: toRestore.length, skipped };
-  } finally {
-    if (button && !automatic) { button.disabled = false; button.textContent = 'Restaurar biblioteca'; }
-  }
-}
-async function deleteCurrentProfileSafeBackup() {
-  const profileId = activeProfileId;
-  const records = await getSafeBackupRecords(profileId);
-  if (!records.length) { setSafeLibraryMessage('Esta cuenta no tiene copias seguras que eliminar.', 'info'); return; }
-  const confirmation = confirm(`Vas a eliminar las ${records.length} canción(es) protegida(s) de la Biblioteca Segura de esta cuenta. La biblioteca principal no se eliminará. Para evitar que estas copias vuelvan a crearse de inmediato, también se pausará la copia automática hasta que la actives otra vez. ¿Continuar?`);
-  if (!confirmation) return;
-  cancelSafeAutoRestore();
-  localStorage.setItem(SAFE_BACKUP_AUTO_KEY, 'false');
-  const backupToggle = document.getElementById('toggle-safe-backup');
-  if (backupToggle) backupToggle.checked = false;
-  const database = await openSafeBackupDatabase();
-  await new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction(['protectedSongs'], 'readwrite');
-      const store = tx.objectStore('protectedSongs');
-      const index = store.index('profileId');
-      const request = index.openCursor(IDBKeyRange.only(String(profileId || GLASSTRACK_GUEST_ID)));
-      request.onsuccess = () => { const cursor = request.result; if (cursor) { cursor.delete(); cursor.continue(); } };
-      request.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudieron eliminar las copias seleccionadas.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la eliminación de las copias.'));
-    } catch (error) { reject(error); }
-  });
-  await refreshSafeBackupStatus();
-  setSafeLibraryMessage('Se eliminaron las copias seguras de esta cuenta. La biblioteca principal permanece intacta y la copia automática está pausada hasta que la reactives.', 'success');
-  showToast('Copias seguras eliminadas para esta cuenta.', 'success', 3000);
-}
-async function exportSafeBackupArchive() {
-  if (!window.JSZip) throw new Error('Motor ZIP no disponible. Recarga Glasstrack e inténtalo de nuevo.');
-  const records = await getSafeBackupRecords(activeProfileId);
-  if (!records.length) throw new Error('La Biblioteca Segura de esta cuenta está vacía.');
-  const zip = new JSZip();
-  const payload = {
-    format: 'glasstrack-backup', version: 2, exportedAt: new Date().toISOString(),
-    songs: records.map(record => serializeSongForBackup(record.song)), files: [],
-    safeBackupExport: true, profileId: activeProfileId
-  };
-  const songsFolder = zip.folder('songs');
-  records.forEach((record, index) => {
-    const song = record.song || {};
-    if (!song.fileBlob || !songsFolder) return;
-    const originalName = song.fileBlob.name || `${song.title || 'cancion'}.bin`;
-    const safeName = String(originalName).replace(/[^a-z0-9._-]+/gi, '_').slice(-100) || 'audio.bin';
-    const path = `songs/${String(index + 1).padStart(5, '0')}-${safeName}`;
-    payload.files.push({ index, name: path.split('/').pop(), path, type: song.fileBlob.type || 'application/octet-stream' });
-    songsFolder.file(path.split('/').pop(), song.fileBlob);
-  });
-  zip.file('glasstrack-backup.json', JSON.stringify(payload, null, 2));
-  const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
-  downloadFileBlob(blob, `glasstrack-biblioteca-segura-${new Date().toISOString().slice(0,10)}.zip`);
-  setSafeLibraryMessage(`Se exportaron ${records.length} canción(es) protegida(s) a un ZIP externo. Guarda ese archivo fuera del navegador.`, 'success');
-  showToast(`Copia externa exportada: ${records.length} canción(es).`, 'success', 3500);
-}
-function initializeSafeBackupControls() {
-  const backupToggle = document.getElementById('toggle-safe-backup');
-  const restoreToggle = document.getElementById('toggle-safe-restore');
-  if (backupToggle) {
-    backupToggle.checked = isSafeBackupEnabled();
-    backupToggle.addEventListener('change', async () => {
-      localStorage.setItem(SAFE_BACKUP_AUTO_KEY, backupToggle.checked ? 'true' : 'false');
-      if (backupToggle.checked) {
-        setSafeLibraryMessage('Copia automática activada. Verificando la biblioteca actual…', 'info');
-        try { await backupCurrentLibrary(true); }
-        catch (error) { handleSafeBackupFailure(error, 'No se pudo activar y verificar la copia automática.'); }
-      } else {
-        setSafeLibraryMessage('Copia automática pausada. Los respaldos existentes se conservarán y no se actualizarán hasta reactivarla.', 'warning');
-        await refreshSafeBackupStatus().catch(() => {});
-      }
-    });
-  }
-  if (restoreToggle) {
-    restoreToggle.checked = isSafeAutoRestoreEnabled();
-    restoreToggle.addEventListener('change', () => {
-      localStorage.setItem(SAFE_RESTORE_AUTO_KEY, restoreToggle.checked ? 'true' : 'false');
-      if (!restoreToggle.checked) cancelSafeAutoRestore();
-      else if (!songList.length) scheduleSafeAutoRestore(activeProfileId);
-      setSafeLibraryMessage(restoreToggle.checked ? 'Recuperación automática activada. Solo actuará si la biblioteca permanece vacía durante dos minutos y hay copias aptas.' : 'Recuperación automática pausada. Las copias seguras siguen guardadas.', restoreToggle.checked ? 'success' : 'warning');
-    });
-  }
-  document.getElementById('btn-safe-backup-now')?.addEventListener('click', () => backupCurrentLibrary(true).catch(error => handleSafeBackupFailure(error, 'No se pudo completar el respaldo manual.')));
-  document.getElementById('btn-safe-restore-now')?.addEventListener('click', async () => {
-    if (songList.length && !confirm('La biblioteca actual contiene canciones. Glasstrack añadirá únicamente las canciones respaldadas que falten, sin reemplazar las actuales. ¿Continuar?')) return;
-    try { await restoreSafeLibrary({ profileId: activeProfileId, automatic: false }); }
-    catch (error) { handleSafeBackupFailure(error, 'No se pudo restaurar la biblioteca desde la copia segura.'); }
-  });
-  document.getElementById('btn-safe-export')?.addEventListener('click', () => exportSafeBackupArchive().catch(error => { setSafeLibraryMessage(error.message || 'No se pudo exportar la copia segura.', 'error'); showToast(error.message || 'No se pudo exportar la copia segura.', 'error', 4500); }));
-  document.getElementById('btn-safe-delete-backup')?.addEventListener('click', () => deleteCurrentProfileSafeBackup().catch(error => handleSafeBackupFailure(error, 'No se pudieron eliminar las copias seguras de esta cuenta.')));
-}
-initializeSafeBackupControls();
-
-// ==========================================
 // COPIA DE SEGURIDAD JSON / ZIP / JAR
 // ==========================================
 function downloadFileBlob(blob, filename) {
@@ -3601,11 +3061,10 @@ function serializeSongForBackup(song) {
 }
 
 async function collectBackupPayload(includeFiles = false) {
-  let songs = Array.isArray(songList) ? songList : [];
-  try { if (db) songs = await getPrimarySongsForProfile(activeProfileId); } catch (error) { console.warn('Se utilizará la biblioteca visible para la exportación:', error); }
+  const songs = Array.isArray(songList) ? songList : [];
   const payload = {
     format: 'glasstrack-backup',
-    version: 2,
+    version: 1,
     exportedAt: new Date().toISOString(),
     songs: songs.map(serializeSongForBackup),
     playlists,
@@ -3621,17 +3080,15 @@ async function collectBackupPayload(includeFiles = false) {
     glasstrackMediaKeys: localStorage.getItem('glasstrackMediaKeys')
   };
   if (includeFiles) {
-    payload.files = [];
-    songs.forEach((song, index) => {
-      if (!song.fileBlob) return;
-      const originalName = song.fileBlob.name || `${String(song.title || 'song').replace(/[^a-z0-9._-]+/gi, '_')}.bin`;
-      const safeName = String(originalName).replace(/[^a-z0-9._-]+/gi, '_').slice(-100) || 'audio.bin';
-      const path = `songs/${String(index + 1).padStart(5, '0')}-${safeName}`;
-      payload.files.push({ index, name: path.split('/').pop(), path, type: song.fileBlob.type || 'application/octet-stream' });
-    });
+    payload.files = songs.map((song, index) => ({
+      index,
+      name: song.fileBlob?.name || `${String(song.title || 'song').replace(/[^a-z0-9._-]+/gi, '_')}.bin`,
+      type: song.fileBlob?.type || 'application/octet-stream'
+    }));
   }
   return payload;
 }
+
 async function exportLibraryJson() {
   const payload = await collectBackupPayload(false);
   downloadFileBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), 'glasstrack-backup.json');
@@ -3647,10 +3104,9 @@ async function exportLibraryArchive(extension) {
   const payload = await collectBackupPayload(true);
   zip.file('glasstrack-backup.json', JSON.stringify(payload, null, 2));
   const songsFolder = zip.folder('songs');
-  const allSongs = await getPrimarySongsForProfile(activeProfileId).catch(() => songList);
-  for (const fileInfo of (payload.files || [])) {
-    const blob = allSongs[fileInfo.index]?.fileBlob;
-    if (blob && songsFolder) songsFolder.file(fileInfo.name, blob);
+  for (let i = 0; i < songList.length; i++) {
+    const blob = songList[i]?.fileBlob;
+    if (blob && songsFolder) songsFolder.file(payload.files[i].name, blob);
   }
   const out = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
   const filename = `glasstrack-backup.${extension}`;
@@ -3681,8 +3137,7 @@ async function importLibraryJsonPayload(payload, zip = null) {
     let fileBlob = null;
     const fileInfo = Array.isArray(payload.files) ? payload.files.find(f => f.index === i) : null;
     if (zip && fileInfo) {
-      const archivePath = fileInfo.path || `songs/${fileInfo.name}`;
-      const archiveFile = zip.file(archivePath);
+      const archiveFile = zip.file(`songs/${fileInfo.name}`);
       if (archiveFile) {
         const bytes = await archiveFile.async('uint8array');
         fileBlob = new Blob([bytes], { type: fileInfo.type || 'application/octet-stream' });
@@ -3694,9 +3149,8 @@ async function importLibraryJsonPayload(payload, zip = null) {
     const song = {
       ...source,
       accountId: activeProfileId,
-      safeBackupId: source.safeBackupId || makeSafeBackupId(),
       fileBlob,
-      url: fileBlob ? URL.createObjectURL(fileBlob) : (source.directUrl || '')
+      url: fileBlob ? URL.createObjectURL(fileBlob) : ''
     };
     delete song.id;
 
@@ -3707,15 +3161,10 @@ async function importLibraryJsonPayload(payload, zip = null) {
       req.onsuccess = e => {
         if (source.id !== undefined) idMap.set(String(source.id), e.target.result);
         song.id = e.target.result;
+        resolve();
       };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudo importar una canción.'));
-      tx.onabort = () => reject(tx.error || new Error('La importación se canceló.'));
+      req.onerror = () => reject(req.error || new Error('No se pudo importar una canción.'));
     });
-    try {
-      await queueSafeSongBackup(song, { force: true });
-      await setSafeRecordRestoreBlocked({ key: safeBackupKey(activeProfileId, song.safeBackupId) }, false);
-    } catch (backupError) { handleSafeBackupFailure(backupError, `La canción importada "${song.title || 'sin título'}" aún no está protegida.`); }
     importedCount++;
   }
 
@@ -3732,13 +3181,12 @@ async function importLibraryJsonPayload(payload, zip = null) {
   });
   await new Promise(resolve => setTimeout(resolve, 50));
   loadStoredSongs();
-  await refreshSafeBackupStatus().catch(() => {});
   showToast(`Importación completada: ${importedCount} canción(es).`, 'info', 2200);
 }
 
-if (document.getElementById('btn-export-json')) document.getElementById('btn-export-json').addEventListener('click', () => exportLibraryJson().catch(error => showToast(`No se pudo exportar el JSON: ${error.message || 'error desconocido'}`, 'error', 4000)));
-if (document.getElementById('btn-export-zip')) document.getElementById('btn-export-zip').addEventListener('click', () => exportLibraryArchive('zip').catch(error => showToast(`No se pudo exportar el ZIP: ${error.message || 'error desconocido'}`, 'error', 4000)));
-if (document.getElementById('btn-export-jar')) document.getElementById('btn-export-jar').addEventListener('click', () => exportLibraryArchive('jar').catch(error => showToast(`No se pudo exportar el JAR: ${error.message || 'error desconocido'}`, 'error', 4000)));
+if (document.getElementById('btn-export-json')) document.getElementById('btn-export-json').addEventListener('click', exportLibraryJson);
+if (document.getElementById('btn-export-zip')) document.getElementById('btn-export-zip').addEventListener('click', () => exportLibraryArchive('zip'));
+if (document.getElementById('btn-export-jar')) document.getElementById('btn-export-jar').addEventListener('click', () => exportLibraryArchive('jar'));
 if (document.getElementById('input-import-json')) {
   document.getElementById('input-import-json').addEventListener('change', async e => {
     const file = e.target.files?.[0];
@@ -3766,1138 +3214,6 @@ if (document.getElementById('input-import-json')) {
   });
 }
 
-// =====================================================================
-// B68 — RESPALDO TEMPORAL, PUNTOS DE GUARDADO Y COPIA COMPLETA PORTABLE
-// =====================================================================
-const B68_PROFILE_STATE_KEYS = ['playlistsDB', 'listeningStats', 'totalPlayedSeconds', 'concludorChain'];
-const B68_SENSITIVE_STORAGE_RE = /password|passwd|credential|auth|token|session|login|account|e-?mail/i;
-
-function isSafeTemporaryBackupEnabled() {
-  try { return localStorage.getItem(SAFE_TEMPORARY_BACKUP_KEY) !== 'false'; } catch (_) { return true; }
-}
-function getSafeTemporaryIntervalMinutes() {
-  let value = 2;
-  try { value = parseInt(localStorage.getItem(SAFE_TEMPORARY_INTERVAL_KEY) || '2', 10); } catch (_) {}
-  return [1, 2, 5, 10, 15].includes(value) ? value : 2;
-}
-function b68CanExportStorageKey(key) {
-  if (!key) return false;
-  if ([GLASSTRACK_ACCOUNTS_KEY, GLASSTRACK_ACTIVE_PROFILE_KEY, GLASSTRACK_SESSION_KEY].includes(key)) return false;
-  if (key.startsWith(GLASSTRACK_PROFILE_PREFIX)) return false;
-  if (key === 'glasstrack_b68_pending_control_restore' || key.startsWith(SAFE_TEMPORARY_LAST_KEY + '_')) return false;
-  if (key === 'glasstrack_library_had_songs_v1' || key.startsWith('glasstrack_library_had_songs_v1_')) return false;
-  if (B68_PROFILE_STATE_KEYS.includes(key)) return false;
-  if (B68_SENSITIVE_STORAGE_RE.test(key)) return false;
-  return true;
-}
-function b68CanExportProfileSettingKey(key) {
-  const value = String(key || '');
-  if (!value || B68_SENSITIVE_STORAGE_RE.test(value)) return false;
-  if (/(account|password|credential|token|login|email|session|secret)/i.test(value)) return false;
-  return true;
-}
-function collectB68PortableSettings() {
-  const local = {};
-  const profileStorage = {};
-  const exportedKeys = [];
-  const activePrefix = `${GLASSTRACK_PROFILE_PREFIX}${String(activeProfileId || GLASSTRACK_GUEST_ID)}.`;
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(activePrefix)) {
-        const suffix = key.slice(activePrefix.length);
-        if (b68CanExportProfileSettingKey(suffix)) {
-          const value = localStorage.getItem(key);
-          if (value !== null) profileStorage[suffix] = value;
-        }
-        continue;
-      }
-      if (!b68CanExportStorageKey(key)) continue;
-      const value = localStorage.getItem(key);
-      if (value === null) continue;
-      local[key] = value;
-      exportedKeys.push(key);
-    }
-  } catch (error) { console.warn('No se pudieron leer todos los ajustes para el respaldo:', error); }
-  const profileState = {};
-  B68_PROFILE_STATE_KEYS.forEach(key => {
-    try {
-      const fallback = key === 'playlistsDB' || key === 'listeningStats' ? '{}' : key === 'totalPlayedSeconds' ? '0' : '';
-      const value = readProfileValue(key, activeProfileId, fallback);
-      profileState[key] = value == null ? fallback : String(value);
-    } catch (_) { profileState[key] = key === 'totalPlayedSeconds' ? '0' : ''; }
-  });
-  const controls = {};
-  // Captura los controles de Ajustes y los interruptores/deslizadores de otros paneles
-  // (ecualizador, karaoke, voz/música y modos), sin guardar campos de búsqueda o acceso.
-  const controlSelector = '#modal-settings input[id], #modal-settings select[id], #modal-settings textarea[id], input[id], select[id], textarea[id]';
-  const seenControls = new Set();
-  document.querySelectorAll(controlSelector).forEach(el => {
-    const id = String(el.id || '');
-    const type = String(el.type || el.tagName || '').toLowerCase();
-    if (!id || seenControls.has(id)) return;
-    seenControls.add(id);
-    if (['file', 'password', 'submit', 'button', 'reset', 'hidden'].includes(type)) return;
-    if (/(account|password|credential|token|login|email|import-full-zip)/i.test(id)) return;
-    if (id === 'select-safe-checkpoint') return;
-    const insideSettings = !!el.closest('#modal-settings');
-    if (!insideSettings && !['checkbox', 'radio', 'range', 'color', 'number'].includes(type) && !['select', 'select-one', 'select-multiple'].includes(type)) return;
-    controls[id] = { type, value: el.value == null ? '' : String(el.value), checked: 'checked' in el ? !!el.checked : undefined };
-  });
-  return {
-    format: 'glasstrack-settings-state', version: 1, complete: true,
-    capturedAt: new Date().toISOString(), localStorage: local, profileStorage, exportedKeys,
-    profileState, controls
-  };
-}
-function b68RestorePortableSettings(settings, idMap = new Map()) {
-  if (!settings || settings.format !== 'glasstrack-settings-state') throw new Error('El archivo no contiene una configuración de Glasstrack válida.');
-  const stored = settings.localStorage && typeof settings.localStorage === 'object' ? settings.localStorage : {};
-  const allowedImportedKeys = new Set(Object.keys(stored).filter(b68CanExportStorageKey));
-  if (settings.complete && Array.isArray(settings.exportedKeys)) {
-    const keysToRemove = [];
-    const activePrefix = `${GLASSTRACK_PROFILE_PREFIX}${String(activeProfileId || GLASSTRACK_GUEST_ID)}.`;
-    const importedProfileStorage = settings.profileStorage && typeof settings.profileStorage === 'object' ? settings.profileStorage : {};
-    const allowedProfileKeys = new Set(Object.keys(importedProfileStorage).filter(b68CanExportProfileSettingKey));
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(activePrefix)) {
-          const suffix = key.slice(activePrefix.length);
-          if (b68CanExportProfileSettingKey(suffix) && !allowedProfileKeys.has(suffix)) keysToRemove.push(key);
-          continue;
-        }
-        if (b68CanExportStorageKey(key) && !allowedImportedKeys.has(key)) keysToRemove.push(key);
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-    } catch (error) { console.warn('No se pudieron limpiar algunos ajustes antes de la restauración:', error); }
-  }
-  Object.entries(stored).forEach(([key, value]) => {
-    if (!b68CanExportStorageKey(key) || value === undefined || value === null) return;
-    try { localStorage.setItem(key, String(value)); } catch (error) { console.warn('No se pudo restaurar el ajuste', key, error); }
-  });
-  const profileStorage = settings.profileStorage && typeof settings.profileStorage === 'object' ? settings.profileStorage : {};
-  Object.entries(profileStorage).forEach(([suffix, value]) => {
-    if (!b68CanExportProfileSettingKey(suffix) || value === undefined || value === null) return;
-    try { localStorage.setItem(`${GLASSTRACK_PROFILE_PREFIX}${String(activeProfileId || GLASSTRACK_GUEST_ID)}.${suffix}`, String(value)); }
-    catch (error) { console.warn('No se pudo restaurar una preferencia del perfil:', suffix, error); }
-  });
-  const profileState = settings.profileState && typeof settings.profileState === 'object' ? settings.profileState : {};
-  B68_PROFILE_STATE_KEYS.forEach(key => {
-    if (!Object.prototype.hasOwnProperty.call(profileState, key)) return;
-    let value = String(profileState[key] ?? '');
-    if (key === 'playlistsDB') {
-      try { value = JSON.stringify(remapPlaylistEntries(JSON.parse(value || '{}'), idMap)); }
-      catch (_) { value = '{}'; }
-    }
-    try { writeProfileValue(key, value, activeProfileId); } catch (error) { console.warn('No se pudo restaurar el estado del perfil:', key, error); }
-  });
-  try { loadProfileScopedState(activeProfileId); } catch (_) {}
-  if (settings.controls && typeof settings.controls === 'object') {
-    try { localStorage.setItem('glasstrack_b68_pending_control_restore', JSON.stringify(settings.controls)); } catch (_) {}
-  }
-}
-function b68ReadPrimaryStore(storeName) {
-  return new Promise((resolve, reject) => {
-    if (!db || !db.objectStoreNames.contains(storeName)) { resolve([]); return; }
-    try {
-      const tx = db.transaction([storeName], 'readonly');
-      const request = tx.objectStore(storeName).getAll();
-      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
-      request.onerror = () => reject(request.error || new Error(`No se pudo leer el almacén ${storeName}.`));
-      tx.onerror = () => reject(tx.error || new Error(`Error leyendo ${storeName}.`));
-    } catch (error) { reject(error); }
-  });
-}
-async function b68GetExternalMixRecords(profileId = activeProfileId) {
-  try { if (typeof flushExternalMixSave === 'function') await flushExternalMixSave(); } catch (_) {}
-  const externalDb = await openExternalMixDb();
-  return new Promise((resolve, reject) => {
-    let tx;
-    try {
-      tx = externalDb.transaction([EXTERNAL_MIX_STORE], 'readonly');
-      const request = tx.objectStore(EXTERNAL_MIX_STORE).getAll();
-      request.onsuccess = () => {
-        const prefix = `${String(profileId || GLASSTRACK_GUEST_ID)}::`;
-        resolve((Array.isArray(request.result) ? request.result : []).filter(record =>
-          String(record.profileId || '') === String(profileId || GLASSTRACK_GUEST_ID) || String(record.key || '').startsWith(prefix)
-        ));
-      };
-      request.onerror = () => reject(request.error || new Error('No se pudieron leer las pistas externas.'));
-      tx.onerror = () => reject(tx.error || new Error('Error leyendo las pistas externas.'));
-    } catch (error) { reject(error); }
-  });
-}
-function b68GetAllSongs() {
-  return new Promise((resolve, reject) => {
-    if (!db || !db.objectStoreNames.contains('songs')) { reject(new Error('La biblioteca principal no está disponible.')); return; }
-    try {
-      const tx = db.transaction(['songs'], 'readonly');
-      const request = tx.objectStore('songs').getAll();
-      request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
-      request.onerror = () => reject(request.error || new Error('No se pudo leer el inventario de música.'));
-      tx.onerror = () => reject(tx.error || new Error('Error leyendo el inventario de música.'));
-    } catch (error) { reject(error); }
-  });
-}
-function b68GetSnapshot(snapshotId) {
-  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readonly');
-      const request = tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).get(String(snapshotId));
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error || new Error('No se pudo leer el punto de guardado.'));
-      tx.onerror = () => reject(tx.error || new Error('Error leyendo el punto de guardado.'));
-    } catch (error) { reject(error); }
-  }));
-}
-function b68ListSnapshots(profileId = activeProfileId) {
-  return openSafeBackupDatabase().then(database => new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readonly');
-      const store = tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE);
-      const request = store.index('profileId').getAll(String(profileId || GLASSTRACK_GUEST_ID));
-      request.onsuccess = () => resolve((Array.isArray(request.result) ? request.result : [])
-        .filter(snapshot => ['automatic', 'manual'].includes(snapshot.reason))
-        .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0)));
-      request.onerror = () => reject(request.error || new Error('No se pudieron leer los puntos de guardado.'));
-      tx.onerror = () => reject(tx.error || new Error('Error leyendo los puntos de guardado.'));
-    } catch (error) { reject(error); }
-  }));
-}
-async function b68RefreshSnapshotSelect() {
-  const select = document.getElementById('select-safe-checkpoint');
-  if (!select) return [];
-  const oldValue = select.value;
-  try {
-    const snapshots = await b68ListSnapshots(activeProfileId);
-    select.replaceChildren();
-    if (!snapshots.length) {
-      const option = document.createElement('option'); option.value = ''; option.textContent = 'Aún no hay puntos de guardado'; select.appendChild(option);
-      return snapshots;
-    }
-    snapshots.forEach(snapshot => {
-      const option = document.createElement('option');
-      option.value = snapshot.id;
-      const stamp = new Date(snapshot.createdAt || Date.now()).toLocaleString();
-      const label = snapshot.reason === 'manual' ? 'Manual' : 'Temporal';
-      const count = Array.isArray(snapshot.librarySongRefs) ? snapshot.librarySongRefs.length : 0;
-      option.textContent = `${label} · ${stamp} · ${count} canción(es)`;
-      select.appendChild(option);
-    });
-    if (snapshots.some(snapshot => snapshot.id === oldValue)) select.value = oldValue;
-    return snapshots;
-  } catch (error) {
-    select.replaceChildren(); const option = document.createElement('option'); option.value = ''; option.textContent = 'No se pudieron leer los puntos'; select.appendChild(option);
-    console.warn('No se pudo actualizar la lista de puntos de guardado:', error);
-    return [];
-  }
-}
-async function b68EnsureSongIdentities(songs, profileId = activeProfileId) {
-  const changed = [];
-  for (const song of songs) {
-    if (!song.safeBackupId) { song.safeBackupId = makeSafeBackupId(); song.accountId = profileId; changed.push(song); }
-  }
-  if (changed.length && db) {
-    await new Promise((resolve, reject) => {
-      try {
-        const tx = db.transaction(['songs'], 'readwrite');
-        changed.forEach(song => tx.objectStore('songs').put(song));
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error || new Error('No se pudieron guardar los identificadores de seguridad.'));
-        tx.onabort = () => reject(tx.error || new Error('Se canceló el guardado de los identificadores.'));
-      } catch (error) { reject(error); }
-    });
-  }
-}
-async function b68CapturePrimaryStores(primarySongs, librarySongRefs) {
-  const [settingsRows, streamRows, allCharts] = await Promise.all([
-    b68ReadPrimaryStore('settings'), b68ReadPrimaryStore('streamMedia'), b68ReadPrimaryStore('charts')
-  ]);
-  const songIds = new Set((primarySongs || []).map(song => String(song.id)));
-  if (!songIds.size) (librarySongRefs || []).forEach(ref => { if (ref.sourceId != null) songIds.add(String(ref.sourceId)); });
-  return {
-    settings: settingsRows,
-    streamMedia: streamRows,
-    charts: allCharts.filter(record => record && songIds.has(String(record.songId)))
-  };
-}
-async function b68SaveSnapshotRecord(snapshot) {
-  const database = await openSafeBackupDatabase();
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readwrite');
-      tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).put(snapshot);
-      tx.oncomplete = () => resolve(snapshot);
-      tx.onerror = () => reject(tx.error || new Error('No se pudo guardar el punto de guardado.'));
-      tx.onabort = () => reject(tx.error || new Error('El punto de guardado se canceló; comprueba el espacio del navegador.'));
-    } catch (error) { reject(error); }
-  });
-}
-function b68CloneSongsForCheckpoint(songs, includeAudio = false) {
-  return (Array.isArray(songs) ? songs : []).map(source => {
-    const song = { ...(source || {}) };
-    if (!song.directUrl && typeof song.url === 'string' && !song.url.startsWith('blob:')) song.directUrl = song.url;
-    delete song.url;
-    delete song.accountId;
-    // Routine checkpoints reference the independent song store to avoid copying
-    // large audio files every minute. The short-lived import rollback captures audio
-    // too, so a failed import can restore the exact pre-import files.
-    if (!includeAudio) delete song.fileBlob;
-    song.safeBackupId = song.safeBackupId || makeSafeBackupId();
-    return song;
-  });
-}
-
-async function b68DeleteSnapshot(snapshotId) {
-  const database = await openSafeBackupDatabase();
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = database.transaction([SAFE_BACKUP_SNAPSHOT_STORE], 'readwrite');
-      tx.objectStore(SAFE_BACKUP_SNAPSHOT_STORE).delete(String(snapshotId));
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudo eliminar el punto temporal de importación.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la limpieza del punto temporal.'));
-    } catch (error) { reject(error); }
-  });
-}
-
-async function createTemporaryCheckpoint(options = {}) {
-  if (safeTemporaryBackupRunning) {
-    const runningPromise = safeTemporaryBackupRunning;
-    const inFlight = await runningPromise;
-    const requestedReason = ['manual', 'rollback'].includes(options.reason) ? options.reason : 'automatic';
-    if (['manual', 'rollback'].includes(requestedReason) && inFlight?.reason !== requestedReason) {
-      // Manual and rollback points must never silently reuse an automatic point.
-      // Clear only the same settled operation before scheduling the requested point.
-      if (safeTemporaryBackupRunning === runningPromise) safeTemporaryBackupRunning = null;
-      return createTemporaryCheckpoint(options);
-    }
-    return inFlight;
-  }
-  const profileId = options.profileId || activeProfileId || GLASSTRACK_GUEST_ID;
-  const reason = ['manual', 'rollback'].includes(options.reason) ? options.reason : 'automatic';
-  const quiet = !!options.quiet;
-  safeTemporaryBackupRunning = (async () => {
-    const button = document.getElementById('btn-safe-backup-now');
-    if (button && reason === 'manual') { button.disabled = true; button.textContent = 'Guardando punto…'; }
-    try {
-      setSafeLibraryMessage(reason === 'manual' ? 'Creando un punto de guardado completo…' : 'Preparando el respaldo temporal…', 'info');
-      const primarySongs = await getPrimarySongsForProfile(profileId);
-      if (primarySongs.length) {
-        await b68EnsureSongIdentities(primarySongs, profileId);
-        if (isSafeBackupEnabled()) await seedSafeBackupFromSongs(primarySongs, profileId, true);
-        else {
-          // Un punto manual/temporal también protege la biblioteca aunque la copia por canción esté pausada.
-          for (const song of primarySongs) await queueSafeSongBackup(song, { force: true });
-        }
-      }
-      await safeBackupQueue.catch(() => {});
-      try { if (typeof flushExternalMixSave === 'function') await flushExternalMixSave(); } catch (_) {}
-      let priorSnapshots = [];
-      try { priorSnapshots = await b68ListSnapshots(profileId); } catch (_) {}
-      let existingRefs = [];
-      let snapshotLibrarySongs = b68CloneSongsForCheckpoint(primarySongs, reason === 'rollback');
-      if (primarySongs.length) {
-        existingRefs = primarySongs.map(song => ({ safeBackupId: song.safeBackupId, sourceId: song.id, title: song.title || '', artist: song.artist || '' }));
-      } else {
-        const previous = priorSnapshots.find(snapshot => Array.isArray(snapshot.librarySongRefs) && snapshot.librarySongRefs.length > 0);
-        if (previous) {
-          existingRefs = previous.librarySongRefs.map(ref => ({ ...ref }));
-          const priorSafeRows = await getSafeBackupRecords(profileId).catch(() => []);
-          const priorBySafeId = new Map(priorSafeRows.map(record => [String(record.safeBackupId), record]));
-          if (Array.isArray(previous.librarySongs) && previous.librarySongs.length) {
-            snapshotLibrarySongs = previous.librarySongs.map(song => {
-              const copy = { ...song };
-              const safeSong = priorBySafeId.get(String(song.safeBackupId))?.song;
-              if (reason === 'rollback' && !copy.fileBlob && safeSong?.fileBlob) copy.fileBlob = safeSong.fileBlob;
-              return copy;
-            });
-          } else {
-            // Upgrade old checkpoints from the independent song copy where possible.
-            snapshotLibrarySongs = existingRefs.map(ref => priorBySafeId.get(String(ref.safeBackupId))?.song).filter(Boolean).map(song => b68CloneSongsForCheckpoint([song], reason === 'rollback')[0]);
-          }
-        }
-      }
-      if (existingRefs.length && snapshotLibrarySongs.length !== existingRefs.length) {
-        throw new Error(`No se pudo verificar un punto completo: hay ${existingRefs.length} canciones referenciadas, pero solo ${snapshotLibrarySongs.length} tienen una copia utilizable. Se conserva el punto anterior para evitar sustituirlo por un respaldo incompleto.`);
-      }
-      const effectiveChartSongs = primarySongs.length ? primarySongs : existingRefs.map(ref => ({ id: ref.sourceId }));
-      const primaryStores = await b68CapturePrimaryStores(effectiveChartSongs, existingRefs);
-      const externalMixes = await b68GetExternalMixRecords(profileId);
-      const now = new Date();
-      const lastKey = `${SAFE_TEMPORARY_LAST_KEY}_${profileId}`;
-      try { localStorage.setItem(lastKey, now.toISOString()); } catch (_) {}
-      const settings = collectB68PortableSettings();
-      const safeRecordsAtCapture = await getSafeBackupRecords(profileId).catch(() => []);
-      const snapshot = {
-        id: `${profileId}::${reason === 'manual' ? 'manual' : reason === 'rollback' ? 'rollback' : 'automatic'}`,
-        profileId: String(profileId), reason, createdAt: now.toISOString(),
-        settings, primaryStores, externalMixes,
-        librarySongRefs: existingRefs,
-        librarySongs: snapshotLibrarySongs,
-        libraryCountAtCapture: existingRefs.length,
-        capturedEmptyLibrary: primarySongs.length === 0,
-        safeBackupIds: safeRecordsAtCapture.map(record => record.safeBackupId)
-      };
-      await b68SaveSnapshotRecord(snapshot);
-      const verifiedSnapshot = await b68GetSnapshot(snapshot.id);
-      if (!verifiedSnapshot || verifiedSnapshot.createdAt !== snapshot.createdAt ||
-          (verifiedSnapshot.librarySongRefs || []).length !== existingRefs.length ||
-          (verifiedSnapshot.librarySongs || []).length !== snapshotLibrarySongs.length ||
-          b68EstimateStoredBytes(verifiedSnapshot) < b68EstimateStoredBytes(snapshot)) {
-        throw new Error('El punto de guardado no superó la verificación posterior a la escritura. Se conserva el punto anterior si todavía existe.');
-      }
-      safeTemporaryLastRunAt = now.getTime();
-      await refreshSafeBackupStatus().catch(() => {});
-      await b68RefreshSnapshotSelect();
-      if (!quiet) {
-        const stateNote = primarySongs.length ? `${primarySongs.length} canción(es) en la biblioteca` : `biblioteca vacía; se conservaron ${existingRefs.length} referencia(s) del punto anterior`;
-        setSafeLibraryMessage(`Punto ${reason === 'manual' ? 'manual' : reason === 'rollback' ? 'de seguridad' : 'temporal'} guardado y verificado: ${stateNote}. Ajustes, fondos, vídeos y pistas respaldables incluidos.`, 'success');
-        if (reason === 'manual') showToast('Punto de guardado completo creado correctamente.', 'success', 3000);
-      } else if (reason === 'automatic') {
-        setSafeLibraryMessage(`Respaldo temporal actualizado: ${new Date(snapshot.createdAt).toLocaleTimeString()}. ${existingRefs.length} canción(es) referenciadas, además de ajustes y recursos locales.`, 'success');
-      }
-      return snapshot;
-    } finally {
-      if (button && reason === 'manual') { button.disabled = false; button.textContent = 'Respaldar ahora · Crear punto'; }
-    }
-  })();
-  const ownRunningPromise = safeTemporaryBackupRunning;
-  try { return await ownRunningPromise; }
-  finally { if (safeTemporaryBackupRunning === ownRunningPromise) safeTemporaryBackupRunning = null; }
-}
-async function runSafeTemporaryBackupIfDue(force = false) {
-  if (!isSafeTemporaryBackupEnabled() || safeTemporaryBackupRunning || !db) return;
-  if (document.hidden && !force) return;
-  const intervalMs = getSafeTemporaryIntervalMinutes() * 60000;
-  let last = 0;
-  try { last = Date.parse(localStorage.getItem(`${SAFE_TEMPORARY_LAST_KEY}_${activeProfileId}`) || '') || 0; } catch (_) {}
-  if (!force && last && Date.now() - last < intervalMs) return;
-  try { await createTemporaryCheckpoint({ reason: 'automatic', quiet: true }); }
-  catch (error) {
-    console.error('Falló el respaldo temporal automático:', error);
-    setSafeLibraryMessage(`No se pudo completar el respaldo temporal: ${error.message || 'error de almacenamiento'}. El punto anterior se conserva.`, 'error');
-  }
-}
-function startSafeTemporaryBackupScheduler() {
-  if (safeTemporaryBackupTimer) clearInterval(safeTemporaryBackupTimer);
-  if (safeTemporaryStartupTimer) clearTimeout(safeTemporaryStartupTimer);
-  safeTemporaryBackupTimer = null; safeTemporaryStartupTimer = null;
-  const toggle = document.getElementById('toggle-safe-temporary-backup');
-  const intervalSelect = document.getElementById('select-safe-backup-interval');
-  if (toggle) toggle.checked = isSafeTemporaryBackupEnabled();
-  if (intervalSelect) intervalSelect.value = String(getSafeTemporaryIntervalMinutes());
-  if (!isSafeTemporaryBackupEnabled()) return;
-  const intervalMs = getSafeTemporaryIntervalMinutes() * 60000;
-  safeTemporaryStartupTimer = setTimeout(() => runSafeTemporaryBackupIfDue(false), 12000);
-  safeTemporaryBackupTimer = setInterval(() => runSafeTemporaryBackupIfDue(false), intervalMs);
-  if (!b68VisibilityHandlerReady) {
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) runSafeTemporaryBackupIfDue(false);
-    });
-    b68VisibilityHandlerReady = true;
-  }
-}
-async function refreshSafeBackupStatus() {
-  const countEl = document.getElementById('safe-library-count');
-  if (!countEl) return;
-  const backupToggle = document.getElementById('toggle-safe-backup');
-  const restoreToggle = document.getElementById('toggle-safe-restore');
-  const temporaryToggle = document.getElementById('toggle-safe-temporary-backup');
-  const intervalSelect = document.getElementById('select-safe-backup-interval');
-  if (backupToggle) backupToggle.checked = isSafeBackupEnabled();
-  if (restoreToggle) restoreToggle.checked = isSafeAutoRestoreEnabled();
-  if (temporaryToggle) temporaryToggle.checked = isSafeTemporaryBackupEnabled();
-  if (intervalSelect) intervalSelect.value = String(getSafeTemporaryIntervalMinutes());
-  try {
-    const [stats, primarySongs] = await Promise.all([
-      getSafeBackupStats(activeProfileId), getPrimarySongsForProfile(activeProfileId).catch(() => [])
-    ]);
-    const { count, bytes, latest } = stats;
-    countEl.textContent = String(count);
-    const currentCountEl = document.getElementById('safe-library-current-count');
-    if (currentCountEl) currentCountEl.textContent = String(primarySongs.length);
-    const sizeEl = document.getElementById('safe-library-size'); if (sizeEl) sizeEl.textContent = formatSafeBytes(bytes);
-    const latestEl = document.getElementById('safe-library-last-run'); if (latestEl) latestEl.textContent = latest ? new Date(latest).toLocaleString() : 'Aún no disponible';
-    const stateEl = document.getElementById('safe-library-state');
-    if (stateEl) {
-      stateEl.textContent = !isSafeBackupEnabled() ? 'Copia por canción pausada' : 'Protección activa';
-      stateEl.classList.toggle('is-paused', !isSafeBackupEnabled());
-    }
-    if (count && count > primarySongs.length) {
-      setSafeLibraryMessage(`Hay ${count} copias protegidas y ${primarySongs.length} canción(es) en la biblioteca principal. Las copias adicionales se conservan para recuperación; no se cuentan como canciones actualmente visibles.`, 'success');
-    } else if (count && !isSafeBackupEnabled()) {
-      setSafeLibraryMessage(`Se conservan ${count} copia(s) protegida(s). La protección inmediata por canción está pausada; las copias existentes no se han borrado.`, 'warning');
-    } else if (count) {
-      setSafeLibraryMessage(`Biblioteca Segura disponible: ${count} copia(s) protegida(s), ${primarySongs.length} canción(es) en la biblioteca principal.`, 'success');
-    } else if (!isSafeBackupEnabled()) {
-      setSafeLibraryMessage('La protección por canción está pausada. Los puntos de guardado manuales y temporales pueden seguir activos.', 'warning');
-    } else {
-      setSafeLibraryMessage('La Biblioteca Segura aún no contiene canciones. Crea un punto de guardado para proteger la biblioteca actual.', 'info');
-    }
-    await b68RefreshSnapshotSelect();
-    return { count, bytes, latest, currentCount: primarySongs.length };
-  } catch (error) {
-    const stateEl = document.getElementById('safe-library-state');
-    if (stateEl) { stateEl.textContent = 'No disponible'; stateEl.classList.add('is-paused'); }
-    countEl.textContent = '—';
-    const currentCountEl = document.getElementById('safe-library-current-count'); if (currentCountEl) currentCountEl.textContent = '—';
-    const sizeEl = document.getElementById('safe-library-size'); if (sizeEl) sizeEl.textContent = 'No disponible';
-    const latestEl = document.getElementById('safe-library-last-run'); if (latestEl) latestEl.textContent = 'No disponible';
-    throw error;
-  }
-}
-function b68SavePortableBlob(zip, path, blob, ctx) {
-  if (!path || !blob) return null;
-  zip.file(path, blob, { binary: true, compression: 'STORE' });
-  ctx.files.push({ path, size: Number(blob.size) || 0, type: blob.type || 'application/octet-stream', name: blob.name || path.split('/').pop() });
-  return path;
-}
-function b68SafeArchiveName(name) {
-  const cleaned = String(name || 'asset.bin').split(/[\\/]/).pop().replace(/[^a-z0-9._-]+/gi, '_').replace(/^\.+/, '').slice(-100);
-  return cleaned || 'asset.bin';
-}
-function b68BlobExtension(blob, name) {
-  const fileName = String(name || blob?.name || '').split(/[\\/]/).pop();
-  const match = fileName.match(/\.([a-z0-9]{1,10})$/i);
-  if (match) return match[1].toLowerCase();
-  const type = String(blob?.type || '').toLowerCase();
-  const known = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/flac': 'flac', 'audio/ogg': 'ogg' };
-  return known[type] || 'bin';
-}
-async function b68EncodeArchiveValue(value, zip, folder, ctx, seen = new WeakSet()) {
-  if (typeof Blob !== 'undefined' && value instanceof Blob) {
-    const originalName = value.name || 'resource.' + b68BlobExtension(value, '');
-    const path = `${folder}/${String(++ctx.assetCounter).padStart(5, '0')}-${b68SafeArchiveName(originalName)}`;
-    b68SavePortableBlob(zip, path, value, ctx);
-    return { __glasstrackBlobRef: path, name: originalName, type: value.type || 'application/octet-stream', lastModified: Number(value.lastModified) || 0 };
-  }
-  if (!value || typeof value !== 'object') return value;
-  if (value instanceof Date) return { __glasstrackDate: value.toISOString() };
-  if (ArrayBuffer.isView(value)) return { __glasstrackTypedArray: value.constructor.name, values: Array.from(value) };
-  if (value instanceof ArrayBuffer) return { __glasstrackArrayBuffer: Array.from(new Uint8Array(value)) };
-  if (seen.has(value)) throw new Error('Se encontró una referencia circular inesperada en los datos de la aplicación.');
-  seen.add(value);
-  let output;
-  if (Array.isArray(value)) {
-    output = [];
-    for (const item of value) output.push(await b68EncodeArchiveValue(item, zip, folder, ctx, seen));
-  } else {
-    output = {};
-    for (const [key, item] of Object.entries(value)) {
-      if (typeof item === 'function' || key === 'url' && typeof item === 'string' && item.startsWith('blob:')) continue;
-      output[key] = await b68EncodeArchiveValue(item, zip, folder, ctx, seen);
-    }
-  }
-  seen.delete(value);
-  return output;
-}
-async function b68DecodeArchiveValue(value, zip) {
-  if (!value || typeof value !== 'object') return value;
-  if (value.__glasstrackBlobRef) {
-    const path = String(value.__glasstrackBlobRef);
-    if (path.startsWith('/') || path.split('/').includes('..') || path.includes('\\')) throw new Error('La copia contiene una ruta de archivo no válida.');
-    const file = zip.file(path);
-    if (!file) throw new Error(`Falta un archivo requerido en la copia: ${path}`);
-    const blob = await file.async('blob');
-    try {
-      if (typeof File !== 'undefined') return new File([blob], value.name || path.split('/').pop(), { type: value.type || blob.type, lastModified: Number(value.lastModified) || Date.now() });
-    } catch (_) {}
-    try { Object.defineProperty(blob, 'name', { value: value.name || path.split('/').pop(), configurable: true }); } catch (_) {}
-    return blob;
-  }
-  if (value.__glasstrackDate) return new Date(value.__glasstrackDate);
-  if (value.__glasstrackArrayBuffer && Array.isArray(value.__glasstrackArrayBuffer)) return new Uint8Array(value.__glasstrackArrayBuffer).buffer;
-  if (value.__glasstrackTypedArray && Array.isArray(value.values)) {
-    const constructors = { Uint8Array, Uint16Array, Uint32Array, Int8Array, Int16Array, Int32Array, Float32Array, Float64Array };
-    const Constructor = constructors[value.__glasstrackTypedArray];
-    if (Constructor) return new Constructor(value.values);
-  }
-  if (Array.isArray(value)) {
-    const result = [];
-    for (const item of value) result.push(await b68DecodeArchiveValue(item, zip));
-    return result;
-  }
-  const result = {};
-  for (const [key, item] of Object.entries(value)) result[key] = await b68DecodeArchiveValue(item, zip);
-  return result;
-}
-async function b68EncodePortableSong(song, zip, ctx, inLibrary) {
-  const rawId = song && song.id != null ? song.id : null;
-  const clean = { ...(song || {}) };
-  const audioBlob = clean.fileBlob instanceof Blob ? clean.fileBlob : null;
-  if (!clean.directUrl && typeof clean.url === 'string' && !clean.url.startsWith('blob:')) clean.directUrl = clean.url;
-  delete clean.fileBlob; delete clean.url; delete clean.accountId; delete clean.id;
-  let audioPath = null;
-  if (audioBlob) {
-    const key = String(clean.safeBackupId || `src:${rawId}:${audioBlob.name || ''}:${audioBlob.size}`);
-    if (ctx.songAudioPaths.has(key)) audioPath = ctx.songAudioPaths.get(key);
-    else {
-      const ext = b68BlobExtension(audioBlob, audioBlob.name || clean.title || 'audio');
-      const name = b68SafeArchiveName(audioBlob.name || `${clean.title || 'audio'}.${ext}`);
-      audioPath = `music/audio/${String(ctx.songAudioPaths.size + 1).padStart(5, '0')}-${name}`;
-      b68SavePortableBlob(zip, audioPath, audioBlob, ctx);
-      ctx.songAudioPaths.set(key, audioPath);
-    }
-  }
-  const encoded = await b68EncodeArchiveValue(clean, zip, 'music/assets', ctx);
-  return {
-    ...encoded, sourceId: rawId, audioPath, audioName: audioBlob?.name || '', audioType: audioBlob?.type || '',
-    audioLastModified: Number(audioBlob?.lastModified) || 0, inLibrary: !!inLibrary
-  };
-}
-async function b68CollectIndexedDBForArchive(zip, ctx, activeSongs) {
-  const settingRows = await b68ReadPrimaryStore('settings');
-  const streamRows = await b68ReadPrimaryStore('streamMedia');
-  const allCharts = await b68ReadPrimaryStore('charts');
-  const ids = new Set((activeSongs || []).map(song => String(song.id)));
-  const chartRows = allCharts.filter(row => row && ids.has(String(row.songId)));
-  const output = {};
-  for (const [storeName, rows] of Object.entries({ settings: settingRows, streamMedia: streamRows, charts: chartRows })) {
-    const items = [];
-    for (const row of rows) {
-      let folder = 'app-data/assets';
-      if (storeName === 'settings') folder = row?.key === 'background' ? 'backgrounds' : row?.key === 'visualModeSticker' ? 'profiles/visual-mode' : 'app-data/settings-assets';
-      if (storeName === 'streamMedia') folder = 'videos/stream-studio';
-      if (storeName === 'charts') folder = 'game/charts';
-      items.push(await b68EncodeArchiveValue(row, zip, folder, ctx));
-    }
-    output[storeName] = items;
-  }
-  return output;
-}
-async function exportCompleteGlasstrackArchive() {
-  if (!window.JSZip) throw new Error('No se pudo cargar el motor ZIP. Conéctate y vuelve a intentarlo.');
-  const profileId = activeProfileId || GLASSTRACK_GUEST_ID;
-  const zip = new JSZip();
-  const ctx = { files: [], assetCounter: 0, songAudioPaths: new Map() };
-  const primarySongs = await getPrimarySongsForProfile(profileId);
-  if (primarySongs.length) {
-    await b68EnsureSongIdentities(primarySongs, profileId);
-    await seedSafeBackupFromSongs(primarySongs, profileId, true);
-    await safeBackupQueue.catch(() => {});
-  }
-  const safeRecords = await getSafeBackupRecords(profileId);
-  const catalog = [];
-  for (const song of primarySongs) catalog.push(await b68EncodePortableSong(song, zip, ctx, true));
-  const safeLibrary = [];
-  for (const record of safeRecords) {
-    const song = record.song || {};
-    safeLibrary.push({
-      safeBackupId: record.safeBackupId || song.safeBackupId,
-      fingerprint: record.fingerprint || '', sizeBytes: Number(record.sizeBytes) || 0,
-      backedUpAt: record.backedUpAt || null, restoreExcluded: !!record.restoreExcluded,
-      intentionalDeleteAt: record.intentionalDeleteAt || null,
-      song: await b68EncodePortableSong(song, zip, ctx, false)
-    });
-  }
-  const settings = collectB68PortableSettings();
-  const indexedDBData = await b68CollectIndexedDBForArchive(zip, ctx, primarySongs);
-  const mixRows = await b68GetExternalMixRecords(profileId);
-  const stems = [];
-  for (const record of mixRows) {
-    const clean = { ...record };
-    delete clean.key; delete clean.profileId;
-    clean.sourceSongId = record.songId == null ? '' : String(record.songId);
-    delete clean.songId;
-    const songFolder = b68SafeArchiveName(`${record.songTitle || 'cancion'}-${record.songArtist || 'artista'}`).slice(0, 90) || 'cancion';
-    clean.tracks = [];
-    for (let trackIndex = 0; trackIndex < (Array.isArray(record.tracks) ? record.tracks.length : 0); trackIndex++) {
-      const track = record.tracks[trackIndex] || {};
-      const trackCopy = { ...track };
-      const blob = trackCopy.blob instanceof Blob ? trackCopy.blob : null;
-      delete trackCopy.blob;
-      if (blob) {
-        const kind = String(track.kind || '').toLowerCase();
-        const trackFolder = kind === 'voice' ? 'stems/voice' : kind === 'music' ? 'stems/instrumental' : 'stems/extras';
-        const trackName = b68SafeArchiveName(track.name || blob.name || `${kind || 'pista'}.${b68BlobExtension(blob, '')}`);
-        const path = `${trackFolder}/${songFolder}/${String(trackIndex + 1).padStart(2, '0')}-${String(++ctx.assetCounter).padStart(5, '0')}-${trackName}`;
-        b68SavePortableBlob(zip, path, blob, ctx);
-        trackCopy.blob = { __glasstrackBlobRef: path, name: track.name || blob.name || trackName, type: track.type || blob.type || 'application/octet-stream', lastModified: Number(track.lastModified || blob.lastModified) || 0 };
-      } else {
-        trackCopy.blob = null;
-      }
-      clean.tracks.push(trackCopy);
-    }
-    stems.push(await b68EncodeArchiveValue(clean, zip, 'stems/metadata', ctx));
-  }
-  zip.file('settings/application.json', JSON.stringify(settings, null, 2));
-  zip.file('music/catalog.json', JSON.stringify(catalog, null, 2));
-  zip.file('music/safe-library.json', JSON.stringify(safeLibrary, null, 2));
-  zip.file('app-data/indexeddb.json', JSON.stringify(indexedDBData, null, 2));
-  zip.file('stems/index.json', JSON.stringify(stems, null, 2));
-  const contentNames = Object.keys(zip.files).filter(name => !zip.files[name].dir).sort();
-  const manifestFileMap = new Map();
-  for (const path of contentNames) {
-    const asset = ctx.files.find(file => file.path === path);
-    manifestFileMap.set(path, { path, size: asset?.size ?? zip.files[path]._data?.uncompressedSize ?? null, ...(asset ? { type: asset.type } : {}) });
-  }
-  const manifestFiles = Array.from(manifestFileMap.values()).sort((a, b) => a.path.localeCompare(b.path));
-  const manifest = {
-    format: 'glasstrack-pro-complete-backup', version: 1, application: 'Glasstrack Pro',
-    createdAt: new Date().toISOString(), profileIncluded: false,
-    counts: { songsInLibrary: primarySongs.length, protectedCopies: safeRecords.length, externalMixes: stems.length, settingsKeys: Object.keys(settings.localStorage || {}).length, assets: ctx.files.length },
-    sections: ['settings/application.json', 'music/catalog.json', 'music/safe-library.json', 'app-data/indexeddb.json', 'stems/index.json'],
-    files: manifestFiles
-  };
-  zip.file('manifest.json', JSON.stringify(manifest, null, 2));
-  const output = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 3 } });
-  downloadFileBlob(output, `glasstrack-pro-respaldo-completo-${new Date().toISOString().slice(0, 10)}.zip`);
-  setSafeLibraryMessage(`Copia completa exportada: ${primarySongs.length} canción(es) activas, ${safeRecords.length} copias protegidas, ${stems.length} mezclas de pistas y ${ctx.files.length} archivos adjuntos.`, 'success');
-  showToast('Respaldo completo exportado. Guárdalo fuera de Glasstrack.', 'success', 4000);
-  return { songs: primarySongs.length, safeCopies: safeRecords.length, stems: stems.length, files: ctx.files.length };
-}
-function b68GetArchiveFile(zip, path) {
-  if (!path) return null;
-  const value = String(path);
-  if (value.startsWith('/') || value.split('/').includes('..') || value.includes('\\')) throw new Error('La copia contiene una ruta de archivo no válida.');
-  const file = zip.file(value);
-  if (!file) throw new Error(`Falta un archivo requerido en la copia: ${value}`);
-  return file;
-}
-async function b68DecodePortableSong(entry, zip) {
-  const clean = await b68DecodeArchiveValue(entry, zip);
-  const audioPath = clean.audioPath;
-  const audioName = clean.audioName;
-  const audioType = clean.audioType;
-  const audioLastModified = clean.audioLastModified;
-  delete clean.sourceId; delete clean.audioPath; delete clean.audioName; delete clean.audioType; delete clean.audioLastModified; delete clean.inLibrary;
-  if (audioPath) {
-    const audioFile = b68GetArchiveFile(zip, audioPath);
-    const blob = await audioFile.async('blob');
-    try { clean.fileBlob = typeof File !== 'undefined' ? new File([blob], audioName || audioPath.split('/').pop(), { type: audioType || blob.type, lastModified: Number(audioLastModified) || Date.now() }) : blob; }
-    catch (_) { clean.fileBlob = blob; try { Object.defineProperty(clean.fileBlob, 'name', { value: audioName || audioPath.split('/').pop() }); } catch (_) {} }
-  } else clean.fileBlob = null;
-  return { sourceId: entry.sourceId, song: clean, inLibrary: !!entry.inLibrary };
-}
-async function b68ReplaceCurrentProfileSongs(importedEntries, profileId) {
-  const allExisting = await b68GetAllSongs();
-  const otherIds = new Set(allExisting.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== profileId).map(song => String(song.id)));
-  const idMap = new Map();
-  await new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['songs'], 'readwrite');
-      const store = tx.objectStore('songs');
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const currentRows = Array.isArray(request.result) ? request.result : [];
-        currentRows.forEach(song => { if ((song.accountId || GLASSTRACK_GUEST_ID) === profileId) store.delete(song.id); });
-        importedEntries.forEach(entry => {
-          const song = { ...entry.song, accountId: profileId, safeBackupId: entry.song.safeBackupId || makeSafeBackupId() };
-          delete song.url; delete song.id;
-          const oldId = entry.sourceId;
-          if (oldId != null && Number.isFinite(Number(oldId)) && !otherIds.has(String(oldId))) song.id = Number(oldId);
-          const addReq = store.add(song);
-          addReq.onsuccess = () => { if (oldId != null) idMap.set(String(oldId), addReq.result); song.id = addReq.result; };
-          addReq.onerror = () => { /* El error de la transacción abortará todas las operaciones. */ };
-        });
-      };
-      request.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudo reemplazar la biblioteca de esta sesión.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de la biblioteca.'));
-    } catch (error) { reject(error); }
-  });
-  return idMap;
-}
-async function b68ReplaceAppStores(stores, profileId, idMap, oldCurrentIds = []) {
-  const settingsRows = Array.isArray(stores.settings) ? stores.settings : [];
-  const streamRows = Array.isArray(stores.streamMedia) ? stores.streamMedia : [];
-  const available = ['settings', 'streamMedia'].filter(name => db && db.objectStoreNames.contains(name));
-  await new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(available, 'readwrite');
-      available.forEach(name => {
-        const store = tx.objectStore(name); store.clear();
-        (name === 'settings' ? settingsRows : streamRows).forEach(row => store.put(row));
-      });
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudieron restaurar los fondos y recursos de la aplicación.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de recursos.'));
-    } catch (error) { reject(error); }
-  });
-  const chartRows = Array.isArray(stores.charts) ? stores.charts : [];
-  if (db && db.objectStoreNames.contains('charts')) {
-    const currentIds = new Set((oldCurrentIds || []).map(String));
-    const mappedCharts = chartRows.map(record => {
-      const copy = { ...record };
-      if (idMap.has(String(copy.songId))) copy.songId = idMap.get(String(copy.songId));
-      else if (!idMap.has(String(copy.songId))) return null;
-      return copy;
-    }).filter(Boolean);
-    await new Promise((resolve, reject) => {
-      try {
-        const tx = db.transaction(['charts'], 'readwrite');
-        const store = tx.objectStore('charts');
-        const getAll = store.getAll();
-        getAll.onsuccess = () => {
-          (getAll.result || []).forEach(record => { if (currentIds.has(String(record.songId))) store.delete(record.songId); });
-          mappedCharts.forEach(record => store.put(record));
-        };
-        getAll.onerror = () => { try { tx.abort(); } catch (_) {} };
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error || new Error('No se pudieron restaurar los datos del Modo Ritmo.'));
-        tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de los charts.'));
-      } catch (error) { reject(error); }
-    });
-  }
-}
-async function b68ReplaceExternalMixes(records, profileId, idMap, catalogEntries = []) {
-  const externalDb = await openExternalMixDb();
-  const catalogBySource = new Map((catalogEntries || []).map(entry => [String(entry.sourceId), entry]));
-  const prepared = [];
-  let skipped = 0;
-  for (const record of records || []) {
-    const sourceId = record.sourceSongId != null ? String(record.sourceSongId) : record.songId != null ? String(record.songId) : '';
-    let targetId = sourceId && idMap.has(sourceId) ? idMap.get(sourceId) : null;
-    if (targetId == null && record.songTitle) {
-      const matched = catalogEntries.find(entry => String(entry.song?.title || '').trim().toLowerCase() === String(record.songTitle || '').trim().toLowerCase() && String(entry.song?.artist || '').trim().toLowerCase() === String(record.songArtist || '').trim().toLowerCase());
-      if (matched && matched.sourceId != null && idMap.has(String(matched.sourceId))) targetId = idMap.get(String(matched.sourceId));
-    }
-    if (targetId == null) { skipped++; continue; }
-    const copy = { ...record, profileId: String(profileId), songId: String(targetId), key: `${String(profileId)}::id:${String(targetId)}` };
-    delete copy.sourceSongId;
-    prepared.push(copy);
-  }
-  await new Promise((resolve, reject) => {
-    try {
-      const tx = externalDb.transaction([EXTERNAL_MIX_STORE], 'readwrite');
-      const store = tx.objectStore(EXTERNAL_MIX_STORE);
-      const request = store.openCursor();
-      request.onsuccess = () => {
-        const cursor = request.result;
-        if (cursor) {
-          const value = cursor.value;
-          if (String(value.profileId || '') === String(profileId) || String(value.key || '').startsWith(`${String(profileId)}::`)) cursor.delete();
-          cursor.continue();
-        } else prepared.forEach(record => store.put(record));
-      };
-      request.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudieron restaurar las pistas de voz e instrumental.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la restauración de pistas.'));
-    } catch (error) { reject(error); }
-  });
-  return { restored: prepared.length, skipped };
-}
-async function b68RestoreSongsFromSnapshot(snapshot, profileId) {
-  const refs = Array.isArray(snapshot.librarySongRefs) ? snapshot.librarySongRefs : [];
-  if (!refs.length) return new Map();
-  const safeRows = await getSafeBackupRecords(profileId);
-  const bySafeId = new Map(safeRows.map(row => [String(row.safeBackupId), row]));
-  const allExisting = await b68GetAllSongs();
-  const otherIds = new Set(allExisting.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== profileId).map(song => String(song.id)));
-  const selected = [];
-  const pointSongs = Array.isArray(snapshot.librarySongs) ? snapshot.librarySongs : [];
-  const pointSongBySafeId = new Map(pointSongs.filter(song => song && song.safeBackupId).map(song => [String(song.safeBackupId), song]));
-  refs.forEach(ref => {
-    const historicalSong = pointSongBySafeId.get(String(ref.safeBackupId));
-    const currentSafeRecord = bySafeId.get(String(ref.safeBackupId));
-    if (historicalSong) {
-      const restoredSong = { ...(currentSafeRecord?.song || {}), ...historicalSong };
-      if (!Object.prototype.hasOwnProperty.call(historicalSong, 'fileBlob')) {
-        if (currentSafeRecord?.song?.fileBlob) restoredSong.fileBlob = currentSafeRecord.song.fileBlob;
-        else delete restoredSong.fileBlob;
-      }
-      selected.push({ ref, record: { ...(currentSafeRecord || {}), safeBackupId: ref.safeBackupId, song: restoredSong } });
-    } else if (currentSafeRecord?.song) selected.push({ ref, record: currentSafeRecord });
-  });
-  const idMap = new Map();
-  await new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(['songs'], 'readwrite');
-      const store = tx.objectStore('songs');
-      const request = store.getAll();
-      request.onsuccess = () => {
-        const rows = Array.isArray(request.result) ? request.result : [];
-        rows.forEach(song => { if ((song.accountId || GLASSTRACK_GUEST_ID) === profileId) store.delete(song.id); });
-        selected.forEach(({ ref, record }) => {
-          const song = { ...record.song, accountId: profileId, safeBackupId: record.safeBackupId };
-          delete song.url;
-          const originalId = ref.sourceId != null ? ref.sourceId : song.id;
-          delete song.id;
-          if (originalId != null && Number.isFinite(Number(originalId)) && !otherIds.has(String(originalId))) song.id = Number(originalId);
-          const addReq = store.add(song);
-          addReq.onsuccess = () => { if (originalId != null) idMap.set(String(originalId), addReq.result); };
-        });
-      };
-      request.onerror = () => { try { tx.abort(); } catch (_) {} };
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error || new Error('No se pudo recuperar la biblioteca desde el punto de guardado.'));
-      tx.onabort = () => reject(tx.error || new Error('Se canceló la recuperación de la biblioteca.'));
-    } catch (error) { reject(error); }
-  });
-  return idMap;
-}
-async function b68RestoreSnapshotData(snapshot, options = {}) {
-  const profileId = activeProfileId || GLASSTRACK_GUEST_ID;
-  const currentSongs = await getPrimarySongsForProfile(profileId).catch(() => []);
-  const oldCurrentIds = currentSongs.map(song => song.id);
-  const idMap = await b68RestoreSongsFromSnapshot(snapshot, profileId);
-  await b68ReplaceAppStores(snapshot.primaryStores || {}, profileId, idMap, oldCurrentIds);
-  const externalRows = (snapshot.externalMixes || []).map(record => ({ ...record, sourceSongId: record.songId }));
-  await b68ReplaceExternalMixes(externalRows, profileId, idMap,
-    (snapshot.librarySongRefs || []).map(ref => ({ sourceId: ref.sourceId, song: { title: ref.title, artist: ref.artist } })));
-  b68RestorePortableSettings(snapshot.settings, idMap);
-  try {
-    localStorage.setItem('glasstrack_library_had_songs_v1', snapshot.librarySongRefs?.length ? 'true' : 'false');
-    localStorage.setItem(`glasstrack_library_had_songs_v1_${profileId}`, snapshot.librarySongRefs?.length ? 'true' : 'false');
-  } catch (_) {}
-  return { idMap, restoredSongs: snapshot.librarySongRefs?.length || 0 };
-}
-async function restoreSelectedSafeCheckpoint() {
-  const select = document.getElementById('select-safe-checkpoint');
-  const snapshotId = select?.value;
-  if (!snapshotId) { showToast('Todavía no hay un punto de guardado disponible.', 'warning', 2800); return; }
-  const snapshot = await b68GetSnapshot(snapshotId);
-  if (!snapshot || String(snapshot.profileId) !== String(activeProfileId)) throw new Error('El punto de guardado no pertenece a la sesión activa o ya no está disponible.');
-  const dateText = new Date(snapshot.createdAt || Date.now()).toLocaleString();
-  if (!confirm(`Se restaurará el punto guardado del ${dateText}. La biblioteca, preferencias, fondos, vídeos locales y pistas de esta sesión volverán al estado guardado. La cuenta no se cambiará. ¿Continuar?`)) return;
-  const button = document.getElementById('btn-safe-restore-checkpoint');
-  if (button) { button.disabled = true; button.textContent = 'Restaurando punto…'; }
-  try {
-    await b68RestoreSnapshotData(snapshot);
-    await refreshSafeBackupStatus().catch(() => {});
-    setSafeLibraryMessage('Punto de guardado restaurado. Glasstrack se recargará para aplicar todos los interruptores, temas y controles.', 'success');
-    showToast('Punto restaurado. Recargando Glasstrack…', 'success', 1800);
-    setTimeout(() => window.location.reload(), 1300);
-  } finally {
-    if (button) { button.disabled = false; button.textContent = 'Restaurar punto guardado'; }
-  }
-}
-function b68SetImportMessage(message, kind = 'info') {
-  const el = document.getElementById('safe-import-message');
-  if (!el) return;
-  el.textContent = String(message || '');
-  el.classList.remove('is-success', 'is-warning', 'is-error');
-  if (kind === 'success') el.classList.add('is-success');
-  else if (kind === 'warning') el.classList.add('is-warning');
-  else if (kind === 'error') el.classList.add('is-error');
-}
-async function importCompleteGlasstrackZip(file) {
-  if (!file) return;
-  if (!/\.zip$/i.test(file.name || '') && file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') throw new Error('Selecciona una copia completa con extensión .zip.');
-  if (!window.JSZip) throw new Error('El motor ZIP no está disponible. Recarga Glasstrack e inténtalo de nuevo.');
-  b68SetImportMessage('Analizando el ZIP y verificando sus archivos…', 'info');
-  const zip = await JSZip.loadAsync(file, { checkCRC32: true });
-  const manifestFile = zip.file('manifest.json');
-  if (!manifestFile) throw new Error('Este ZIP no contiene manifest.json. Para respaldos antiguos usa la opción compatible de abajo.');
-  const manifest = JSON.parse(await manifestFile.async('string'));
-  if (manifest.format !== 'glasstrack-pro-complete-backup' || Number(manifest.version) !== 1) throw new Error('El formato del ZIP no es una copia completa compatible de Glasstrack Pro.');
-  const required = [
-    ['settings/application.json', 'settings'], ['music/catalog.json', 'catalog'],
-    ['music/safe-library.json', 'safe'], ['app-data/indexeddb.json', 'stores'], ['stems/index.json', 'stems']
-  ];
-  const parsed = {};
-  for (const [path, name] of required) {
-    const entry = zip.file(path);
-    if (!entry) throw new Error(`La copia está incompleta: falta ${path}`);
-    parsed[name] = JSON.parse(await entry.async('string'));
-  }
-  if (!parsed.settings || parsed.settings.format !== 'glasstrack-settings-state' || !Array.isArray(parsed.catalog) || !Array.isArray(parsed.safe) || !parsed.stores || !Array.isArray(parsed.stems)) {
-    throw new Error('La estructura de datos de la copia no es válida. No se modificó Glasstrack.');
-  }
-  // Decodificar y comprobar todos los adjuntos antes de tocar la biblioteca activa.
-  const catalogEntries = [];
-  for (const entry of parsed.catalog) catalogEntries.push(await b68DecodePortableSong(entry, zip));
-  const safeEntries = [];
-  for (const item of parsed.safe) {
-    const songEntry = await b68DecodePortableSong(item.song, zip);
-    safeEntries.push({ ...item, song: songEntry });
-  }
-  const appStores = await b68DecodeArchiveValue(parsed.stores, zip);
-  const stemsEntries = [];
-  for (const record of parsed.stems) stemsEntries.push(await b68DecodeArchiveValue(record, zip));
-  // Revisar que cada canción de la colección declarada pueda restaurarse sin dejar referencias a archivos ausentes.
-  for (const entry of catalogEntries) {
-    if (!entry.song || typeof entry.song !== 'object') throw new Error('La copia contiene una entrada de música inválida.');
-    if (entry.song.fileBlob && !(entry.song.fileBlob instanceof Blob)) throw new Error('Uno de los archivos de audio no pudo reconstruirse.');
-  }
-  if (!confirm(`Vas a importar una copia completa creada el ${new Date(manifest.createdAt || Date.now()).toLocaleString()}. Se reemplazará la biblioteca y la configuración de la sesión activa, incluidos fondos y pistas locales. La cuenta y sus credenciales no se importarán. Antes se guardará un punto de seguridad para poder volver atrás si algo falla. ¿Continuar?`)) return;
-  b68SetImportMessage('Creando el punto previo y aplicando la copia completa…', 'info');
-  const profileId = activeProfileId || GLASSTRACK_GUEST_ID;
-  await createTemporaryCheckpoint({ reason: 'rollback', quiet: true, profileId });
-  let importApplied = false;
-  try {
-    const currentSongsBeforeImport = await getPrimarySongsForProfile(profileId);
-    const oldCurrentIds = currentSongsBeforeImport.map(song => song.id);
-    const idMap = await b68ReplaceCurrentProfileSongs(catalogEntries, profileId);
-    // Una copia segura nunca se borra porque importe una biblioteca distinta: se agregan las referencias nuevas sin eliminar el histórico.
-    const safeMergedEntries = safeEntries.map(item => ({
-      ...item,
-      song: { ...item.song, sourceId: item.song.sourceId, audioPath: null, audioName: '', audioType: '', audioLastModified: 0 }
-    }));
-    // Insertar los respaldos codificados del ZIP directamente en la base segura, manteniendo los que ya existían.
-    const database = await openSafeBackupDatabase();
-    const portableSafeRecords = [];
-    for (const item of safeMergedEntries) {
-      const decoded = item.song;
-      const song = { ...decoded.song, accountId: profileId, safeBackupId: item.safeBackupId || decoded.song.safeBackupId || makeSafeBackupId() };
-      if (decoded.sourceId != null && idMap.has(String(decoded.sourceId))) song.id = idMap.get(String(decoded.sourceId));
-      else delete song.id;
-      const key = safeBackupKey(profileId, song.safeBackupId);
-      portableSafeRecords.push({
-        key, profileId, safeBackupId: song.safeBackupId, song,
-        fingerprint: item.fingerprint || safeFingerprint(song), sizeBytes: Number(item.sizeBytes) || approximateSongSize(song),
-        backedUpAt: item.backedUpAt || new Date().toISOString(), restoreExcluded: !!item.restoreExcluded,
-        intentionalDeleteAt: item.intentionalDeleteAt || null
-      });
-    }
-    if (portableSafeRecords.length) await new Promise((resolve, reject) => {
-      try {
-        const tx = database.transaction(['protectedSongs'], 'readwrite');
-        const store = tx.objectStore('protectedSongs');
-        portableSafeRecords.forEach(record => {
-          const getReq = store.get(record.key);
-          getReq.onsuccess = () => { if (!getReq.result) store.add(record); };
-        });
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error || new Error('No se pudieron importar las copias protegidas.'));
-        tx.onabort = () => reject(tx.error || new Error('Se canceló la importación de copias protegidas.'));
-      } catch (error) { reject(error); }
-    });
-    const remappedStores = {
-      settings: Array.isArray(appStores.settings) ? appStores.settings : [],
-      streamMedia: Array.isArray(appStores.streamMedia) ? appStores.streamMedia : [],
-      charts: Array.isArray(appStores.charts) ? appStores.charts : []
-    };
-    await b68ReplaceAppStores(remappedStores, profileId, idMap, oldCurrentIds);
-    const stemsResult = await b68ReplaceExternalMixes(stemsEntries, profileId, idMap, catalogEntries);
-    const importedActiveSongs = await getPrimarySongsForProfile(profileId);
-    await seedSafeBackupFromSongs(importedActiveSongs, profileId, true);
-    for (const song of importedActiveSongs) {
-      await setSafeRecordRestoreBlocked({ key: safeBackupKey(profileId, song.safeBackupId) }, false).catch(() => {});
-    }
-    b68RestorePortableSettings(parsed.settings, idMap);
-    try {
-      localStorage.setItem('glasstrack_library_had_songs_v1', catalogEntries.length ? 'true' : 'false');
-      localStorage.setItem(`glasstrack_library_had_songs_v1_${profileId}`, catalogEntries.length ? 'true' : 'false');
-    } catch (_) {}
-    importApplied = true;
-    await b68DeleteSnapshot(`${profileId}::rollback`).catch(() => {});
-    await refreshSafeBackupStatus().catch(() => {});
-    await b68RefreshSnapshotSelect();
-    const stemNote = stemsResult.skipped ? ` ${stemsResult.skipped} mezcla(s) no pudieron asociarse a una canción importada.` : '';
-    b68SetImportMessage(`Importación completada: ${catalogEntries.length} canción(es), ${portableSafeRecords.length} registros de protección, fondos/recursos y ${stemsResult.restored} mezclas de pistas. Glasstrack se recargará para aplicar todos los ajustes.${stemNote}`, stemsResult.skipped ? 'warning' : 'success');
-    showToast('Copia completa importada. Recargando Glasstrack…', 'success', 3000);
-    setTimeout(() => window.location.reload(), 1700);
-    return { songs: catalogEntries.length, safeCopies: portableSafeRecords.length, stems: stemsResult.restored, skippedStems: stemsResult.skipped };
-  } catch (error) {
-    console.error('Error al importar la copia completa:', error);
-    if (!importApplied) {
-      try {
-        const rollback = await b68GetSnapshot(`${profileId}::rollback`);
-        if (rollback) {
-          await b68RestoreSnapshotData(rollback);
-          await refreshSafeBackupStatus().catch(() => {});
-        }
-      } catch (rollbackError) { console.error('No se pudo restaurar automáticamente el punto previo:', rollbackError); }
-    }
-    throw error;
-  }
-}
-function initializeSafeBackupControls() {
-  const backupToggle = document.getElementById('toggle-safe-backup');
-  const restoreToggle = document.getElementById('toggle-safe-restore');
-  const temporaryToggle = document.getElementById('toggle-safe-temporary-backup');
-  const intervalSelect = document.getElementById('select-safe-backup-interval');
-  if (backupToggle) {
-    backupToggle.checked = isSafeBackupEnabled();
-    backupToggle.addEventListener('change', async () => {
-      try { localStorage.setItem(SAFE_BACKUP_AUTO_KEY, backupToggle.checked ? 'true' : 'false'); } catch (_) {}
-      if (backupToggle.checked) {
-        setSafeLibraryMessage('Protección automática por canción activada. Verificando la biblioteca…', 'info');
-        try { await backupCurrentLibrary(true); } catch (error) { handleSafeBackupFailure(error, 'No se pudo activar la protección automática por canción.'); }
-      } else {
-        setSafeLibraryMessage('La protección inmediata por canción está pausada. Los respaldos y puntos existentes se conservan.', 'warning');
-        await refreshSafeBackupStatus().catch(() => {});
-      }
-    });
-  }
-  if (restoreToggle) {
-    restoreToggle.checked = isSafeAutoRestoreEnabled();
-    restoreToggle.addEventListener('change', () => {
-      try { localStorage.setItem(SAFE_RESTORE_AUTO_KEY, restoreToggle.checked ? 'true' : 'false'); } catch (_) {}
-      if (!restoreToggle.checked) cancelSafeAutoRestore();
-      else if (!songList.length) scheduleSafeAutoRestore(activeProfileId);
-      setSafeLibraryMessage(restoreToggle.checked ? 'Recuperación de biblioteca activada. Esperará dos minutos antes de actuar.' : 'Recuperación de biblioteca pausada. Los respaldos siguen guardados.', restoreToggle.checked ? 'success' : 'warning');
-    });
-  }
-  if (temporaryToggle) {
-    temporaryToggle.checked = isSafeTemporaryBackupEnabled();
-    temporaryToggle.addEventListener('change', async () => {
-      try { localStorage.setItem(SAFE_TEMPORARY_BACKUP_KEY, temporaryToggle.checked ? 'true' : 'false'); } catch (_) {}
-      startSafeTemporaryBackupScheduler();
-      if (temporaryToggle.checked) {
-        try { await createTemporaryCheckpoint({ reason: 'automatic', quiet: true }); setSafeLibraryMessage(`Respaldo temporal activado. El siguiente se repetirá cada ${getSafeTemporaryIntervalMinutes()} minuto(s).`, 'success'); }
-        catch (error) { setSafeLibraryMessage(`No se pudo crear el primer respaldo temporal: ${error.message || 'error desconocido'}.`, 'error'); }
-      } else {
-        setSafeLibraryMessage('Respaldo temporal automático pausado. Los puntos manuales y las copias ya creadas se conservan.', 'warning');
-      }
-    });
-  }
-  if (intervalSelect) {
-    intervalSelect.value = String(getSafeTemporaryIntervalMinutes());
-    intervalSelect.addEventListener('change', () => {
-      const next = parseInt(intervalSelect.value, 10);
-      if (![1, 2, 5, 10, 15].includes(next)) { intervalSelect.value = String(getSafeTemporaryIntervalMinutes()); return; }
-      try { localStorage.setItem(SAFE_TEMPORARY_INTERVAL_KEY, String(next)); } catch (_) {}
-      startSafeTemporaryBackupScheduler();
-      setSafeLibraryMessage(`Intervalo del respaldo temporal actualizado: cada ${next} minuto(s). La copia existente se mantiene.`, 'success');
-    });
-  }
-  document.getElementById('btn-safe-backup-now')?.addEventListener('click', () => createTemporaryCheckpoint({ reason: 'manual' }).catch(error => handleSafeBackupFailure(error, 'No se pudo crear el punto de guardado completo.')));
-  document.getElementById('btn-safe-restore-now')?.addEventListener('click', async () => {
-    if (songList.length && !confirm('La biblioteca actual contiene canciones. Glasstrack añadirá únicamente las canciones respaldadas que falten, sin reemplazar las actuales. ¿Continuar?')) return;
-    try { await restoreSafeLibrary({ profileId: activeProfileId, automatic: false }); }
-    catch (error) { handleSafeBackupFailure(error, 'No se pudo restaurar la biblioteca desde la copia segura.'); }
-  });
-  document.getElementById('btn-safe-restore-checkpoint')?.addEventListener('click', () => restoreSelectedSafeCheckpoint().catch(error => { setSafeLibraryMessage(error.message || 'No se pudo restaurar el punto seleccionado.', 'error'); showToast(error.message || 'No se pudo restaurar el punto seleccionado.', 'error', 4500); }));
-  document.getElementById('btn-safe-export')?.addEventListener('click', () => exportCompleteGlasstrackArchive().catch(error => { setSafeLibraryMessage(error.message || 'No se pudo exportar la copia completa.', 'error'); showToast(error.message || 'No se pudo exportar la copia completa.', 'error', 4500); }));
-  document.getElementById('btn-safe-delete-backup')?.addEventListener('click', () => deleteCurrentProfileSafeBackup().catch(error => handleSafeBackupFailure(error, 'No se pudieron eliminar las copias seguras de esta cuenta.')));
-  const importInput = document.getElementById('input-import-full-zip');
-  const dropzone = document.getElementById('safe-import-dropzone');
-  const selectImport = document.getElementById('btn-safe-select-import');
-  const importFile = async file => {
-    if (!file) return;
-    if (dropzone) dropzone.classList.add('is-busy');
-    if (selectImport) { selectImport.disabled = true; selectImport.textContent = 'Verificando ZIP…'; }
-    try { await importCompleteGlasstrackZip(file); }
-    catch (error) { console.error(error); b68SetImportMessage(error.message || 'No se pudo importar la copia completa.', 'error'); showToast(error.message || 'No se pudo importar la copia completa.', 'error', 5000); }
-    finally {
-      if (dropzone) dropzone.classList.remove('is-busy');
-      if (selectImport) { selectImport.disabled = false; selectImport.textContent = 'Seleccionar archivo ZIP'; }
-      if (importInput) importInput.value = '';
-    }
-  };
-  if (selectImport && importInput) {
-    // The hidden file input lives inside the dropzone; stop its synthetic click
-    // from bubbling back and reopening the picker recursively.
-    importInput.addEventListener('click', event => event.stopPropagation());
-    selectImport.addEventListener('click', event => { event.stopPropagation(); importInput.click(); });
-  }
-  if (dropzone && importInput) {
-    dropzone.addEventListener('click', event => {
-      if (event.target === importInput || event.target.closest('button')) return;
-      importInput.click();
-    });
-    dropzone.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); importInput.click(); } });
-    ['dragenter', 'dragover'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); event.stopPropagation(); dropzone.classList.add('is-dragover'); }));
-    ['dragleave', 'dragend'].forEach(type => dropzone.addEventListener(type, event => { event.preventDefault(); dropzone.classList.remove('is-dragover'); }));
-    dropzone.addEventListener('drop', event => {
-      event.preventDefault(); event.stopPropagation(); dropzone.classList.remove('is-dragover');
-      const files = Array.from(event.dataTransfer?.files || []);
-      const file = files.find(item => /\.zip$/i.test(item.name || '') || item.type === 'application/zip');
-      if (!file) { b68SetImportMessage('Arrastra un archivo .zip completo de Glasstrack Pro.', 'warning'); return; }
-      importFile(file);
-    });
-  }
-  if (importInput) importInput.addEventListener('change', () => importFile(importInput.files?.[0] || null));
-  startSafeTemporaryBackupScheduler();
-}
-
-
 // ==========================================
 // 5. INDEXEDDB Y GESTIÓN DE ARCHIVOS
 // ==========================================
@@ -4905,7 +3221,6 @@ function saveSongToDB(songObj) {
   return new Promise((resolve, reject) => {
     if (!db || !songObj) { reject(new Error('El almacenamiento de Glasstrack todavía no está listo.')); return; }
     if (!songObj.accountId) songObj.accountId = activeProfileId;
-    if (!songObj.safeBackupId) songObj.safeBackupId = makeSafeBackupId();
 
     let generatedId = null;
     let settled = false;
@@ -4919,15 +3234,8 @@ function saveSongToDB(songObj) {
         if (settled) return;
         settled = true;
         if (generatedId !== null && generatedId !== undefined) songObj.id = generatedId;
-        try {
-          localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
-          localStorage.setItem(`glasstrack_library_had_songs_v1_${songObj.accountId || activeProfileId}`, 'true');
-        } catch (_) {}
-        cancelSafeAutoRestore();
-        queueSafeSongBackup(songObj)
-        .then(() => refreshSafeBackupStatus())
-        .catch(error => handleSafeBackupFailure(error, `La canción "${songObj.title || 'sin título'}" se guardó en la biblioteca principal, pero su copia segura no pudo verificarse.`))
-        .finally(() => resolve(songObj.id));
+        try { localStorage.setItem('glasstrack_library_had_songs_v1', 'true'); } catch (_) {}
+        resolve(songObj.id);
       };
       tx.onerror = () => {
         if (settled) return;
@@ -4950,15 +3258,11 @@ function saveSongToDB(songObj) {
 function updateSongInDB(songObj) {
   if (!db || !songObj || songObj.id === undefined) return;
   if (!songObj.accountId) songObj.accountId = activeProfileId;
-  if (!songObj.safeBackupId) songObj.safeBackupId = makeSafeBackupId();
   try {
     const tx = db.transaction(['songs'], 'readwrite');
     tx.objectStore('songs').put(songObj);
     tx.onerror = () => console.warn('No se pudieron guardar los cambios de la canción:', tx.error);
     tx.onabort = () => console.warn('Se canceló la actualización de la canción:', tx.error);
-    tx.oncomplete = () => {
-      queueSafeSongBackup(songObj).then(() => refreshSafeBackupStatus()).catch(error => handleSafeBackupFailure(error, 'Los cambios se guardaron, pero no se pudo actualizar la copia segura.'));
-    };
   } catch (error) { console.warn('No se pudo iniciar la actualización de la canción:', error); }
 }
 
@@ -4974,84 +3278,188 @@ function clearCurrentTrackUI() {
 }
 
 function loadStoredSongs() {
-  if (!db) return;
-  let tx;
-  try { tx = db.transaction(["songs"], "readonly"); }
-  catch (error) { console.error('No se pudo iniciar la carga de la biblioteca:', error); return; }
-  const req = tx.objectStore("songs").getAll();
-  req.onsuccess = () => {
-    const storedSongs = Array.isArray(req.result) ? req.result : [];
-    const targetProfile = activeProfileId;
-    const claimedLegacySongs = !isGuestProfile()
-      ? storedSongs.filter(song => !song.accountId)
-      : [];
-    claimedLegacySongs.forEach(song => { song.accountId = targetProfile; });
+  if (!db || !db.objectStoreNames.contains('songs')) {
+    // No convertimos una apertura pendiente o fallida en una biblioteca vacía.
+    return Promise.resolve(false);
+  }
 
-    const visible = storedSongs.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) === targetProfile);
-    const identityUpdates = [];
-    visible.forEach(song => {
-      if (!song.safeBackupId) {
-        song.safeBackupId = makeSafeBackupId();
-        identityUpdates.push(song);
+  const generation = ++libraryLoadGeneration;
+  const requestedProfileId = activeProfileId;
+
+  return new Promise(resolve => {
+    let tx;
+    let request;
+    let settled = false;
+    const settle = value => { if (!settled) { settled = true; resolve(value); } };
+
+    const showReadError = error => {
+      if (settled) return;
+      if (generation !== libraryLoadGeneration || requestedProfileId !== activeProfileId) {
+        settle(false);
+        return;
       }
-    });
-    claimedLegacySongs.forEach(song => {
-      if (!identityUpdates.includes(song)) identityUpdates.push(song);
-    });
-    const persistIdentityUpdates = identityUpdates.length ? new Promise((resolve, reject) => {
-      try {
-        const writeTx = db.transaction(['songs'], 'readwrite');
-        identityUpdates.forEach(song => writeTx.objectStore('songs').put(song));
-        writeTx.oncomplete = resolve;
-        writeTx.onerror = () => reject(writeTx.error || new Error('No se pudieron guardar los identificadores de seguridad.'));
-        writeTx.onabort = () => reject(writeTx.error || new Error('Se canceló la preparación de la copia segura.'));
-      } catch (error) { reject(error); }
-    }) : Promise.resolve();
+      console.error('No se pudo leer la biblioteca de IndexedDB; no se ejecutó ningún borrado:', error || tx?.error || request?.error);
+      // Si había una biblioteca ya mostrada, la conservamos. No vaciamos songList ni la UI por un error de lectura.
+      if (songList.length) renderPlaylist();
+      showToast('No se pudo leer la biblioteca local. Tus canciones no se han borrado desde esta operación; no restablezcas los datos. Cierra otras pestañas de Glasstrack y vuelve a cargar.', 'error', 7000);
+      settle(false);
+    };
 
-    songList = visible.map(song => {
-      let safeUrl = song.directUrl || '';
-      if (song.fileBlob) {
-        try { safeUrl = URL.createObjectURL(song.fileBlob); }
-        catch (error) { console.warn('No se pudo reconstruir el archivo local:', song.title, error); }
-      }
-      return { ...song, url: safeUrl };
-    });
-
-    if (visible.length > 0) {
-      try {
-        localStorage.setItem('glasstrack_library_had_songs_v1', 'true');
-        localStorage.setItem(`glasstrack_library_had_songs_v1_${targetProfile}`, 'true');
-      } catch (_) {}
+    try {
+      tx = db.transaction(['songs'], 'readonly');
+      request = tx.objectStore('songs').getAll();
+    } catch (error) {
+      showReadError(error);
+      return;
     }
-    ensureGlasstrackInitialized();
-    renderPlaylist();
-    if (songList.length > 0) {
-      cancelSafeAutoRestore();
-      const firstVisibleIndex = songList.findIndex(song => song && !song.isHidden);
-      if (firstVisibleIndex >= 0) loadSong(firstVisibleIndex, false);
-      else clearCurrentTrackUI();
-      // Primera activación de seguridad: protege gradualmente las canciones antiguas,
-      // sin borrar ni reemplazar la copia si la biblioteca principal está vacía.
-      persistIdentityUpdates.then(() => seedSafeBackupFromSongs(visible, targetProfile))
-        .then(() => refreshSafeBackupStatus())
-        .catch(error => handleSafeBackupFailure(error, 'No se pudo completar la copia inicial de algunas canciones.'));
-    } else {
-      clearCurrentTrackUI();
-      const otherProfileCount = storedSongs.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== targetProfile).length;
-      if (otherProfileCount > 0) {
-        showToast(`Hay ${otherProfileCount} canción(es) guardada(s) en otro perfil. No se han borrado: cambia a la cuenta donde se guardaron.`, 'info', 6500);
-      } else if (localStorage.getItem('glasstrack_library_had_songs_v1') === 'true') {
-        showToast('La biblioteca principal aparece vacía. Glasstrack comprobará la Biblioteca Segura antes de intentar una recuperación.', 'warning', 5000);
+
+    request.onerror = () => showReadError(request.error);
+    tx.onerror = () => showReadError(tx.error);
+    tx.onabort = () => showReadError(tx.error || new Error('Lectura de biblioteca abortada'));
+
+    request.onsuccess = () => {
+      if (settled) return;
+      if (generation !== libraryLoadGeneration || requestedProfileId !== activeProfileId) {
+        settle(false);
+        return;
       }
-      scheduleSafeAutoRestore(targetProfile);
-    }
-  };
-  req.onerror = () => {
-    console.error('No se pudo leer la biblioteca principal:', req.error);
-    showToast('No se pudo leer la biblioteca. Glasstrack conservará intacta la Biblioteca Segura.', 'error', 5000);
-    scheduleSafeAutoRestore(activeProfileId);
-  };
+
+      const storedSongs = Array.isArray(request.result) ? request.result : [];
+      const targetProfile = requestedProfileId;
+      const rawAccounts = localStorage.getItem(GLASSTRACK_ACCOUNTS_KEY);
+      const accounts = parseStoredAccounts();
+      const knownAccountIds = new Set(accounts.map(account => String(account.id)));
+      const mutations = [];
+      const claimedIds = new Set();
+      const recoveredIds = new Set();
+
+      // Si el índice local de cuentas se perdió pero IndexedDB conserva canciones
+      // asociadas a perfiles que ya no existen, las reasignamos al Invitado en vez
+      // de ocultarlas indefinidamente. Solo se hace para perfiles huérfanos.
+      if (targetProfile === GLASSTRACK_GUEST_ID) {
+        const accountIndexIsEmpty = rawAccounts === null || rawAccounts.trim() === '[]';
+        if (accountIndexIsEmpty) {
+          storedSongs.forEach(song => {
+            const owner = song.accountId ? String(song.accountId) : '';
+            if (owner && owner !== GLASSTRACK_GUEST_ID && !knownAccountIds.has(owner)) {
+              song.accountId = GLASSTRACK_GUEST_ID;
+              mutations.push(song);
+              recoveredIds.add(String(song.id));
+            }
+          });
+        } else if (accounts.length > 0) {
+          // También recuperamos registros cuyo perfil ya no existe, sin mezclar canciones
+          // de perfiles que siguen registrados.
+          storedSongs.forEach(song => {
+            const owner = song.accountId ? String(song.accountId) : '';
+            if (owner && owner !== GLASSTRACK_GUEST_ID && !knownAccountIds.has(owner)) {
+              song.accountId = GLASSTRACK_GUEST_ID;
+              mutations.push(song);
+              recoveredIds.add(String(song.id));
+            }
+          });
+        }
+      }
+
+      // La primera cuenta activa hereda registros antiguos sin perfil. Se muestran
+      // en esta misma lectura y no desaparecen hasta un segundo reinicio.
+      if (targetProfile !== GLASSTRACK_GUEST_ID) {
+        storedSongs.forEach(song => {
+          if (!song.accountId) {
+            song.accountId = targetProfile;
+            mutations.push(song);
+            claimedIds.add(String(song.id));
+          }
+        });
+      }
+
+      const finalize = writeError => {
+        if (settled) return;
+        if (generation !== libraryLoadGeneration || requestedProfileId !== activeProfileId) {
+          settle(false);
+          return;
+        }
+
+        if (writeError) {
+          console.warn('La biblioteca se mostrará, pero no se pudo guardar una reasignación de perfil:', writeError);
+          showToast('Se encontraron canciones conservadas, pero no se pudo guardar por completo su perfil. No se han eliminado; comprueba el espacio y vuelve a cargar.', 'warning', 6000);
+        } else if (recoveredIds.size > 0) {
+          showToast(`Se recuperaron ${recoveredIds.size} canción(es) que estaban asociadas a perfiles que ya no existen.`, 'success', 4500);
+        }
+
+        const visible = storedSongs.filter(song => {
+          const owner = song.accountId || GLASSTRACK_GUEST_ID;
+          return owner === targetProfile || claimedIds.has(String(song.id)) || recoveredIds.has(String(song.id));
+        });
+
+        songList = visible.map(song => {
+          let safeUrl = song.directUrl || '';
+          if (song.fileBlob) {
+            try { safeUrl = URL.createObjectURL(song.fileBlob); }
+            catch (error) { console.warn('No se pudo reconstruir el archivo local:', song.title, error); }
+          }
+          return { ...song, url: safeUrl };
+        });
+
+        if (storedSongs.length > 0) {
+          try { localStorage.setItem('glasstrack_library_had_songs_v1', 'true'); } catch (_) {}
+        }
+        ensureGlasstrackInitialized();
+        renderPlaylist();
+
+        const countKey = libraryCountStorageKey(targetProfile);
+        const previousCountRaw = localStorage.getItem(countKey);
+        const previousCount = previousCountRaw === null ? null : Math.max(0, Number(previousCountRaw) || 0);
+        if (songList.length > 0) {
+          if (previousCount !== null && songList.length < previousCount) {
+            // No reducimos automáticamente el último inventario conocido: podría tratarse
+            // de una carga incompleta o de un perfil/origen cambiado entre actualizaciones.
+            showToast(`Aviso de biblioteca: ahora se encontraron ${songList.length} canción(es), pero el último recuento registrado era ${previousCount}. No hemos sobrescrito el recuento anterior; revisa el perfil y la carpeta antes de seguir modificando datos.`, 'warning', 8500);
+          } else {
+            saveLibraryCountHint(targetProfile, songList.length);
+          }
+          const firstVisibleIndex = songList.findIndex(song => song && !song.isHidden);
+          if (firstVisibleIndex >= 0) loadSong(firstVisibleIndex, false);
+          else clearCurrentTrackUI();
+        } else {
+          clearCurrentTrackUI();
+          const otherProfileCount = storedSongs.filter(song => (song.accountId || GLASSTRACK_GUEST_ID) !== targetProfile).length;
+          if (otherProfileCount > 0) {
+            showToast(`Hay ${otherProfileCount} canción(es) guardada(s) en otro perfil. No se han borrado: cambia a la cuenta donde se guardaron.`, 'info', 6500);
+          }
+
+          const previouslyHadSongs = previousCount !== null
+            ? previousCount > 0
+            : localStorage.getItem('glasstrack_library_had_songs_v1') === 'true';
+          if (storedSongs.length === 0 && previouslyHadSongs) {
+            // No sobrescribir el último recuento conocido: podría ser un origen distinto,
+            // una base temporalmente vacía o una pérdida real. En ningún caso borrar más datos.
+            showToast('La biblioteca aparece vacía, aunque antes tenía canciones. Glasstrack no ha borrado registros en esta lectura. Mantén abierta esta misma carpeta/origen, cierra otras pestañas y vuelve a cargar antes de restablecer nada.', 'warning', 8500);
+          }
+        }
+        settle(true);
+      };
+
+      if (!mutations.length) {
+        finalize(null);
+        return;
+      }
+
+      let writeTx;
+      try {
+        writeTx = db.transaction(['songs'], 'readwrite');
+        const store = writeTx.objectStore('songs');
+        mutations.forEach(song => store.put(song));
+        writeTx.oncomplete = () => finalize(null);
+        writeTx.onerror = () => finalize(writeTx.error || new Error('No se pudieron guardar los propietarios de las canciones'));
+        writeTx.onabort = () => finalize(writeTx.error || new Error('Se abortó la actualización de la biblioteca'));
+      } catch (error) {
+        finalize(error);
+      }
+    };
+  });
 }
+
 async function switchActiveProfile(profileId, options = {}) {
   if (!profileId || profileId === activeProfileId) return;
   saveProfileScopedState(activeProfileId);
@@ -5143,10 +3551,23 @@ function handleFiles(files) {
 
 async function processAndSave(songObj) {
   try {
+    // Reintentar el permiso persistente tras una acción explícita del usuario.
+    // No es una copia adicional: ayuda a evitar que el navegador evicte el almacenamiento local.
+    retryPersistentStorageAfterUserAction();
     // La canción no se anuncia en la biblioteca hasta que IndexedDB confirme el commit.
+    const destinationProfileId = songObj.accountId || activeProfileId;
     await saveSongToDB(songObj);
     songObj.url = URL.createObjectURL(songObj.fileBlob);
+    if (destinationProfileId !== activeProfileId) {
+      // La selección de perfil cambió mientras se leían los metadatos del archivo.
+      // El registro se conserva en su perfil de origen y no contamina la lista actual.
+      loadStoredSongs();
+      showToast('La canción se guardó en el perfil que estaba activo al seleccionarla. No se ha perdido; vuelve a ese perfil para verla.', 'info', 5500);
+      return;
+    }
     songList.push(songObj);
+    saveLibraryCountHint(activeProfileId, songList.length);
+    refreshLibraryCountHint(activeProfileId).catch(() => {});
     renderPlaylist();
     document.dispatchEvent(new CustomEvent('glasstrack:track-added', { detail: { song: songObj } }));
     if (songList.length === 1) loadSong(0, false);
@@ -6335,7 +4756,6 @@ document.querySelectorAll('.setting-card-item[data-target]').forEach(card => {
     if (subPanel) {
       if (settingsMainView) settingsMainView.classList.add('slide-out');
       subPanel.classList.add('slide-in');
-      if (targetId === 'sub-data') refreshSafeBackupStatus().catch(() => {});
     }
   });
 });
@@ -6874,10 +5294,6 @@ async function hardDeleteSong(song) {
       tx.onabort = () => reject(tx.error || new Error('Transacción abortada'));
     });
 
-    // Mantener la copia segura, pero confirmar el registro de eliminación intencional
-    // antes de finalizar esta acción para que no se restaure por accidente al recargar.
-    await markSafeSongIntentionallyDeleted(song).catch(error => handleSafeBackupFailure(error, 'La canción se eliminó de la biblioteca principal, pero no se pudo marcar su estado en la copia segura.'));
-
     // 2) Libera la URL temporal de memoria.
     if (song.url) {
       try { URL.revokeObjectURL(song.url); } catch (_) {}
@@ -6891,6 +5307,8 @@ async function hardDeleteSong(song) {
     if (deletedIndex > -1) {
       songList.splice(deletedIndex, 1);
     }
+    saveLibraryCountHint(activeProfileId, songList.length);
+    refreshLibraryCountHint(activeProfileId).catch(() => {});
 
     // 4) Quita también la canción eliminada de todas las playlists guardadas.
     Object.keys(playlists).forEach(name => {
@@ -6945,7 +5363,7 @@ async function hardDeleteSong(song) {
     selectedSongForMenu = null;
     renderPlaylist();
     renderHiddenList();
-    showToast(`"${song.title}" salió de la biblioteca principal; su copia segura se conserva.`, 'info', 3000);
+    showToast(`"${song.title}" eliminada permanentemente.`, 'info');
     return true;
   } catch (error) {
     console.error('Error en hardDeleteSong:', error);
@@ -6961,7 +5379,7 @@ if (optDeleteSong) {
 
     const song = selectedSongForMenu;
     const confirmed = confirm(
-      `¿Eliminar "${song.title}" de la biblioteca principal?\n\nLa copia de la Biblioteca Segura se conservará y no se borrará automáticamente. Si después quieres recuperarla, podrás usar Restaurar biblioteca en Ajustes.`
+      `¿Eliminar permanentemente "${song.title}"?\n\nEl archivo se borrará de la biblioteca local y no podrá recuperarse desde Glasstrack.`
     );
 
     if (!confirmed) return;
@@ -7028,26 +5446,40 @@ if (toggleSFX) {
   });
 }
 
+function resetInterfaceSettingsPreservingLibrary() {
+  // Restablecer el aspecto no debe cerrar/desvincular la cuenta ni ocultar la biblioteca.
+  // Las canciones viven en IndexedDB; estas claves son la identidad usada para encontrarlas.
+  const exactKeysToKeep = new Set([
+    GLASSTRACK_ACCOUNTS_KEY,
+    GLASSTRACK_ACTIVE_PROFILE_KEY,
+    GLASSTRACK_SESSION_KEY,
+    GLASSTRACK_INITIALIZED_KEY,
+    'glasstrack_library_had_songs_v1',
+    'glasstrack_storage_persisted',
+    'playlistsDB', 'listeningStats', 'totalPlayedSeconds', 'concludorChain'
+  ]);
+  const keysToKeep = key => {
+    if (exactKeysToKeep.has(key)) return true;
+    if (key.startsWith('glasstrackAccount')) return true; // compatibilidad con cuentas antiguas
+    if (key.startsWith(GLASSTRACK_LIBRARY_COUNT_PREFIX)) return true;
+    return /^glasstrack\.profile\..+\.(playlistsDB|listeningStats|totalPlayedSeconds|concludorChain)$/.test(key);
+  };
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && !keysToKeep(key)) keys.push(key);
+  }
+  keys.forEach(key => {
+    try { localStorage.removeItem(key); }
+    catch (error) { console.warn('No se pudo restablecer una preferencia:', key, error); }
+  });
+}
+
 if (btnFactoryReset) {
   btnFactoryReset.addEventListener('click', () => {
     playSFX('click');
-    if (confirm("¿Estás seguro de restablecer la configuración visual y la interfaz a los valores predeterminados? La Biblioteca Segura, las canciones y la identidad de la cuenta se conservarán.")) {
-      const keepKeys = [
-        'glasstrackAccountsV2', 'glasstrackActiveProfileId', 'glasstrackSessionActive',
-        'glasstrack_safe_backup_auto_v1', 'glasstrack_safe_restore_auto_v1',
-        'glasstrack_storage_persisted', 'glasstrack_initialized',
-        'glasstrack_library_had_songs_v1'
-      ];
-      const kept = {};
-      keepKeys.forEach(key => { try { const value = localStorage.getItem(key); if (value !== null) kept[key] = value; } catch (_) {} });
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith('glasstrack_library_had_songs_v1_')) kept[key] = localStorage.getItem(key);
-        }
-      } catch (_) {}
-      localStorage.clear();
-      Object.entries(kept).forEach(([key, value]) => { try { localStorage.setItem(key, value); } catch (_) {} });
+    if (confirm("¿Restablecer la apariencia y las preferencias? La biblioteca musical, las cuentas y las playlists se conservarán.")) {
+      resetInterfaceSettingsPreservingLibrary();
       location.reload();
     }
   });
@@ -21756,39 +20188,3 @@ if (typeof document !== 'undefined') {
     event.preventDefault();
   }, { capture: true, passive: false });
 })();
-
-// B68: aplicar el estado de controles que solo existe en el DOM después de importar/restaurar.
-function b68ApplyPendingControlRestore(attempt = 0) {
-  let raw = null;
-  try { raw = localStorage.getItem('glasstrack_b68_pending_control_restore'); } catch (_) {}
-  if (!raw) return;
-  let saved;
-  try { saved = JSON.parse(raw); } catch (_) { try { localStorage.removeItem('glasstrack_b68_pending_control_restore'); } catch (_) {} return; }
-  const remaining = {};
-  const changed = [];
-  Object.entries(saved || {}).forEach(([id, state]) => {
-    const el = document.getElementById(id);
-    if (!el) { if (attempt < 20) remaining[id] = state; return; }
-    if (el instanceof HTMLSelectElement && state.value != null && !Array.from(el.options).some(option => option.value === String(state.value))) {
-      if (attempt < 20) remaining[id] = state;
-      return;
-    }
-    const type = String(el.type || el.tagName || '').toLowerCase();
-    if (['file', 'password', 'submit', 'button', 'reset', 'hidden'].includes(type)) return;
-    let didChange = false;
-    if ('checked' in el && state.checked !== undefined && !!el.checked !== !!state.checked) { el.checked = !!state.checked; didChange = true; }
-    if (state.value !== undefined && el.value !== String(state.value)) { el.value = String(state.value); didChange = true; }
-    if (didChange) changed.push(el);
-  });
-  changed.forEach(el => {
-    try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-    try { el.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
-  });
-  if (Object.keys(remaining).length && attempt < 20) {
-    try { localStorage.setItem('glasstrack_b68_pending_control_restore', JSON.stringify(remaining)); } catch (_) {}
-    setTimeout(() => b68ApplyPendingControlRestore(attempt + 1), 450);
-  } else {
-    try { localStorage.removeItem('glasstrack_b68_pending_control_restore'); } catch (_) {}
-  }
-}
-setTimeout(() => b68ApplyPendingControlRestore(0), 450);

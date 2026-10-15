@@ -12,7 +12,7 @@
     <!-- Icono (favicon) para la pestaña -->
     <link rel="icon" type="image/png" href="img/favicon.png">
 
-    <link rel="stylesheet" href="styles.css?v=glasstrack-b68-respaldo-completo-20261014">
+    <link rel="stylesheet" href="styles.css?v=glasstrack-b66-mobile-ui-runner-eq-20261014">
     <!-- Fuentes de Google Fonts actualizadas -->
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Nunito:wght@400;600;700&family=Raleway:wght@400;600;700&family=Rubik:wght@400;500;700&family=Bebas+Neue&family=Playfair+Display:wght@400;600;700&family=Press+Start+2P&family=Montserrat:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Pacifico&family=Permanent+Marker&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
@@ -758,7 +758,7 @@
             </div>
             <div class="setting-card-content">
               <span class="setting-card-title">Gestión de Datos y Biblioteca</span>
-              <span class="setting-card-desc">Biblioteca Segura, recuperación automática y exportación</span>
+              <span class="setting-card-desc">Copia de seguridad JSON, caché e IndexedDB</span>
             </div>
             <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
@@ -1401,85 +1401,12 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Volver
           </button>
           <div class="sub-content">
-            <section class="safe-library-panel" aria-labelledby="safe-library-title">
-              <div class="safe-library-heading">
-                <div class="safe-library-emblem" aria-hidden="true">
-                  <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 19 6v5c0 4.7-3 7.7-7 10-4-2.3-7-5.3-7-10V6l7-3Z"/><path d="m8.7 12.2 2.1 2.1 4.5-4.7"/></svg>
-                </div>
-                <div class="safe-library-title-wrap">
-                  <span class="setting-title" id="safe-library-title">Biblioteca Segura</span>
-                  <span class="setting-desc">Copia independiente de la biblioteca principal. No se borra al vaciar la lista ni al restablecer el diseño.</span>
-                </div>
-                <span class="safe-library-state" id="safe-library-state">Preparando…</span>
-              </div>
-
-              <div class="safe-library-stats" aria-live="polite">
-                <div class="safe-library-stat"><strong id="safe-library-count">—</strong><span>Copias protegidas</span></div>
-                <div class="safe-library-stat"><strong id="safe-library-current-count">—</strong><span>En biblioteca principal</span></div>
-                <div class="safe-library-stat"><strong id="safe-library-size">Calculando…</strong><span>Tamaño respaldado estimado</span></div>
-                <div class="safe-library-stat"><strong id="safe-library-last-run">Aún no disponible</strong><span>Última verificación correcta</span></div>
-              </div>
-
-              <div class="safe-library-options">
-                <div class="safe-library-option">
-                  <div class="setting-info"><span class="setting-title">Protección automática por canción</span><span class="setting-desc">Protege las canciones nuevas y los cambios de sus datos sin esperar al siguiente punto temporal.</span></div>
-                  <label class="switch"><input type="checkbox" id="toggle-safe-backup" checked><span class="slider"></span></label>
-                </div>
-                <div class="safe-library-option safe-library-option-timed">
-                  <div class="setting-info"><span class="setting-title">Respaldo temporal automático</span><span class="setting-desc">Guarda periódicamente ajustes, fondos, vídeos locales, pistas y la lista de canciones del punto de guardado. No borra la copia al desactivarlo.</span></div>
-                  <div class="safe-library-timer-controls">
-                    <select id="select-safe-backup-interval" class="safe-library-interval" aria-label="Intervalo del respaldo temporal">
-                      <option value="1">Cada 1 minuto</option>
-                      <option value="2" selected>Cada 2 minutos</option>
-                      <option value="5">Cada 5 minutos</option>
-                      <option value="10">Cada 10 minutos</option>
-                      <option value="15">Cada 15 minutos</option>
-                    </select>
-                    <label class="switch"><input type="checkbox" id="toggle-safe-temporary-backup" checked><span class="slider"></span></label>
-                  </div>
-                </div>
-                <div class="safe-library-option">
-                  <div class="setting-info"><span class="setting-title">Recuperación automática de biblioteca</span><span class="setting-desc">Si la biblioteca queda vacía, espera dos minutos y comprueba el respaldo antes de restaurar.</span></div>
-                  <label class="switch"><input type="checkbox" id="toggle-safe-restore" checked><span class="slider"></span></label>
-                </div>
-              </div>
-
-              <div class="safe-library-actions">
-                <button type="button" id="btn-safe-backup-now" class="action-btn safe-library-primary">Respaldar ahora · Crear punto</button>
-                <button type="button" id="btn-safe-restore-now" class="action-btn">Restaurar biblioteca</button>
-                <button type="button" id="btn-safe-restore-checkpoint" class="action-btn">Restaurar punto guardado</button>
-                <button type="button" id="btn-safe-export" class="action-btn">Exportar respaldo completo (.zip)</button>
-              </div>
-              <button type="button" id="btn-safe-delete-backup" class="action-btn-danger safe-library-delete">Eliminar copias seguras de esta cuenta</button>
-              <div class="safe-library-checkpoint-row">
-                <label for="select-safe-checkpoint">Puntos de guardado disponibles</label>
-                <select id="select-safe-checkpoint" class="safe-library-interval" aria-label="Elegir punto de guardado"><option value="">Buscando puntos guardados…</option></select>
-              </div>
-              <p class="safe-library-message" id="safe-library-message" role="status" aria-live="polite">Las canciones y los ajustes se verificarán antes de aparecer como protegidos.</p>
-              <p class="safe-library-footnote">Los respaldos temporales conservan la configuración y los recursos locales disponibles. Las canciones de la Biblioteca Segura se mantienen por separado. Los enlaces externos guardan referencias, no descargan audio. Exporta el ZIP completo y guárdalo fuera de Glasstrack para protegerte si Chrome elimina todos los datos del sitio.</p>
-            </section>
-
-            <section class="safe-import-panel" aria-labelledby="safe-import-title">
-              <div class="safe-import-heading">
-                <span class="safe-import-icon" aria-hidden="true">⇧</span>
-                <div><span class="setting-title" id="safe-import-title">Importar todos los datos</span><span class="setting-desc">Restaura música, pistas, temas, ajustes, fondos y recursos incluidos en una copia completa de Glasstrack.</span></div>
-              </div>
-              <div id="safe-import-dropzone" class="safe-import-dropzone" tabindex="0" role="button" aria-label="Arrastra una copia ZIP completa o selecciona un archivo">
-                <span class="safe-import-drop-icon" aria-hidden="true">ZIP</span>
-                <strong>Arrastra aquí tu copia completa (.zip)</strong>
-                <span class="safe-import-drop-hint">o selecciona el archivo desde tu computadora</span>
-                <button type="button" id="btn-safe-select-import" class="action-btn">Seleccionar archivo ZIP</button>
-                <input type="file" id="input-import-full-zip" accept=".zip,application/zip,application/x-zip-compressed" hidden>
-              </div>
-              <p class="safe-library-message" id="safe-import-message" role="status" aria-live="polite">La importación completa reemplazará los datos y ajustes de esta sesión, pero no la cuenta ni sus credenciales. Antes se creará un punto de seguridad.</p>
-            </section>
-
-            <div class="setting-item vertical safe-external-backup">
-              <span class="setting-title">Copia externa y compatibilidad</span>
-              <span class="setting-desc">JSON conserva metadatos y ajustes; ZIP/JAR incluye también los archivos de audio locales cuando estén disponibles.</span>
+            <div class="setting-item vertical">
+              <span class="setting-title">Copia de Seguridad de la Biblioteca</span>
+              <span class="setting-desc">Exporta o restaura tus playlists, favoritos y configuraciones.</span>
               <div class="btn-group-row">
-                <button id="btn-export-json" class="action-btn">Exportar metadatos (.json)</button>
-                <button id="btn-export-zip" class="action-btn">Exportar biblioteca (.zip compatible)</button>
+                <button id="btn-export-json" class="action-btn">Exportar (.json)</button>
+                <button id="btn-export-zip" class="action-btn">Exportar (.zip)</button>
                 <button id="btn-export-jar" class="action-btn">Exportar (.jar)</button>
                 <label class="action-btn custom-file-label">
                   Importar (.json/.zip/.jar)
@@ -3450,7 +3377,7 @@
   </div>
 </section>
 
-  <script src="script.js?v=glasstrack-b68-respaldo-completo-20261014"></script>
+  <script src="script.js?v=glasstrack-b67-data-persistence-20261015"></script>
 <!-- =========================================================
      GLASSTRACK PRO — VISUAL OVERLAY STUDIO
      Editor independiente: no modifica el reproductor normal.
