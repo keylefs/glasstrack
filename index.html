@@ -1475,6 +1475,49 @@
               </label>
             </div>
 
+            <div class="cinema-effects-settings">
+              <div class="setting-item vertical">
+                <span class="setting-title">Animaciones de letras</span>
+                <span class="setting-desc">Activa una animación principal a la vez para evitar que se superpongan.</span>
+                <div class="cinema-effect-grid" role="group" aria-label="Animación principal de letras">
+                  <label><input type="radio" name="cinema-lyric-animation" value="none" checked> Sin animación</label>
+                  <label><input type="radio" name="cinema-lyric-animation" value="ghost"> Letras fantasma</label>
+                  <label><input type="radio" name="cinema-lyric-animation" value="typewriter"> Máquina de escribir</label>
+                  <label><input type="radio" name="cinema-lyric-animation" value="fade"> Desvanecimiento gradual</label>
+                  <label><input type="radio" name="cinema-lyric-animation" value="word"> Revelado palabra por palabra</label>
+                  <label><input type="radio" name="cinema-lyric-animation" value="scanner"> Escáner de luz</label>
+                  <label><input type="radio" name="cinema-lyric-animation" value="echo"> Eco de letras</label>
+                </div>
+              </div>
+              <div class="setting-item vertical">
+                <span class="setting-title">Efectos visuales adicionales</span>
+                <span class="setting-desc">Estos efectos son independientes de la animación principal.</span>
+                <div class="cinema-effect-grid" role="group" aria-label="Efectos visuales adicionales">
+                  <label><input type="checkbox" data-cinema-effect="depth"> Profundidad cinematográfica</label>
+                  <label><input type="checkbox" data-cinema-effect="focus-frame"> Marco de enfoque dinámico</label>
+                  <label><input type="checkbox" data-cinema-effect="audio-underline"> Subrayado reactivo al audio</label>
+                  <label><input type="checkbox" data-cinema-effect="reflection"> Reflejo de escenario</label>
+                  <label><input type="checkbox" data-cinema-effect="contrast"> Contraste inteligente de letras</label>
+                </div>
+              </div>
+              <div class="setting-item vertical">
+                <span class="setting-title">Posición y tamaño de letras</span>
+                <span class="setting-desc">Ajusta la posición vertical y el tamaño sin cambiar la biblioteca.</span>
+                <label class="cinema-range-label">Posición vertical <input id="cinema-lyrics-position" type="range" min="25" max="75" value="50"></label>
+                <label class="cinema-range-label">Tamaño de letras <input id="cinema-lyrics-size" type="range" min="75" max="140" value="100"></label>
+              </div>
+              <div class="setting-item vertical">
+                <span class="setting-title">Controles de cine</span>
+                <span class="setting-desc">Elige qué controles rápidos aparecen en Modo Cine.</span>
+                <div class="cinema-effect-grid">
+                  <label><input type="checkbox" data-cinema-control="seekbar" checked> Barra de tiempo</label>
+                  <label><input type="checkbox" data-cinema-control="visualizer" checked> Visualizador</label>
+                  <label><input type="checkbox" data-cinema-control="lyrics-style" checked> Letras decoradas</label>
+                  <label><input type="checkbox" data-cinema-control="song-menu" checked> Menú de canción</label>
+                </div>
+              </div>
+            </div>
+
             <div class="setting-item vertical">
               <span class="setting-title">Fondo del Modo Cine</span>
               <span class="setting-desc">Animado comparte el mismo fondo de video elegido en Tema y Diseño.</span>

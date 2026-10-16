@@ -5508,6 +5508,41 @@ document.querySelectorAll('.cinema-scale-btn').forEach(btn => {
   });
 });
 
+// Efectos de Modo Cine: preferencias propias, sin tocar IndexedDB ni la biblioteca.
+(() => {
+  const root = document.getElementById('cinema-mode');
+  if (!root) return;
+  const prefKey = 'glasstrack_cinema_visual_preferences_v1';
+  const animationClasses = ['none','ghost','typewriter','fade','word','scanner','echo'];
+  const effectNames = ['depth','focus-frame','audio-underline','reflection','contrast'];
+  const defaults = { animation: 'none', effects: [], position: 50, size: 100, controls: ['seekbar','visualizer','lyrics-style','song-menu'] };
+  let prefs = {...defaults};
+  try { const saved = JSON.parse(localStorage.getItem(prefKey) || 'null'); if (saved && typeof saved === 'object') prefs = {...defaults,...saved}; } catch (_) {}
+  function save(){ try { localStorage.setItem(prefKey, JSON.stringify(prefs)); } catch (_) {} }
+  function apply(){
+    root.classList.remove(...animationClasses.map(v => 'cinema-animation-' + v));
+    root.classList.add('cinema-animation-' + (animationClasses.includes(prefs.animation) ? prefs.animation : 'none'));
+    effectNames.forEach(name => root.classList.toggle('cinema-effect-' + name, Array.isArray(prefs.effects) && prefs.effects.includes(name)));
+    document.documentElement.style.setProperty('--cinema-lyrics-position', `${Math.max(25,Math.min(75,Number(prefs.position)||50))}%`);
+    document.documentElement.style.setProperty('--cinema-user-lyrics-size', String(Math.max(75,Math.min(140,Number(prefs.size)||100))/100));
+    document.querySelectorAll('[data-cinema-control]').forEach(el => {
+      const key = el.dataset.cinemaControl; const target = ({seekbar: cinemaSeekbarWrapper, visualizer: document.getElementById('btn-cinema-audio-visualizer'), 'lyrics-style': cinemaLyricsStyleBtn, 'song-menu': cinemaSongMenuBtn})[key];
+      if (target) target.classList.toggle('cinema-user-hidden', !prefs.controls.includes(key));
+    });
+    const pos = document.getElementById('cinema-lyrics-position'); if (pos) pos.value = prefs.position;
+    const size = document.getElementById('cinema-lyrics-size'); if (size) size.value = prefs.size;
+    document.querySelectorAll('input[name="cinema-lyric-animation"]').forEach(el => el.checked = el.value === prefs.animation);
+    document.querySelectorAll('[data-cinema-effect]').forEach(el => el.checked = prefs.effects.includes(el.dataset.cinemaEffect));
+    document.querySelectorAll('[data-cinema-control]').forEach(el => el.checked = prefs.controls.includes(el.dataset.cinemaControl));
+  }
+  document.querySelectorAll('input[name="cinema-lyric-animation"]').forEach(el => el.addEventListener('change', () => { if (el.checked) { prefs.animation = el.value; save(); apply(); } }));
+  document.querySelectorAll('[data-cinema-effect]').forEach(el => el.addEventListener('change', () => { const v = el.dataset.cinemaEffect; prefs.effects = el.checked ? [...new Set([...prefs.effects,v])] : prefs.effects.filter(x => x !== v); save(); apply(); }));
+  document.querySelectorAll('[data-cinema-control]').forEach(el => el.addEventListener('change', () => { const v = el.dataset.cinemaControl; prefs.controls = el.checked ? [...new Set([...prefs.controls,v])] : prefs.controls.filter(x => x !== v); save(); apply(); }));
+  const position = document.getElementById('cinema-lyrics-position'); if (position) position.addEventListener('input', () => { prefs.position = Number(position.value); document.documentElement.style.setProperty('--cinema-lyrics-position', `${prefs.position}%`); save(); });
+  const size = document.getElementById('cinema-lyrics-size'); if (size) size.addEventListener('input', () => { prefs.size = Number(size.value); document.documentElement.style.setProperty('--cinema-user-lyrics-size', String(prefs.size/100)); save(); });
+  apply();
+})();
+
 // Mostrar / ocultar la barra de tiempo del Modo Cine (el switch tampoco hacía nada)
 if (toggleCinemaSeekbar && cinemaSeekbarWrapper) {
   toggleCinemaSeekbar.addEventListener('change', (e) => {

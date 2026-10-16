@@ -15018,3 +15018,34 @@ body.mobile-lyrics-exclusive-active.mobile-player-expanded .lyrics-panel.active 
 /* El indicador fijo de Ajustes es pasivo y nunca captura los gestos del control. */
 .runner-live-indicator,
 .runner-live-indicator * { pointer-events: none !important; }
+
+
+/* Glasstrack Pro B68 — efectos independientes del almacenamiento de música */
+.cinema-effect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;width:100%;margin-top:10px}
+.cinema-effect-grid label,.cinema-range-label{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.035);font-size:.88rem;cursor:pointer}
+.cinema-effect-grid input{accent-color:var(--accent-color,#9d7bff);flex-shrink:0}
+.cinema-range-label{justify-content:space-between;flex-wrap:wrap;margin-top:8px}
+.cinema-range-label input{width:100%;accent-color:var(--accent-color,#9d7bff)}
+#cinema-mode.cinema-effect-depth .cinema-lyrics-body .lyrics-line:not(.active){transform:scale(.88) translateY(0);opacity:.22;filter:blur(2.8px)}
+#cinema-mode.cinema-effect-depth .cinema-lyrics-body .lyrics-line.active{transform:perspective(700px) translateZ(24px) scale(1.1)}
+#cinema-mode.cinema-effect-focus-frame .cinema-lyrics-body .lyrics-line.active{position:relative;isolation:isolate;width:max-content;max-width:100%;margin-left:auto;margin-right:auto;padding:5px 14px;border:1px solid rgba(255,255,255,.35);border-radius:8px;box-shadow:0 0 18px rgba(var(--dominant-rgb),.25)}
+#cinema-mode.cinema-effect-audio-underline .cinema-lyrics-body .lyrics-line.active{text-decoration:underline;text-decoration-color:rgba(var(--dominant-rgb),.9);text-decoration-thickness:3px;text-underline-offset:9px;animation:cinemaAudioUnderline 1.15s ease-in-out infinite alternate}
+@keyframes cinemaAudioUnderline{from{text-decoration-thickness:2px;text-underline-offset:7px}to{text-decoration-thickness:5px;text-underline-offset:11px}}
+#cinema-mode.cinema-effect-reflection .cinema-lyrics-body .lyrics-line.active{text-shadow:0 0 18px rgba(var(--dominant-rgb),.65),0 1.1em 3px rgba(var(--dominant-rgb),.14)}
+#cinema-mode.cinema-effect-contrast .cinema-lyrics-body .lyrics-line.active{background:rgba(0,0,0,.2);border-radius:8px;padding:4px 10px;-webkit-box-decoration-break:clone;box-decoration-break:clone;text-shadow:0 2px 5px rgba(0,0,0,.9),0 0 18px rgba(var(--dominant-rgb),.5)}
+#cinema-mode.cinema-animation-scanner .cinema-lyrics-body .lyrics-line.active{background:linear-gradient(100deg,transparent 0%,rgba(255,255,255,.05) 35%,rgba(255,255,255,.65) 50%,rgba(255,255,255,.05) 65%,transparent 100%);background-size:220% 100%;background-clip:padding-box;animation:cinemaScanner 1.7s ease-in-out infinite}
+@keyframes cinemaScanner{from{background-position:120% 0}to{background-position:-120% 0}}
+#cinema-mode.cinema-animation-fade .cinema-lyrics-body .lyrics-line.active{animation:cinemaSoftFade .9s ease both}
+@keyframes cinemaSoftFade{from{opacity:0;filter:blur(7px);transform:translateY(9px)}to{opacity:1;filter:blur(0);transform:translateY(0)}}
+#cinema-mode.cinema-animation-ghost .cinema-lyrics-body .lyrics-line.active{animation:cinemaGhost .85s ease both}
+@keyframes cinemaGhost{0%{opacity:0;filter:blur(8px);letter-spacing:.14em}35%{opacity:.35;filter:blur(4px)}100%{opacity:1;filter:blur(0);letter-spacing:normal}}
+#cinema-mode.cinema-animation-echo .cinema-lyrics-body .lyrics-line.active{text-shadow:0 0 0 rgba(var(--dominant-rgb),.9),.08em .08em 0 rgba(var(--dominant-rgb),.28),.16em .16em 0 rgba(var(--dominant-rgb),.12)}
+#cinema-mode.cinema-animation-word .cinema-lyrics-body .lyrics-line.active .karaoke-word{animation:cinemaWordReveal .32s ease both}
+@keyframes cinemaWordReveal{from{opacity:.08;filter:blur(4px);transform:translateY(5px)}to{opacity:1;filter:blur(0);transform:translateY(0)}}
+#cinema-mode.cinema-animation-typewriter .cinema-lyrics-body .lyrics-line.active{animation:cinemaTypeReveal .55s steps(14,end) both;overflow:hidden}
+@keyframes cinemaTypeReveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@media(prefers-reduced-motion:reduce){#cinema-mode.cinema-effect-audio-underline .cinema-lyrics-body .lyrics-line.active,#cinema-mode.cinema-animation-scanner .cinema-lyrics-body .lyrics-line.active{animation:none}}
+
+#cinema-mode .cinema-lyrics-body{padding-top:var(--cinema-lyrics-position,40%);padding-bottom:calc(90% - var(--cinema-lyrics-position,50%));}
+#cinema-mode .cinema-lyrics-body .lyrics-line{font-size:calc(2.1rem * var(--lyrics-scale, 1) * var(--cinema-scale-preset, 1) * var(--cinema-user-lyrics-size, 1));}
+#cinema-mode .cinema-user-hidden{display:none!important}
